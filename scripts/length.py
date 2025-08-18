@@ -1,7 +1,6 @@
 """
 To compute the prompt length distribution of the GSM8K dataset.
 
-Developed by: Yixuan Even Xu in 2025
 """
 
 from utils.data import get_gsm8k_questions

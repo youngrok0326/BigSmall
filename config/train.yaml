@@ -15,7 +15,7 @@ model:
     - "down_proj"
   random_state: 42
 wandb:
-  enable: true
+  enable: false
   project_name: "PODS-Babel"
   run_name: "Instruct-GSM8K-16-16-Run1"
 rl:

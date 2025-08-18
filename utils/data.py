@@ -1,7 +1,6 @@
 """
 Implementation of data loading and processing functions for math datasets.
 
-Developed by: Yixuan Even Xu in 2025
 """
 
 import re

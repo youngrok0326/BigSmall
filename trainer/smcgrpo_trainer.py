@@ -1,16 +1,10 @@
 """
 This file is adapted from trl.trainers.grpo_trainer.py (trl version 0.14.0)
-This file implements the Random Down-Sampling Rule in the paper
-"Not All Rollouts are Useful: Down-Sampling Rollouts in LLM Reinforcement Learning"
-by Yixuan Even Xu*, Yash Savani*, Fei Fang, and Zico Kolter
-https://arxiv.org/abs/2504.13818
 
-Adapted by: Yixuan Even Xu in 2025
 """
 
 import os
 import time
-import random
 import textwrap
 import warnings
 from collections import defaultdict
@@ -43,7 +37,7 @@ from trl.data_utils import apply_chat_template, is_conversational, maybe_apply_c
 from trl.import_utils import is_vllm_available
 from trl.models import create_reference_model, prepare_deepspeed, unwrap_model_for_generation
 from trl.trainer.callbacks import SyncRefModelCallback
-from .randomgrpo_config import RandomGRPOConfig
+from .smcgrpo_config import SMCGRPOConfig
 from trl.trainer.utils import generate_model_card, get_comet_experiment_url, pad
 
 
@@ -61,9 +55,9 @@ if is_wandb_available():
 RewardFunc = Union[str, PreTrainedModel, Callable[[list, list], list[float]]]
 
 
-class RandomGRPOTrainer(Trainer):
+class SMCGRPOTrainer(Trainer):
     """
-    Trainer for the Tree Policy Optimization (RandomGRPO) method. 
+    Trainer for the Tree Policy Optimization (SMCGRPO) method. 
 
     Args:
         model (`Union[str, PreTrainedModel]`):
@@ -91,7 +85,7 @@ class RandomGRPOTrainer(Trainer):
                   [Using a custom reward function](#using-a-custom-reward-function).
             - A list of reward functions, where each item can independently be any of the above types. Mixing different
             types within the list (e.g., a string model ID and a custom reward function) is allowed.
-        args ([`RandomGRPOConfig`], *optional*, defaults to `None`):
+        args ([`SMCGRPOConfig`], *optional*, defaults to `None`):
             Configuration for this trainer. If `None`, a default configuration is used.
         train_dataset ([`~datasets.Dataset`] or [`~datasets.IterableDataset`]):
             Dataset to use for training. It must include a column `"prompt"`. Any additional columns in the dataset is
@@ -127,13 +121,13 @@ class RandomGRPOTrainer(Trainer):
             PEFT configuration used to wrap the model. If `None`, the model is not wrapped.
     """
 
-    _tag_names = ["randomgrpo"]
+    _tag_names = ["smcgrpo"]
 
     def __init__(
         self,
         model: Union[str, PreTrainedModel],
         reward_funcs: Union[RewardFunc, list[RewardFunc]],
-        args: RandomGRPOConfig = None,
+        args: SMCGRPOConfig = None,
         train_dataset: Optional[Union[Dataset, IterableDataset]] = None,
         eval_dataset: Optional[Union[Dataset, IterableDataset, dict[str, Union[Dataset, IterableDataset]]]] = None,
         processing_class: Optional[PreTrainedTokenizerBase] = None,
@@ -149,7 +143,7 @@ class RandomGRPOTrainer(Trainer):
         if args is None:
             model_name = model if isinstance(model, str) else model.config._name_or_path
             model_name = model_name.split("/")[-1]
-            args = RandomGRPOConfig(f"{model_name}-RandomGRPO")
+            args = SMCGRPOConfig(f"{model_name}-SMCGRPO")
 
         # Models
         # Trained model
@@ -164,7 +158,7 @@ class RandomGRPOTrainer(Trainer):
                 model_init_kwargs["torch_dtype"] = torch_dtype
             else:
                 raise ValueError(
-                    "Invalid `torch_dtype` passed to `RandomGRPOConfig`. Expected either 'auto' or a string representing "
+                    "Invalid `torch_dtype` passed to `SMCGRPOConfig`. Expected either 'auto' or a string representing "
                     f"a `torch.dtype` (e.g., 'float32'), but got {torch_dtype}."
                 )
             # Disable caching if gradient checkpointing is enabled (not supported)
@@ -176,7 +170,7 @@ class RandomGRPOTrainer(Trainer):
             model_id = model.config._name_or_path
             if args.model_init_kwargs is not None:
                 raise ValueError(
-                    "You passed `model_init_kwargs` to the `RandomGRPOConfig`, but your model is already instantiated. "
+                    "You passed `model_init_kwargs` to the `SMCGRPOConfig`, but your model is already instantiated. "
                     "This argument can only be used when the `model` argument is a string."
                 )
 
@@ -230,7 +224,7 @@ class RandomGRPOTrainer(Trainer):
         self.reward_processing_classes = reward_processing_classes
 
         # Data collator
-        def data_collator(features):  # No data collation is needed in RandomGRPO
+        def data_collator(features):  # No data collation is needed in SMCGRPO
             return features
 
         # Training arguments
@@ -243,7 +237,7 @@ class RandomGRPOTrainer(Trainer):
         self.beta = args.beta
 
         # The trainer estimates the number of FLOPs (floating-point operations) using the number of elements in the
-        # input tensor associated with the key "input_ids". However, in RandomGRPO, the sampled data does not include the
+        # input tensor associated with the key "input_ids". However, in SMCGRPO, the sampled data does not include the
         # "input_ids" key. Instead, the available keys is "prompt". As a result, the trainer issues the warning:
         # "Could not estimate the number of tokens of the input, floating-point operations will not be computed." To
         # suppress this warning, we set the "estimate_tokens" key in the model's "warnings_issued" dictionary to True.
@@ -353,7 +347,7 @@ class RandomGRPOTrainer(Trainer):
     def _set_signature_columns_if_needed(self):
         # If `self.args.remove_unused_columns` is True, non-signature columns are removed.
         # By default, this method sets `self._signature_columns` to the model's expected inputs.
-        # In RandomGRPOTrainer, we preprocess data, so using the model's signature columns doesn't work.
+        # In SMCGRPOTrainer, we preprocess data, so using the model's signature columns doesn't work.
         # Instead, we set them to the columns expected by the `training_step` method, hence the override.
         if self._signature_columns is None:
             self._signature_columns = ["prompt"]
@@ -513,8 +507,17 @@ class RandomGRPOTrainer(Trainer):
         self._metrics["reward"].append(self.accelerator.gather_for_metrics(rewards).mean().item())
         self._metrics["reward_std"].append(self.accelerator.gather_for_metrics(std_grouped_rewards).mean().item())
 
-        # Select a random set of indices
-        indices = random.sample(range(self.num_generations_reward), self.num_generations_grad)
+        # Select the variance-maximizing set of indices
+        _, sorted_indices = rewards.sort(descending=True)
+        sorted_indices = list(sorted_indices.cpu().numpy())
+        indices = sorted_indices[:self.num_generations_grad]
+        variance = rewards[indices].var().item()
+        for i in range(self.num_generations_grad):
+            _indices = sorted_indices[:i] + sorted_indices[i - self.num_generations_grad:]
+            _variance = rewards[_indices].var().item()
+            if _variance > variance:
+                variance = _variance
+                indices = _indices
 
         # Normalize the rewards to compute the advantages
         rewards = rewards[indices]
@@ -657,7 +660,7 @@ class RandomGRPOTrainer(Trainer):
             tags=tags,
             wandb_url=wandb.run.get_url() if is_wandb_available() and wandb.run is not None else None,
             comet_url=get_comet_experiment_url(),
-            trainer_name="RandomGRPO",
+            trainer_name="SMCGRPO",
             trainer_citation=citation,
             paper_title="",
             paper_id="",

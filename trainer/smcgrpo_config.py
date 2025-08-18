@@ -1,7 +1,6 @@
 """
 This file is adapted from trl.trainers.grpo_config.py (trl version 0.14.0)
 
-Adapted by: Yixuan Even Xu in 2025
 """
 
 from dataclasses import dataclass, field
@@ -11,11 +10,11 @@ from transformers import TrainingArguments
 
 
 @dataclass
-class MaxVarGRPOConfig(TrainingArguments):
+class SMCGRPOConfig(TrainingArguments):
     r"""
-    Configuration class for the [`MaxVarGRPOTrainer`].
+    Configuration class for the [`SMCGRPOTrainer`].
 
-    Only the parameters specific to MaxVarGRPO training are listed here. For details on other parameters, refer to the
+    Only the parameters specific to SMCGRPO training are listed here. For details on other parameters, refer to the
     [`~transformers.TrainingArguments`] documentation.
 
     Using [`~transformers.HfArgumentParser`] we can turn this class into
@@ -27,7 +26,7 @@ class MaxVarGRPOConfig(TrainingArguments):
 
         model_init_kwargs (`dict[str, Any]` or `None`, *optional*, defaults to `None`):
             Keyword arguments for [`~transformers.AutoModelForCausalLM.from_pretrained`], used when the `model`
-            argument of the [`MaxVarGRPOTrainer`] is provided as a string.
+            argument of the [`SMCGRPOTrainer`] is provided as a string.
 
         > Parameters that control the data preprocessing
 
@@ -102,12 +101,12 @@ class MaxVarGRPOConfig(TrainingArguments):
         default=None,
         metadata={
             "help": "Keyword arguments for `transformers.AutoModelForCausalLM.from_pretrained`, used when the `model` "
-            "argument of the `MaxVarGRPOTrainer` is provided as a string."
+            "argument of the `SMCGRPOTrainer` is provided as a string."
         },
     )
 
     # Parameters that control the data preprocessing
-    # The default value remove_unused_columns is overwritten from the parent class, because in MaxVarGRPO we usually rely on
+    # The default value remove_unused_columns is overwritten from the parent class, because in SMCGRPO we usually rely on
     # additional columns to compute the reward
     remove_unused_columns: Optional[bool] = field(
         default=False,

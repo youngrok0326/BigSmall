@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Debug train.py with Hydra",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/train.py",
+      "console": "integratedTerminal",
+      "args": [
+        "hydra.run.dir=.",
+        "wandb.enable=false"
+      ],
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "0",
+        "WANDB_DISABLED": "true"
+      },
+      "justMyCode": true
+    }
+  ]
+}

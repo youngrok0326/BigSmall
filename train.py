@@ -1,7 +1,6 @@
 """
 To train a reasoning model using the Unsloth framework.
 
-Developed by: Yixuan Even Xu in 2025
 """
 
 import hydra

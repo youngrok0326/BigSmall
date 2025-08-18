@@ -1,7 +1,6 @@
 """
 Implementation of the evaluation function for testing language models on math datasets.
 
-Developed by: Yixuan Even Xu in 2025
 """
 
 from omegaconf import DictConfig

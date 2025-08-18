@@ -1,7 +1,6 @@
 """
 To evaluate the performance of a run by testing all LoRA checkpoints.
 
-Developed by: Yixuan Even Xu in 2025
 """
 
 import re

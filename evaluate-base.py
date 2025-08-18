@@ -1,7 +1,6 @@
 """
 To evaluate the base model performance.
 
-Developed by: Yixuan Even Xu in 2025
 """
 
 import json

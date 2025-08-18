@@ -1,7 +1,6 @@
 """
 This file is adapted from unsloth.models.rl (unsloth version 2025.2.4)
 
-Adapted by: Yixuan Even Xu in 2025
 """
 
 __all__ = [
