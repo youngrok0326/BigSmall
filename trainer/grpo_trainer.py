@@ -68,8 +68,6 @@ from trl.trainer.utils import (
     selective_log_softmax,
 )
 
-from trainer.smc_generator import generate_completions_smc
-
 
 if is_peft_available():
     from peft import PeftConfig, get_peft_model
@@ -1344,11 +1342,6 @@ class GRPOTrainer(Trainer):
         rewards_per_func = gather(rewards_per_func)
         return rewards_per_func
 
-    @torch.no_grad()
-    def _generate_completions_smc(self, unwrapped_model: nn.Module, prompt_ids: torch.Tensor, prompt_mask: torch.Tensor) -> dict:
-        """Wrapper to call the external TSMC generator function."""
-        return generate_completions_smc(self, unwrapped_model, prompt_ids, prompt_mask)
-    
     def _generate_and_score_completions(
         self, inputs: list[dict[str, Union[torch.Tensor, Any]]]
     ) -> dict[str, Union[torch.Tensor, Any]]:
@@ -1419,25 +1412,9 @@ class GRPOTrainer(Trainer):
                 prompts_text = [
                     re.sub(rf"({re.escape(self.image_token)})+", self.image_token, text) for text in prompts_text
                 ]
-                
-        # TSMC Implementation
-        if self.use_vllm or self.use_transformers_paged:
-            warnings.warn("`use_smc` is enabled, but an optimized generator is also selected. "
-                            "TSMC's manual loop will be used, ignoring the optimized generator.")
-            
-        with (
-                profiling_context(self, "transformers.generate"),
-                unwrap_model_for_generation(
-                    self.model_wrapped, self.accelerator, gather_deepspeed3_params=self.args.ds3_gather_for_generation
-                ) as unwrapped_model,
-                torch.no_grad(),
-                FSDP.summon_full_params(self.model_wrapped, recurse=False) if self.is_fsdp_enabled else nullcontext(),
-        ):
-            completion_ids = self._generate_completions_smc(unwrapped_model, prompt_ids, prompt_mask)
-            prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
 
-        """ # Generate completions using either vLLM or regular generation
-        elif self.use_vllm:
+        # Generate completions using either vLLM or regular generation
+        if self.use_vllm:
             # First, update the vLLM weights if needed
             if self.state.global_step != self._last_loaded_step:
                 self._move_model_to_vllm()
@@ -1603,7 +1580,7 @@ class GRPOTrainer(Trainer):
             # Compute prompt length and extract completion ids
             prompt_length = prompt_ids.size(1)
             prompt_ids = prompt_completion_ids[:, :prompt_length]
-            completion_ids = prompt_completion_ids[:, prompt_length:] """
+            completion_ids = prompt_completion_ids[:, prompt_length:]
 
         # Mask everything after the first EOS token
         is_eos = completion_ids == self.eos_token_id

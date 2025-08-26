@@ -6,14 +6,15 @@ To train a reasoning model using the Unsloth framework.
 import hydra
 from omegaconf import DictConfig
 
+
 @hydra.main(version_base=None, config_path="config", config_name="train")
 def main(cfg: DictConfig) -> None:
+    from utils.patcher import apply_patch
+    apply_patch(cfg.rl.algorithm)
     # Patch the trl trainers to use FastLanguageModel
     from unsloth import FastLanguageModel
     from transformers import AutoTokenizer
-    from utils.unsloth import PatchFastRL
-    PatchFastRL(cfg.rl.algorithm, FastLanguageModel)
-
+    
     # Load the model
     pretrained_args = {
         "model_name": cfg.model.model_name,
@@ -40,24 +41,25 @@ def main(cfg: DictConfig) -> None:
     # dataset_testing  = get_math8k_questions(split = "test")
 
     # Import the trainer and config
-    import importlib
-    trainer_module = importlib.import_module(f"trainer.{cfg.rl.algorithm.lower()}_trainer")
-    config_module = importlib.import_module(f"trainer.{cfg.rl.algorithm.lower()}_config")
-    Trainer = getattr(trainer_module, f"{cfg.rl.algorithm}Trainer")
-    Config = getattr(config_module, f"{cfg.rl.algorithm}Config")
+    from trl import GRPOTrainer, GRPOConfig
+    Trainer = GRPOTrainer
+    Config = GRPOConfig
     
     # Initialize the trainer
     rlparams = {
         "algorithm": cfg.rl.algorithm,
         "max_prompt_length": cfg.rl.max_prompt_length,
         "max_completion_length": cfg.rl.max_completion_length,
-        "num_generations_reward": cfg.rl.num_generations_reward,
-        "num_generations_grad": cfg.rl.num_generations_grad,
-        "advantage_decay": cfg.rl.advantage_decay,
+        "num_generations": cfg.rl.num_generations,
         "max_steps": cfg.rl.max_steps,
         "save_steps": cfg.rl.save_steps,
         "beta": cfg.rl.beta,
         "save_strategy": "steps" if cfg.rl.save_strategy == "steps" else "no",
+        "epsilon": cfg.rl.epsilon,
+        "epsilon_high": cfg.rl.epsilon_high,
+        "delta": cfg.rl.delta,
+        "loss_type": cfg.rl.loss_type,
+        "mask_truncated_completions": cfg.rl.mask_truncated_completions
     }
     if cfg.wandb.enable:
         import wandb
@@ -72,7 +74,6 @@ def main(cfg: DictConfig) -> None:
     valid_params = signature(Config.__init__).parameters.keys()
     rlparams = {k: v for k, v in rlparams.items() if k in valid_params}
     training_args = Config(
-        use_vllm = cfg.optim.use_vllm,
         learning_rate = cfg.optim.learning_rate,
         adam_beta1 = cfg.optim.adam_beta1,
         adam_beta2 = cfg.optim.adam_beta2,
@@ -132,7 +133,7 @@ def main(cfg: DictConfig) -> None:
     # Start training
     if cfg.rl.save_strategy == "time":
         trainer.add_callback(TimedCheckpointCallback(cfg.rl.save_interval, cfg.rl.max_time))
-    trainer.train()
+    trainer.train(resume_from_checkpoint=cfg.rl.resume_from_checkpoint)
 
 if __name__ == "__main__":
     main()

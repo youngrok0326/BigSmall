@@ -4,7 +4,7 @@ model:
   max_seq_length: 1024
   lora_rank: 64
   load_in_4bit: true
-  fast_inference: true
+  fast_inference: false # use_vllm
   target_modules:
     - "q_proj"
     - "k_proj"
@@ -15,34 +15,45 @@ model:
     - "down_proj"
   random_state: 42
 wandb:
-  enable: false
-  project_name: "PODS-Babel"
-  run_name: "Instruct-GSM8K-16-16-Run1"
+  enable: true
+  project_name: "SMCGRPO"
+  run_name: base_no_vllm #"Instruct-GSM8K-16-16-Run1"
 rl:
-  algorithm: "MaxVarGRPO"
+  algorithm: "GRPO"
   dataset: "gsm8k"
   max_prompt_length: 512
   max_completion_length: 512
-  num_generations_reward: 16
-  num_generations_grad: 16
-  advantage_decay: 1.0
+  num_generations: 16
   max_steps: 8000
   save_strategy: "time"
   save_steps: 100
   save_interval: 1800
-  max_time: 21600
+  max_time: 
   beta: 0.0
+  epsilon: 0.2
+  epsilon_high: #0.28 # one sided
+  delta: #1.5 # two sided
+  loss_type: 'grpo' # 'bnpo', 'dr_grpo'
+  mask_truncated_completions: # True #DAPO
+  resume_from_checkpoint: true
 optim:
   learning_rate: 5e-6
   lr_scheduler_type: "constant"
-  use_vllm: true
-  optim: "adamw_8bit"
+  # use_vllm: false # TODO: optimize on vllm
+  optim: "adamw_8bit" #TODO: muon optimizer
   adam_beta1: 0.9
   adam_beta2: 0.99
   weight_decay: 0.1
   warmup_ratio: 0.01
   temperature: 0.9
   max_grad_norm: 0.1
-  per_device_train_batch_size: 1
+  per_device_train_batch_size: 1 # We now expect `per_device_train_batch_size` to be a multiple of `num_generations`
   gradient_accumulation_steps: 1
   logging_steps: 1
+smc:
+  smc_temperature: 0.5
+  smc_warmup_tokens: 50
+  smc_max_resampling_steps: 5
+  smc_step_delimiter_token_id:  #TODO: Figure out the delimiter token ID # 13 is the ID for the newline character in Llama
+  smc_beta: 1.0
+

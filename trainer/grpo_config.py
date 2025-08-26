@@ -579,35 +579,6 @@ class GRPOConfig(TrainingArguments):
             "all prompts are logged."
         },
     )
-    
-    # --- START: tsmc configuration ---
-    use_smc: bool = field(
-        default=False,
-        metadata={"help": "Whether to use Twisted Sequential Monte Carlo for generating completions."},
-    )
-    smc_temperature: float = field(
-        default=1.0,
-        metadata={"help": "Temperature for sampling during the TSMC loop."},
-    )
-    smc_warmup_tokens: int = field(
-        default=50,
-        metadata={
-            "help": "Number of initial tokens to generate before the first TSMC resampling step is allowed."
-        },
-    )
-    smc_max_resampling_steps: int = field(
-        default=5,
-        metadata={"help": "Maximum number of resampling steps to perform during generation."},
-    )
-    smc_step_delimiter_token_id: Optional[int] = field(
-        default=None,
-        metadata={"help": "The token ID that marks the end of a reasoning step."},
-    )
-    smc_beta: float = field(
-        default=1.0,
-        metadata={"help": "The beta parameter for the SMC algorithm."},
-    )
-    # --- END: tsmc configuration ---
 
     def __post_init__(self):
         self.bf16 = not (self.fp16) if self.bf16 is None else self.bf16

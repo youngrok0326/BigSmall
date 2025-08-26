@@ -12,10 +12,11 @@
         "wandb.enable=false"
       ],
       "env": {
-        "CUDA_VISIBLE_DEVICES": "0",
+        "CUDA_VISIBLE_DEVICES": "7",
         "WANDB_DISABLED": "true"
       },
-      "justMyCode": true
+      "justMyCode": false,
+      "subProcess": true
     }
   ]
 }
