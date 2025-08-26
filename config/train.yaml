@@ -15,7 +15,7 @@ model:
     - "down_proj"
   random_state: 42
 wandb:
-  enable: false
+  enable: true
   project_name: "SMCGRPO"
   run_name: smc_base_no_vllm #"Instruct-GSM8K-16-16-Run1"
 rl:
@@ -28,7 +28,7 @@ rl:
   save_strategy: "time"
   save_steps: 100
   save_interval: 1800
-  max_time: inf
+  max_time: .inf
   beta: 0.0
   epsilon: 0.2
   epsilon_high: #0.28 # one sided
