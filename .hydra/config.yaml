@@ -19,7 +19,7 @@ wandb:
   project_name: SMCGRPO
   run_name: base_no_vllm
 rl:
-  algorithm: GRPO
+  algorithm: SMCGRPO
   dataset: gsm8k
   max_prompt_length: 512
   max_completion_length: 512
@@ -28,13 +28,14 @@ rl:
   save_strategy: time
   save_steps: 100
   save_interval: 1800
-  max_time: 21600
+  max_time: 'inf'
   beta: 0.0
   epsilon: 0.2
   epsilon_high: null
   delta: null
   loss_type: grpo
   mask_truncated_completions: null
+  resume_from_checkpoint: true
 optim:
   learning_rate: 5.0e-06
   lr_scheduler_type: constant
@@ -52,5 +53,8 @@ smc:
   smc_temperature: 0.5
   smc_warmup_tokens: 50
   smc_max_resampling_steps: 5
-  smc_step_delimiter_token_id: null
+  smc_step_delimiter_string: '
+
+
+    '
   smc_beta: 1.0

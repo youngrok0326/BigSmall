@@ -61,6 +61,16 @@ def main(cfg: DictConfig) -> None:
         "loss_type": cfg.rl.loss_type,
         "mask_truncated_completions": cfg.rl.mask_truncated_completions
     }
+    if "smc" in cfg.rl.algorithm.lower():
+        smcparams = {
+            "smc_temperature": cfg.smc.smc_temperature,
+            "smc_warmup_tokens": cfg.smc.smc_warmup_tokens,
+            "smc_max_resampling_steps": cfg.smc.smc_max_resampling_steps,
+            "smc_step_delimiter_string": cfg.smc.smc_step_delimiter_string,
+            "smc_beta": cfg.smc.smc_beta,
+        } #TODO: check if this is correctly fed into a config after unsloth patching
+    else:
+        smcparams = {} 
     if cfg.wandb.enable:
         import wandb
         wandb_run = wandb.init(
@@ -91,6 +101,7 @@ def main(cfg: DictConfig) -> None:
         report_to = "wandb" if cfg.wandb.enable else None,
         output_dir = f"checkpoints/{cfg.wandb.run_name}",
         **rlparams,
+        **smcparams
     )
     reward_funcs = [correctness_reward_func]
     if cfg.rl.dataset == "gsm8k":

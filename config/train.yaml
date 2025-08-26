@@ -15,11 +15,11 @@ model:
     - "down_proj"
   random_state: 42
 wandb:
-  enable: true
+  enable: false
   project_name: "SMCGRPO"
-  run_name: base_no_vllm #"Instruct-GSM8K-16-16-Run1"
+  run_name: smc_base_no_vllm #"Instruct-GSM8K-16-16-Run1"
 rl:
-  algorithm: "GRPO"
+  algorithm: "SMCGRPO"
   dataset: "gsm8k"
   max_prompt_length: 512
   max_completion_length: 512
@@ -28,7 +28,7 @@ rl:
   save_strategy: "time"
   save_steps: 100
   save_interval: 1800
-  max_time: 
+  max_time: inf
   beta: 0.0
   epsilon: 0.2
   epsilon_high: #0.28 # one sided
@@ -54,6 +54,6 @@ smc:
   smc_temperature: 0.5
   smc_warmup_tokens: 50
   smc_max_resampling_steps: 5
-  smc_step_delimiter_token_id:  #TODO: Figure out the delimiter token ID # 13 is the ID for the newline character in Llama
+  smc_step_delimiter_string: "\n\n"  #TODO: Figure out the delimiter token ID # 13 is the ID for the newline character in Llama
   smc_beta: 1.0
 

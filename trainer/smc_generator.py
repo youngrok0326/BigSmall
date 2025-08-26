@@ -26,7 +26,7 @@ def generate_completions_smc(
     prompt_ids: torch.Tensor,
     prompt_mask: torch.Tensor
 ) -> torch.Tensor:
-    
+
     device = trainer.accelerator.device
     batch_size, prompt_len = prompt_ids.shape
     total_len = prompt_len + trainer.max_completion_length
@@ -45,6 +45,14 @@ def generate_completions_smc(
     resampling_steps_done = torch.zeros(batch_size, dtype=torch.long, device=device)
     
     attention_mask = prompt_mask
+    
+    # segmenting reasoning steps
+    delimiter_tokens = trainer.tokenizer.encode(
+        trainer.args.smc_step_delimiter_string, 
+        add_special_tokens=False
+    )
+    delimiter_len = len(delimiter_tokens)
+    delimiter_tensor = torch.tensor(delimiter_tokens, device=device, dtype=torch.long)
 
     model_inputs = unwrapped_model.prepare_inputs_for_generation(prompt_ids, past_key_values=None, attention_mask=prompt_mask)
     outputs = unwrapped_model(**model_inputs, use_cache=True)
@@ -132,7 +140,7 @@ def generate_completions_smc(
 
         if trainer.ref_model is None:
             with unwrapped_model.disable_adapter():
-                ref_outputs = unwrapped_model(**ref_model_inputs, use_cache=False, return_dict=True)
+                ref_outputs = unwrapped_model(**ref_model_inputs, use_cache=False, return_dict=True) #TODO: in the future, we could reduce this extra forward pass
         else:
             ref_outputs = trainer.ref_model(**ref_model_inputs, use_cache=False, return_dict=True)
         
@@ -142,7 +150,11 @@ def generate_completions_smc(
         per_token_kl = token_logp_policy - token_logp_ref
         cumulative_kl[active_for_generation] += per_token_kl[active_for_generation]
 
-        is_at_delimiter = (next_tokens == trainer.args.smc_step_delimiter_token_id)
+        # segment the reasoning steps
+        is_at_delimiter = torch.zeros(batch_size, dtype=torch.bool, device=device)
+        if delimiter_len > 0 and cur_len >= prompt_len + delimiter_len - 1:
+            last_n_tokens = sequences[:, cur_len - delimiter_len + 1 : cur_len + 1]
+            is_at_delimiter = torch.all(last_n_tokens == delimiter_tensor, dim=1)
         
         can_resample_pause = (
             is_at_delimiter &
@@ -165,7 +177,7 @@ def generate_completions_smc(
 
         if is_step_finished.all():
             # The score `V(s_t)` is beta * cumulative_kl.
-            current_scores = trainer.args.beta * cumulative_kl
+            current_scores = trainer.args.smc_beta * cumulative_kl
             
             # Reshape for group-wise standardization.
             grouped_scores = current_scores.view(num_groups, group_size)

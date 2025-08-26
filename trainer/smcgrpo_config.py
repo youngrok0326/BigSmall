@@ -599,9 +599,9 @@ class GRPOConfig(TrainingArguments):
         default=5,
         metadata={"help": "Maximum number of resampling steps to perform during generation."},
     )
-    smc_step_delimiter_token_id: Optional[int] = field(
+    smc_step_delimiter_string: str = field(
         default=None,
-        metadata={"help": "The token ID that marks the end of a reasoning step."},
+        metadata={"help": "The string that marks the end of a reasoning step."},
     )
     smc_beta: float = field(
         default=1.0,
