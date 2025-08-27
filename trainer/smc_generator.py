@@ -47,8 +47,8 @@ def generate_completions_smc(
     attention_mask = prompt_mask
     
     # segmenting reasoning steps
-    delimiter_tokens = trainer.tokenizer.encode(
-        trainer.args.smc_step_delimiter_string, 
+    delimiter_tokens = trainer.processing_class.encode(
+        trainer.args.smc_step_delimiter_string,
         add_special_tokens=False
     )
     delimiter_len = len(delimiter_tokens)
@@ -66,18 +66,12 @@ def generate_completions_smc(
         position_ids = torch.tensor([[cur_len]], dtype=torch.long, device=device).expand(batch_size, -1)
         active_for_generation = ~is_step_finished
         
-        # repetition penalty
+        # repetition penalty #TODO: vectorized way
         if trainer.args.repetition_penalty != 1.0:
             generated_so_far = sequences[:, prompt_len:cur_len]
-            for i in range(batch_size):
-                # Find unique tokens to penalize for each sequence
-                unique_tokens = torch.unique(generated_so_far[i])
-                # Penalize by dividing positive logits and multiplying negative logits
-                next_token_logits[i, unique_tokens] = torch.where(
-                    next_token_logits[i, unique_tokens] > 0,
-                    next_token_logits[i, unique_tokens] / trainer.args.repetition_penalty,
-                    next_token_logits[i, unique_tokens] * trainer.args.repetition_penalty,
-                )
+            score = torch.gather(next_token_logits, 1, generated_so_far)
+            score = torch.where(score < 0, score * trainer.args.repetition_penalty, score / trainer.args.repetition_penalty)
+            next_token_logits.scatter_(1, generated_so_far, score)
                 
         # Apply Top-K and Top-P filtering
         # Get the top k logits and set the rest to -inf
@@ -128,27 +122,27 @@ def generate_completions_smc(
         ], dim=1)
         
         # CUMULATIVE KL CALCULATION for the single new token
-        logps_policy = torch.nn.functional.log_softmax(next_token_logits, dim=-1)
-        token_logp_policy = logps_policy.gather(-1, sampled_tokens.unsqueeze(-1)).squeeze(-1)
+        # logps_policy = torch.nn.functional.log_softmax(next_token_logits, dim=-1)
+        # token_logp_policy = logps_policy.gather(-1, sampled_tokens.unsqueeze(-1)).squeeze(-1)
         
-        ref_model_inputs = unwrapped_model.prepare_inputs_for_generation(
-            next_tokens.unsqueeze(-1),
-            past_key_values=past_key_values,
-            attention_mask=attention_mask  #TODO: correct attention mask?
-        )
-        ref_model_inputs['position_ids'] = position_ids
+        # ref_model_inputs = unwrapped_model.prepare_inputs_for_generation(
+        #     next_tokens.unsqueeze(-1),
+        #     past_key_values=past_key_values,
+        #     attention_mask=attention_mask  #TODO: correct attention mask?
+        # )
+        # ref_model_inputs['position_ids'] = position_ids
 
-        if trainer.ref_model is None:
-            with unwrapped_model.disable_adapter():
-                ref_outputs = unwrapped_model(**ref_model_inputs, use_cache=False, return_dict=True) #TODO: in the future, we could reduce this extra forward pass
-        else:
-            ref_outputs = trainer.ref_model(**ref_model_inputs, use_cache=False, return_dict=True)
+        # if trainer.ref_model is None:
+        #     with unwrapped_model.disable_adapter():
+        #         ref_outputs = unwrapped_model(**ref_model_inputs, use_cache=False, return_dict=True) #TODO: in the future, we could reduce this extra forward pass
+        # else:
+        #     ref_outputs = trainer.ref_model(**ref_model_inputs, use_cache=False, return_dict=True)
         
-        logps_ref = torch.nn.functional.log_softmax(ref_outputs.logits[:, -1, :], dim=-1)
-        token_logp_ref = logps_ref.gather(-1, sampled_tokens.unsqueeze(-1)).squeeze(-1)
+        # logps_ref = torch.nn.functional.log_softmax(ref_outputs.logits[:, -1, :], dim=-1)
+        # token_logp_ref = logps_ref.gather(-1, sampled_tokens.unsqueeze(-1)).squeeze(-1)
 
-        per_token_kl = token_logp_policy - token_logp_ref
-        cumulative_kl[active_for_generation] += per_token_kl[active_for_generation]
+        # per_token_kl = token_logp_policy - token_logp_ref
+        # cumulative_kl[active_for_generation] += per_token_kl[active_for_generation]
 
         # segment the reasoning steps
         is_at_delimiter = torch.zeros(batch_size, dtype=torch.bool, device=device)
@@ -176,6 +170,31 @@ def generate_completions_smc(
         next_token_logits = outputs.logits[:, -1, :]
 
         if is_step_finished.all():
+            # 1. Get the full sequences for the completed step
+            step_end_len = cur_len + 1
+            full_sequences = sequences[:, :step_end_len]
+            full_attention_mask = attention_mask[:, :step_end_len]
+            
+            # 2. Get logps for the full sequences from both models
+            # This is more efficient as it's one large forward pass instead of many small ones.
+            logps_policy, _ = trainer._get_per_token_logps_and_entropies(
+                unwrapped_model, full_sequences, full_attention_mask, step_end_len - prompt_len
+            )
+            if trainer.ref_model is None:
+                with unwrapped_model.disable_adapter():
+                    logps_ref, _ = trainer._get_per_token_logps_and_entropies(
+                        unwrapped_model, full_sequences, full_attention_mask, step_end_len - prompt_len
+                    )
+            else:
+                logps_ref, _ = trainer._get_per_token_logps_and_entropies(
+                    trainer.ref_model, full_sequences, full_attention_mask, step_end_len - prompt_len
+                )
+            
+            # 3. Calculate cumulative KL over the entire generated text so far
+            completion_mask = full_attention_mask[:, prompt_len:]
+            per_token_kl = logps_policy - logps_ref
+            cumulative_kl = (per_token_kl * completion_mask).sum(dim=-1)
+            
             # The score `V(s_t)` is beta * cumulative_kl.
             current_scores = trainer.args.smc_beta * cumulative_kl
             
