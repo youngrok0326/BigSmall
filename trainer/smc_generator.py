@@ -2,6 +2,8 @@ import torch
 from torch import nn
 from typing import TYPE_CHECKING, Dict, Any
 
+import wandb
+
 if TYPE_CHECKING:
     from .smcgrpo_trainer import GRPOTrainer
 
@@ -51,6 +53,7 @@ def generate_completions_smc(
     
     # segmenting reasoning steps
     delimiter_len = 0
+    reasoning_step_counter = 0
     if trainer.args.smc_step_delimiter_string is not None:
         delimiter_tokens = trainer.processing_class.encode(
             trainer.args.smc_step_delimiter_string,
@@ -127,29 +130,6 @@ def generate_completions_smc(
             attention_mask,
             torch.ones((batch_size, 1), dtype=torch.long, device=device)
         ], dim=1)
-        
-        # CUMULATIVE KL CALCULATION for the single new token
-        # logps_policy = torch.nn.functional.log_softmax(next_token_logits, dim=-1)
-        # token_logp_policy = logps_policy.gather(-1, sampled_tokens.unsqueeze(-1)).squeeze(-1)
-        
-        # ref_model_inputs = unwrapped_model.prepare_inputs_for_generation(
-        #     next_tokens.unsqueeze(-1),
-        #     past_key_values=past_key_values,
-        #     attention_mask=attention_mask  #TODO: correct attention mask?
-        # )
-        # ref_model_inputs['position_ids'] = position_ids
-
-        # if trainer.ref_model is None:
-        #     with unwrapped_model.disable_adapter():
-        #         ref_outputs = unwrapped_model(**ref_model_inputs, use_cache=False, return_dict=True) #TODO: in the future, we could reduce this extra forward pass
-        # else:
-        #     ref_outputs = trainer.ref_model(**ref_model_inputs, use_cache=False, return_dict=True)
-        
-        # logps_ref = torch.nn.functional.log_softmax(ref_outputs.logits[:, -1, :], dim=-1)
-        # token_logp_ref = logps_ref.gather(-1, sampled_tokens.unsqueeze(-1)).squeeze(-1)
-
-        # per_token_kl = token_logp_policy - token_logp_ref
-        # cumulative_kl[active_for_generation] += per_token_kl[active_for_generation]
 
         # segment the reasoning steps
         is_at_delimiter = torch.zeros(batch_size, dtype=torch.bool, device=device)
@@ -219,7 +199,7 @@ def generate_completions_smc(
             
             # To implement sqrt(V), calculate log(V) and multiply by temperature (0.5).
             resampling_log_weights = torch.log(torch.abs(standardized_scores) + 1e-9) * trainer.args.smc_temperature
-            
+                
             resampled_indices_local = ordered_stratified_resampling(resampling_log_weights)
             base_indices = torch.arange(0, batch_size, group_size, device=device).unsqueeze(1)
             final_indices = (resampled_indices_local + base_indices).flatten()
@@ -236,6 +216,16 @@ def generate_completions_smc(
             resampling_steps_done += 1
             is_step_finished = is_finished.clone()
             
+            # logging
+            if trainer.is_world_process_zero() and "wandb" in trainer.args.report_to:
+                wandb.define_metric("reasoning_step")
+                wandb.define_metric("smc/*", step_metric="reasoning_step")
+                wandb.log({
+                    "smc/per_step_sum_of_ratios": sum_of_ratios.mean().item(),
+                    "global_step": trainer.state.global_step,
+                    "reasoning_step": reasoning_step_counter
+                })
+            reasoning_step_counter += 1
     completion_ids = sequences[:, prompt_len:]
 
     return completion_ids

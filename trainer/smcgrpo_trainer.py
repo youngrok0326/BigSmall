@@ -882,6 +882,9 @@ class GRPOTrainer(Trainer):
                     self.reward_funcs[i] = self.accelerator.prepare_model(
                         reward_func, evaluation_mode=True, device_placement=True
                     )
+                    
+        from .smc_generator import SMCGenerator
+        self.smc_generator = SMCGenerator(self)
 
     def _set_signature_columns_if_needed(self):
         # If `self.args.remove_unused_columns` is True, non-signature columns are removed.
@@ -1347,7 +1350,7 @@ class GRPOTrainer(Trainer):
     @torch.no_grad()
     def _generate_completions_smc(self, unwrapped_model: nn.Module, prompt_ids: torch.Tensor, prompt_mask: torch.Tensor) -> dict:
         """Wrapper to call the external TSMC generator function."""
-        return generate_completions_smc(self, unwrapped_model, prompt_ids, prompt_mask)
+        return self.smc_generator.generate(unwrapped_model, prompt_ids, prompt_mask)
     
     def _generate_and_score_completions(
         self, inputs: list[dict[str, Union[torch.Tensor, Any]]]

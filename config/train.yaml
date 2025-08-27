@@ -15,9 +15,9 @@ model:
     - "down_proj"
   random_state: 42
 wandb:
-  enable: true
+  enable: false
   project_name: "SMCGRPO"
-  run_name: smc_base_no_vllm #"Instruct-GSM8K-16-16-Run1"
+  run_name: smc_modified #"Instruct-GSM8K-16-16-Run1"
 rl:
   algorithm: "SMCGRPO"
   dataset: "gsm8k"
@@ -35,7 +35,7 @@ rl:
   delta: #1.5 # two sided
   loss_type: 'grpo' # 'bnpo', 'dr_grpo'
   mask_truncated_completions: # True #DAPO
-  resume_from_checkpoint: true
+  resume_from_checkpoint:
 optim:
   learning_rate: 5e-6
   lr_scheduler_type: "constant"
