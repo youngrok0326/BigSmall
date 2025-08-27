@@ -36,8 +36,11 @@ def generate_completions_smc(
     sequences = torch.full((batch_size, total_len), trainer.pad_token_id, dtype=torch.long, device=device)
     sequences[:, :prompt_len] = prompt_ids
     
-    # State variable to store the cumulative KL divergence.
-    cumulative_kl = torch.zeros(batch_size, dtype=torch.float32, device=device)
+    all_policy_logits = torch.empty(
+        (batch_size, trainer.max_completion_length, unwrapped_model.config.vocab_size),
+        dtype=unwrapped_model.dtype,
+        device=device
+    )
    
     past_key_values = None
     is_finished = torch.zeros(batch_size, dtype=torch.bool, device=device)
@@ -47,12 +50,13 @@ def generate_completions_smc(
     attention_mask = prompt_mask
     
     # segmenting reasoning steps
-    delimiter_tokens = trainer.processing_class.encode(
-        trainer.args.smc_step_delimiter_string,
-        add_special_tokens=False
-    )
-    delimiter_len = len(delimiter_tokens)
-    delimiter_tensor = torch.tensor(delimiter_tokens, device=device, dtype=torch.long)
+    delimiter_len = 0
+    if trainer.args.smc_step_delimiter_string is not None:
+        delimiter_tokens = trainer.processing_class.encode(
+            trainer.args.smc_step_delimiter_string,
+            add_special_tokens=False)
+        delimiter_len = len(delimiter_tokens)
+        delimiter_tensor = torch.tensor(delimiter_tokens, device=device, dtype=torch.long)
 
     model_inputs = unwrapped_model.prepare_inputs_for_generation(prompt_ids, past_key_values=None, attention_mask=prompt_mask)
     outputs = unwrapped_model(**model_inputs, use_cache=True)
@@ -105,6 +109,9 @@ def generate_completions_smc(
             threshold = max_probs * trainer.args.min_p
             indices_to_remove = probs < threshold
             next_token_logits[indices_to_remove] = -float("Inf")
+            
+        completion_pos = cur_len - prompt_len
+        all_policy_logits[:, completion_pos, :] = next_token_logits
         
         # Apply Temperature and Sample
         probs = torch.nn.functional.softmax(next_token_logits / trainer.temperature, dim=-1)
@@ -162,41 +169,47 @@ def generate_completions_smc(
         model_inputs = unwrapped_model.prepare_inputs_for_generation(
             next_tokens.unsqueeze(-1),
             past_key_values=past_key_values,
-            attention_mask=attention_mask)
+            attention_mask=attention_mask,
+            return_dict=True)
         model_inputs['position_ids'] = position_ids
-
-        outputs = unwrapped_model(**model_inputs, use_cache=True, return_dict=True)
+        outputs = unwrapped_model(**model_inputs, use_cache=True)
         past_key_values = outputs.past_key_values
         next_token_logits = outputs.logits[:, -1, :]
 
         if is_step_finished.all():
-            # 1. Get the full sequences for the completed step
             step_end_len = cur_len + 1
             full_sequences = sequences[:, :step_end_len]
             full_attention_mask = attention_mask[:, :step_end_len]
+            completion_len = step_end_len - prompt_len
             
-            # 2. Get logps for the full sequences from both models
-            # This is more efficient as it's one large forward pass instead of many small ones.
-            logps_policy, _ = trainer._get_per_token_logps_and_entropies(
-                unwrapped_model, full_sequences, full_attention_mask, step_end_len - prompt_len
-            )
+            # 1. Get policy logits from our stored tensor.
+            policy_logits = all_policy_logits[:, :completion_len, :]
+            
+            # 2. Run forward pass for the reference model ONLY.
+            # We use the _get_logps_fallback helper as it contains all necessary logic.
+            if 'selective_log_softmax' not in locals(): from trl.trainer.utils import selective_log_softmax
+            if '_get_logps_fallback' not in locals():
+                @torch.no_grad()
+                def _get_logps_fallback(model, sequences, attention_mask, completion_len):
+                    outputs = model(input_ids=sequences, attention_mask=attention_mask, return_dict=True)
+                    logits, completion_ids = outputs.logits[:, -completion_len-1:-1], sequences[:, -completion_len:]
+                    return selective_log_softmax(logits, completion_ids)
+
             if trainer.ref_model is None:
                 with unwrapped_model.disable_adapter():
-                    logps_ref, _ = trainer._get_per_token_logps_and_entropies(
-                        unwrapped_model, full_sequences, full_attention_mask, step_end_len - prompt_len
-                    )
+                    logps_ref = _get_logps_fallback(unwrapped_model, full_sequences, full_attention_mask, completion_len)
             else:
-                logps_ref, _ = trainer._get_per_token_logps_and_entropies(
-                    trainer.ref_model, full_sequences, full_attention_mask, step_end_len - prompt_len
-                )
+                logps_ref = _get_logps_fallback(trainer.ref_model, full_sequences, full_attention_mask, completion_len)
             
-            # 3. Calculate cumulative KL over the entire generated text so far
-            completion_mask = full_attention_mask[:, prompt_len:]
-            per_token_kl = logps_policy - logps_ref
-            cumulative_kl = (per_token_kl * completion_mask).sum(dim=-1)
+            # 3. Calculate policy logps from the stored logits.
+            completion_ids = full_sequences[:, -completion_len:]
+            logps_policy = selective_log_softmax(policy_logits, completion_ids)
             
-            # The score `V(s_t)` is beta * cumulative_kl.
-            current_scores = trainer.args.smc_beta * cumulative_kl
+            # 4. The rest of the scoring logic is now efficient.
+            per_token_ratios = torch.exp(logps_policy - logps_ref)
+            completion_mask = full_attention_mask[:, -completion_len:]
+            sum_of_ratios = (per_token_ratios * completion_mask).sum(dim=-1)
+            current_scores = trainer.args.smc_beta * sum_of_ratios
             
             # Reshape for group-wise standardization.
             grouped_scores = current_scores.view(num_groups, group_size)
@@ -208,20 +221,17 @@ def generate_completions_smc(
             resampling_log_weights = torch.log(torch.abs(standardized_scores) + 1e-9) * trainer.args.smc_temperature
             
             resampled_indices_local = ordered_stratified_resampling(resampling_log_weights)
-            
             base_indices = torch.arange(0, batch_size, group_size, device=device).unsqueeze(1)
             final_indices = (resampled_indices_local + base_indices).flatten()
 
             sequences = sequences[final_indices]
-            cumulative_kl = cumulative_kl[final_indices]
             is_finished = is_finished[final_indices]
             resampling_steps_done = resampling_steps_done[final_indices]
-            
             attention_mask = attention_mask[final_indices]
-            
             past_key_values = tuple(
                 tuple(tensor[final_indices] for tensor in layer) for layer in past_key_values
             )
+            all_policy_logits = all_policy_logits[final_indices]
             
             resampling_steps_done += 1
             is_step_finished = is_finished.clone()
