@@ -239,8 +239,8 @@ class SMCGenerator:
                 "smc/per_step_mean_sum_of_ratios": sum_of_ratios.mean().item(),
                 "smc/per_step_mean_value": mean.item(),
                 "smc/per_step_mean_std": std.item(),
-                "smc/mean_standardized_scores": standardized_scores[~self.was_finished].mean().item(),
-                "smc/mean_resampling_weights": resampling_weights[~self.was_finished].mean().item(),
+                "smc/mean_standardized_value": standardized_value.flatten()[~self.was_finished].mean().item(),
+                "smc/mean_resampling_weight": resampling_weights[~self.was_finished].mean().item(),
                 "global_step": self.trainer.state.global_step,
                 "reasoning_step": self.reasoning_step_counter
             })
