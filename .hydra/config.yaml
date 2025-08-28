@@ -1,5 +1,5 @@
 model:
-  model_name: Qwen/Qwen2.5-3B-Instruct
+  model_name: Qwen/Qwen2.5-Math-1.5B-Instruct
   gpu_memory_utilization: 0.5
   max_seq_length: 1024
   lora_rank: 64
@@ -17,7 +17,7 @@ model:
 wandb:
   enable: false
   project_name: SMCGRPO
-  run_name: base_no_vllm
+  run_name: smc_modified
 rl:
   algorithm: SMCGRPO
   dataset: gsm8k
@@ -28,14 +28,14 @@ rl:
   save_strategy: time
   save_steps: 100
   save_interval: 1800
-  max_time: 'inf'
+  max_time: .inf
   beta: 0.0
   epsilon: 0.2
   epsilon_high: null
   delta: null
   loss_type: grpo
   mask_truncated_completions: null
-  resume_from_checkpoint: true
+  resume_from_checkpoint: null
 optim:
   learning_rate: 5.0e-06
   lr_scheduler_type: constant
@@ -46,7 +46,7 @@ optim:
   warmup_ratio: 0.01
   temperature: 0.9
   max_grad_norm: 0.1
-  per_device_train_batch_size: 1
+  per_device_train_batch_size: 16
   gradient_accumulation_steps: 1
   logging_steps: 1
 smc:

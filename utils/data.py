@@ -9,7 +9,11 @@ from .grader import grade_answer
 from datasets import load_dataset, Dataset, Features, Value, concatenate_datasets
 from transformers import AutoTokenizer
 
-tokenizer_name = "Qwen/Qwen2.5-3B-Instruct"
+# tokenizer_name = "Qwen/Qwen2.5-3B-Instruct"
+def set_tokenizer_name(name):
+    global tokenizer_name
+    tokenizer_name = name
+
 SYSTEM_PROMPT_BASE = \
 """
 An AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., 
@@ -21,19 +25,22 @@ Answer
 </answer>
 """
 
-SYSTEM_PROMPT_INSTRUCT = \
-"""
-You will be given a math question.
-Reason about the question and correct your own mistakes if you make any.
+# SYSTEM_PROMPT_INSTRUCT = \
+# """
+# You will be given a math question.
+# Reason about the question and correct your own mistakes if you make any.
 
-Respond in the following format:
-<think>
-Reason here. Decide to answer when you are confident as your response length is limited.
-</think>
-<answer>
-Answer here.
-</answer>
-"""
+# Respond in the following format:
+# <think>
+# Reason here. Decide to answer when you are confident as your response length is limited.
+# </think>
+# <answer>
+# Answer here.
+# </answer>
+# """
+
+SYSTEM_PROMPT_INSTRUCT = \
+"Please reason step by step, and put your final answer within \\boxed{}."
 
 def extract_xml_answer(text: str) -> str:
     # Extracts the answer block from the XML format

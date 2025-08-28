@@ -11,6 +11,8 @@ from omegaconf import DictConfig
 def main(cfg: DictConfig) -> None:
     from utils.patcher import apply_patch
     apply_patch(cfg.rl.algorithm)
+    from utils.data import set_tokenizer_name
+    set_tokenizer_name(cfg.model.model_name)
     # Patch the trl trainers to use FastLanguageModel
     from unsloth import FastLanguageModel
     from transformers import AutoTokenizer

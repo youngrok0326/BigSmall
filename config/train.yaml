@@ -1,5 +1,5 @@
 model:
-  model_name: "Qwen/Qwen2.5-3B-Instruct"
+  model_name: "Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
   gpu_memory_utilization: 0.5
   max_seq_length: 1024
   lora_rank: 64
@@ -54,6 +54,6 @@ smc:
   smc_temperature: 0.5
   smc_warmup_tokens: 50
   smc_max_resampling_steps: 5
-  smc_step_delimiter_string: "\n\n"  #TODO: Figure out the delimiter token ID # 13 is the ID for the newline character in Llama
+  smc_step_delimiter_string: "\n\n" #"\n\n"  #TODO: Remove from trainer config if not used.
   smc_beta: 1.0
 

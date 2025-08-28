@@ -68,7 +68,7 @@ from trl.trainer.utils import (
     selective_log_softmax,
 )
 
-from trainer.smc_generator import generate_completions_smc
+from trainer.smc_generator import SMCGenerator
 
 
 if is_peft_available():
@@ -883,7 +883,6 @@ class GRPOTrainer(Trainer):
                         reward_func, evaluation_mode=True, device_placement=True
                     )
                     
-        from .smc_generator import SMCGenerator
         self.smc_generator = SMCGenerator(self)
 
     def _set_signature_columns_if_needed(self):
