@@ -70,7 +70,7 @@ class SMCGenerator:
         batch_size = prompt_ids.shape[0]
 
         model_inputs = unwrapped_model.prepare_inputs_for_generation(prompt_ids, past_key_values=None, attention_mask=self.attention_mask, return_dict=True)
-        outputs = unwrapped_model(**model_inputs, use_cache=True)
+        outputs = unwrapped_model(**model_inputs, use_cache=True) #TODO: prefilling
         self.past_key_values = outputs.past_key_values
         next_token_logits = outputs.logits[:, -1, :]
 
@@ -110,7 +110,7 @@ class SMCGenerator:
             self.is_step_finished[step_completion_mask] = True
             self.cur_len[~self.is_step_finished] += 1
             
-            model_inputs = unwrapped_model.prepare_inputs_for_generation(
+            model_inputs = unwrapped_model.prepare_inputs_for_generation( #TODO: 직접 generation 하지말고 transformers .generate활용
                 next_tokens.unsqueeze(-1), 
                 past_key_values=self.past_key_values, 
                 attention_mask=self.attention_mask, 
@@ -121,7 +121,7 @@ class SMCGenerator:
             self.past_key_values = outputs.past_key_values
             next_token_logits = outputs.logits[:, -1, :]
             
-            if self.is_step_finished.all():
+            if self.is_step_finished.all(): #TODO: Last step일 때도 resampling을 해야하는지? 안해두 될거 같은데..
                 self._resample_states(unwrapped_model)
                 self.was_finished = self.is_finished.clone()
                 self.is_step_finished = self.is_finished.clone()
@@ -204,7 +204,7 @@ class SMCGenerator:
         grouped_scores = current_scores.view(num_groups, self.group_size)
         
         # Calculate mean/std only on active (not finished) sequences to avoid skew
-        active_mask = ~self.was_finished.view(num_groups, self.group_size)
+        active_mask = ~self.was_finished.view(num_groups, self.group_size) #TODO: what if only 1 trajectory is left? Don't do resampling? 
         if active_mask.any():
             mean = grouped_scores[active_mask].mean()
             std = grouped_scores[active_mask].std()

@@ -4,7 +4,7 @@ model:
   max_seq_length: 1024
   lora_rank: 64
   load_in_4bit: true
-  fast_inference: false # use_vllm
+  fast_inference: true # use_vllm
   target_modules:
     - "q_proj"
     - "k_proj"
@@ -15,11 +15,11 @@ model:
     - "down_proj"
   random_state: 42
 wandb:
-  enable: true
+  enable: false
   project_name: "SMCGRPO"
-  run_name: smc_modified_a6000 #"Instruct-GSM8K-16-16-Run1"
+  run_name: debug #"Instruct-GSM8K-16-16-Run1"
 rl:
-  algorithm: "SMCGRPO"
+  algorithm: "GRPO"
   dataset: "gsm8k"
   max_prompt_length: 512
   max_completion_length: 512
