@@ -4,7 +4,7 @@ model:
   max_seq_length: 1024
   lora_rank: 64
   load_in_4bit: true
-  fast_inference: true # use_vllm
+  fast_inference: false # use_vllm
   target_modules:
     - "q_proj"
     - "k_proj"
@@ -15,11 +15,11 @@ model:
     - "down_proj"
   random_state: 42
 wandb:
-  enable: false
+  enable: true
   project_name: "SMCGRPO"
-  run_name: debug #"Instruct-GSM8K-16-16-Run1"
+  run_name: smc_math_instruct #"Instruct-GSM8K-16-16-Run1"
 rl:
-  algorithm: "GRPO"
+  algorithm: "SMCGRPO"
   dataset: "gsm8k"
   max_prompt_length: 512
   max_completion_length: 512
@@ -47,10 +47,11 @@ optim:
   warmup_ratio: 0.01
   temperature: 0.9
   max_grad_norm: 0.1
-  per_device_train_batch_size: 16 # We now expect `per_device_train_batch_size` to be a multiple of `num_generations`
+  per_device_train_batch_size: 1 # We now expect `per_device_train_batch_size` to be a multiple of `num_generations`
   gradient_accumulation_steps: 1
   logging_steps: 1
 smc:
+  use_smc: true
   smc_temperature: 0.5
   smc_warmup_tokens: 50
   smc_max_resampling_steps: 5

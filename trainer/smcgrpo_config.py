@@ -580,10 +580,10 @@ class GRPOConfig(TrainingArguments):
         },
     )
     
-    # --- START: tsmc configuration ---
+    # --- START: smc configuration ---
     use_smc: bool = field(
-        default=False,
-        metadata={"help": "Whether to use Twisted Sequential Monte Carlo for generating completions."},
+        default=True,
+        metadata={"help": "Whether to use Sequential Monte Carlo for generating completions."},
     )
     smc_temperature: float = field(
         default=1.0,

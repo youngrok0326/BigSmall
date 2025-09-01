@@ -68,8 +68,6 @@ from trl.trainer.utils import (
     selective_log_softmax,
 )
 
-from trainer.smc_generator import SMCGenerator
-
 
 if is_peft_available():
     from peft import PeftConfig, get_peft_model
@@ -853,6 +851,18 @@ class GRPOTrainer(Trainer):
             if args.generation_kwargs is not None:
                 generation_kwargs.update(args.generation_kwargs)
             self.generation_config = GenerationConfig(**generation_kwargs)
+            
+            smc_params = {
+                "use_smc": self.args.use_smc,
+                "num_generations": self.args.num_generations,
+                "smc_beta": self.args.smc_beta,
+                "smc_temperature": self.args.smc_temperature,
+                "smc_step_delimiter_string": self.args.smc_step_delimiter_string,
+                "smc_warmup_tokens": self.args.smc_warmup_tokens,
+                "smc_max_resampling_steps": self.args.smc_max_resampling_steps,
+            }
+            for key, value in smc_params.items():
+                setattr(self.generation_config, key, value)
 
         # Gradient accumulation requires scaled loss. Normally, loss scaling in the parent class depends on whether the
         # model accepts loss-related kwargs. Since we compute our own loss, this check is irrelevant. We set
@@ -883,7 +893,6 @@ class GRPOTrainer(Trainer):
                         reward_func, evaluation_mode=True, device_placement=True
                     )
                     
-        self.smc_generator = SMCGenerator(self)
 
     def _set_signature_columns_if_needed(self):
         # If `self.args.remove_unused_columns` is True, non-signature columns are removed.
@@ -1427,16 +1436,31 @@ class GRPOTrainer(Trainer):
             warnings.warn("`use_smc` is enabled, but an optimized generator is also selected. "
                             "TSMC's manual loop will be used, ignoring the optimized generator.")
             
+        # logging in generate function
+        logging_config = {
+            "is_main_process": self.is_world_process_zero(),
+            "report_to": self.args.report_to,
+            "global_step": self.state.global_step,
+        }
+    
+        # Regular generation path
         with (
-                profiling_context(self, "transformers.generate"),
-                unwrap_model_for_generation(
-                    self.model_wrapped, self.accelerator, gather_deepspeed3_params=self.args.ds3_gather_for_generation
-                ) as unwrapped_model,
-                torch.no_grad(),
-                FSDP.summon_full_params(self.model_wrapped, recurse=False) if self.is_fsdp_enabled else nullcontext(),
+            profiling_context(self, "transformers.generate"),
+            unwrap_model_for_generation(
+                self.model_wrapped, self.accelerator, gather_deepspeed3_params=self.args.ds3_gather_for_generation
+            ) as unwrapped_model,
+            torch.no_grad(),
+            FSDP.summon_full_params(self.model_wrapped, recurse=False) if self.is_fsdp_enabled else nullcontext(),
         ):
-            completion_ids = self._generate_completions_smc(unwrapped_model, prompt_ids, prompt_mask)
-            prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
+            prompt_inputs["input_ids"], prompt_inputs["attention_mask"] = prompt_ids, prompt_mask
+            prompt_completion_ids = unwrapped_model.generate(
+                **prompt_inputs, custom_generate='.', generation_config=self.generation_config, disable_compile=True,
+                ref_model=self.ref_model, logging_config=logging_config, tokenizer=self.tokenizer
+            )
+        # Compute prompt length and extract completion ids
+        prompt_length = prompt_ids.size(1)
+        prompt_ids = prompt_completion_ids[:, :prompt_length]
+        completion_ids = prompt_completion_ids[:, prompt_length:]
 
         """ # Generate completions using either vLLM or regular generation
         elif self.use_vllm:

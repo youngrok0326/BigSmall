@@ -43,9 +43,7 @@ def main(cfg: DictConfig) -> None:
     # dataset_testing  = get_math8k_questions(split = "test")
 
     # Import the trainer and config
-    from trl import GRPOTrainer, GRPOConfig
-    Trainer = GRPOTrainer
-    Config = GRPOConfig
+    from trl import GRPOTrainer as Trainer, GRPOConfig as Config
     
     # Initialize the trainer
     rlparams = {
@@ -63,14 +61,14 @@ def main(cfg: DictConfig) -> None:
         "loss_type": cfg.rl.loss_type,
         "mask_truncated_completions": cfg.rl.mask_truncated_completions
     }
-    if "smc" in cfg.rl.algorithm.lower():
+    if cfg.smc.use_smc:
         smcparams = {
             "smc_temperature": cfg.smc.smc_temperature,
             "smc_warmup_tokens": cfg.smc.smc_warmup_tokens,
             "smc_max_resampling_steps": cfg.smc.smc_max_resampling_steps,
             "smc_step_delimiter_string": cfg.smc.smc_step_delimiter_string,
             "smc_beta": cfg.smc.smc_beta,
-        } #TODO: check if this is correctly fed into a config after unsloth patching
+        }
     else:
         smcparams = {} 
     if cfg.wandb.enable:
