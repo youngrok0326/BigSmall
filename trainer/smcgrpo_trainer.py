@@ -1455,7 +1455,7 @@ class GRPOTrainer(Trainer):
             prompt_inputs["input_ids"], prompt_inputs["attention_mask"] = prompt_ids, prompt_mask
             prompt_completion_ids = unwrapped_model.generate(
                 **prompt_inputs, custom_generate='.', generation_config=self.generation_config, disable_compile=True,
-                ref_model=self.ref_model, logging_config=logging_config, tokenizer=self.tokenizer
+                ref_model=self.ref_model, logging_config=logging_config, tokenizer=self.processing_class
             )
         # Compute prompt length and extract completion ids
         prompt_length = prompt_ids.size(1)

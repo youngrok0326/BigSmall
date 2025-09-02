@@ -94,7 +94,7 @@ def generate(
     smc_warmup_tokens = getattr(generation_config, "smc_warmup_tokens", 10)
     smc_max_resampling_steps = getattr(generation_config, "smc_max_resampling_steps", 5)
     #TODO: Modification end
-        
+    
     # Initialize values
     # Handle pad token properly (following HF best practices)
     pad_token_id = generation_config.pad_token_id
@@ -140,9 +140,12 @@ def generate(
     is_main_process = logging_config.get("is_main_process", False) if logging_config else False
     report_to = logging_config.get("report_to", []) if logging_config else []
     global_step = logging_config.get("global_step", 0) if logging_config else 0
+    if is_main_process and "wandb" in report_to:
+        wandb.define_metric("smc/reasoning_step")
+        wandb.define_metric("smc/*", step_metric="smc/reasoning_step")
 
-    #TODO: Efficient group-wise Prefill Step
-    """ # --- SMC: KV Cache Sharing Optimization (Prefill Step) ---
+    """     #TODO: Efficient group-wise Prefill Step
+        # --- SMC: KV Cache Sharing Optimization (Prefill Step) ---
         # 1. Select unique prompts for a single forward pass
         unique_prompt_indices = torch.arange(0, batch_size, num_generations, device=input_ids.device)
         unique_input_ids = input_ids[unique_prompt_indices]
@@ -166,7 +169,6 @@ def generate(
         )
         model_kwargs["past_key_values"] = expanded_past_key_values
         next_token_logits = next_token_logits.repeat_interleave(num_generations, dim=0) """
-
 
     # Main generation loop using public controls
     steps = 0
@@ -205,6 +207,9 @@ def generate(
             
             standardized_scores = (grouped_scores - mean) / (std + 1e-6)
             standardized_value = F.softmax(standardized_scores, dim=-1) #TODO: discussion: softmax is ok? But, we will modify to self-confidence anyway.
+            if torch.isnan(standardized_value).any():
+                raise ValueError("NaN detected in standardized_value during SMC resampling.")
+                print(mean, std, grouped_scores)    
             current_value_processed = standardized_value.flatten() ** smc_temperature
 
             # Incremental weight calculation
@@ -238,12 +243,12 @@ def generate(
                     "smc/per_step_mean_avg_logps_policy": avg_logps_policy.mean().item(),
                     "smc/per_step_mean_value": mean,
                     "smc/per_step_mean_std": std,
-                    "smc/mean_standardized_value": standardized_value.flatten()[unfinished_sequences].mean().item(),
-                    "smc/mean_resampling_weight": resampling_weights[unfinished_sequences].mean().item(),
-                    "global_step": global_step,
-                    "reasoning_step": reasoning_step_counter
+                    "smc/mean_standardized_value": standardized_value[active_mask].flatten().mean().item(),
+                    "smc/mean_resampling_weight": resampling_weights[active_mask.flatten()].mean().item(),
+                    "smc/global_step": global_step,
+                    "smc/reasoning_step": reasoning_step_counter
                 })
-            
+
         ###Modification###
         
         #TODO: if steps > 0: # This is necessary if we do the prefill broadcasting.
@@ -253,7 +258,7 @@ def generate(
         # Prepare variable output controls
         model_inputs.update({"output_attentions": output_attentions} if output_attentions else {})
         model_inputs.update({"output_hidden_states": output_hidden_states} if output_hidden_states else {})
-        
+        breakpoint()
         # Forward pass with proper KV cache handling
         with torch.no_grad():
             outputs = model(**model_inputs, return_dict=True) #TODO: only the active sequences
@@ -262,6 +267,7 @@ def generate(
         # Update model kwargs for next iteration (public): carry past_key_values
         if hasattr(outputs, "past_key_values") and outputs.past_key_values is not None:
             model_kwargs["past_key_values"] = outputs.past_key_values
+        # TODO: if steps > 0:
 
         # Pre-process distribution with logits processors
         next_token_scores = logits_processor(input_ids, next_token_logits)
@@ -352,7 +358,7 @@ def generate(
                     end_idx = cur_len + 1
 
                     new_token_segment = input_ids[i, start_idx:end_idx]
-                    decoded_segment = tokenizer.decode(new_token_segment, skip_special_tokens=False) #TODO: temporary
+                    decoded_segment = tokenizer.decode(new_token_segment, skip_special_tokens=False) #TODO: temporary. Decoding would take a lot of time.
                     
                     if delimiter_pattern.search(decoded_segment):
                         smc_step_finished[i] = True

@@ -112,12 +112,11 @@ hydra:
     hydra:
     - hydra.run.dir=.
     - hydra.mode=RUN
-    task:
-    - wandb.enable=false
+    task: []
   job:
     name: train
     chdir: null
-    override_dirname: wandb.enable=false
+    override_dirname: ''
     id: ???
     num: ???
     config_name: train

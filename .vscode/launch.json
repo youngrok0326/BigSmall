@@ -9,11 +9,11 @@
       "console": "integratedTerminal",
       "args": [
         "hydra.run.dir=.",
-        "wandb.enable=false"
+        // "wandb.enable=false"
       ],
       "env": {
         "CUDA_VISIBLE_DEVICES": "5",
-        "WANDB_DISABLED": "true",
+        // "WANDB_DISABLED": "true",
         "CUDA_LAUNCH_BLOCKING": "1"
       },
       "justMyCode": false,

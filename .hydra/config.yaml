@@ -15,7 +15,7 @@ model:
   - down_proj
   random_state: 42
 wandb:
-  enable: false
+  enable: true
   project_name: SMCGRPO
   run_name: smc_math_instruct
 rl:
