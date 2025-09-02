@@ -204,12 +204,8 @@ def generate(
             std = grouped_scores[active_mask].std() if active_mask.sum() > 1 else 0.0
             
             standardized_scores = (grouped_scores - mean) / (std + 1e-6)
-            # standardized_value = F.softmax(standardized_scores, dim=-1) #TODO: discussion: softmax is ok? But, we will modify to self-confidence anyway.
-            current_value_processed = standardized_scores.flatten() ** smc_temperature
-
-            # Check for NaN values and raise error if found
-            if torch.isnan(current_value_processed).any():
-                raise ValueError("NaN detected in current_value_processed during SMC resampling step.")
+            standardized_value = F.softmax(standardized_scores, dim=-1) #TODO: discussion: softmax is ok? But, we will modify to self-confidence anyway.
+            current_value_processed = standardized_value.flatten() ** smc_temperature
 
             # Incremental weight calculation
             resampling_weights = current_value_processed / prev_scores
@@ -242,7 +238,7 @@ def generate(
                     "smc/per_step_mean_avg_logps_policy": avg_logps_policy.mean().item(),
                     "smc/per_step_mean_value": mean,
                     "smc/per_step_mean_std": std,
-                    "smc/mean_standardized_value": standardized_scores.flatten()[unfinished_sequences].mean().item(),
+                    "smc/mean_standardized_value": standardized_value.flatten()[unfinished_sequences].mean().item(),
                     "smc/mean_resampling_weight": resampling_weights[unfinished_sequences].mean().item(),
                     "global_step": global_step,
                     "reasoning_step": reasoning_step_counter
