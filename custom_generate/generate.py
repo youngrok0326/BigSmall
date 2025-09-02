@@ -196,18 +196,13 @@ def generate(
             current_scores = smc_beta * sum_of_ratios """
             
             current_scores = -avg_logps_policy #TODO: self-confidence
-
             grouped_scores = current_scores.view(num_groups, num_generations)
             # resampling_weights = F.softmax(grouped_scores / smc_temperature, dim=-1) #TODO: discussion: softmax is ok? But, we will modify to self-confidence anyway.
 
             #TODO: standardization & increment weight
             active_mask = unfinished_sequences.view(num_groups, num_generations)
-            if active_mask.any():
-                mean = grouped_scores[active_mask].mean()
-                std = grouped_scores[active_mask].std() if active_mask.sum() > 1 else 1.0
-            else:
-                mean = 0.0
-                std = 1.0
+            mean = grouped_scores[active_mask].mean()
+            std = grouped_scores[active_mask].std() if active_mask.sum() > 1 else 0.0
             
             standardized_scores = (grouped_scores - mean) / (std + 1e-6)
             standardized_value = F.softmax(standardized_scores, dim=-1)
@@ -318,12 +313,11 @@ def generate(
         ###Modification###
         #TODO: SMC
         log_probs = F.log_softmax(next_token_scores, dim=-1)
-        log_probs = -torch.gather(log_probs, dim=1, index=next_tokens.unsqueeze(-1)).squeeze(-1) #TODO: self-confidence
+        log_probs = torch.gather(log_probs, dim=1, index=next_tokens.unsqueeze(-1)).squeeze(-1) #TODO: self-confidence
         avg_logps_policy = torch.where(
             unfinished_sequences.bool(), (avg_logps_policy * steps + log_probs) / (steps + 1), avg_logps_policy
         )
         ###Modification###
-    
         
         # Finished sentences should have their next token be a padding token
         if has_eos_stopping_criteria and pad_token_id is not None:
