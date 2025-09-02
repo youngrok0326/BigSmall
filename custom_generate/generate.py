@@ -140,35 +140,45 @@ def generate(
     is_main_process = logging_config.get("is_main_process", False) if logging_config else False
     report_to = logging_config.get("report_to", []) if logging_config else []
     global_step = logging_config.get("global_step", 0) if logging_config else 0
+    
     if is_main_process and "wandb" in report_to:
-        wandb.define_metric("smc/reasoning_step")
-        wandb.define_metric("smc/*", step_metric="smc/reasoning_step")
+        columns = [
+            "global_step",
+            "reasoning_step", 
+            "mean_avg_logps",
+            "std_avg_logps",
+            "mean_standardized_value",
+            "std_standardized_value",
+            "mean_resampling_weight",
+            "std_resampling_weight"
+        ]
+        smc_table = wandb.Table(columns=columns)
 
-    """     #TODO: Efficient group-wise Prefill Step
-        # --- SMC: KV Cache Sharing Optimization (Prefill Step) ---
-        # 1. Select unique prompts for a single forward pass
-        unique_prompt_indices = torch.arange(0, batch_size, num_generations, device=input_ids.device)
-        unique_input_ids = input_ids[unique_prompt_indices]
-        unique_attention_mask = model_kwargs["attention_mask"][unique_prompt_indices]
-        
-        # 2. Perform a single forward pass on unique prompts to get the initial KV cache
-        prefill_inputs = model.prepare_inputs_for_generation(
-            unique_input_ids, attention_mask=unique_attention_mask
-        )
-        with torch.no_grad():
-            prefill_outputs = model(**prefill_inputs, return_dict=True, use_cache=True)
-        
-        # 3. Get logits for the first token and the initial KV cache
-        initial_past_key_values = prefill_outputs.past_key_values
-        next_token_logits = prefill_outputs.logits[:, -1, :].detach()
+    """ #TODO: Efficient group-wise Prefill Step
+    # --- SMC: KV Cache Sharing Optimization (Prefill Step) ---
+    # 1. Select unique prompts for a single forward pass
+    unique_prompt_indices = torch.arange(0, batch_size, num_generations, device=input_ids.device)
+    unique_input_ids = input_ids[unique_prompt_indices]
+    unique_attention_mask = model_kwargs["attention_mask"][unique_prompt_indices]
+    
+    # 2. Perform a single forward pass on unique prompts to get the initial KV cache
+    prefill_inputs = model.prepare_inputs_for_generation(
+        unique_input_ids, attention_mask=unique_attention_mask
+    )
+    with torch.no_grad():
+        prefill_outputs = model(**prefill_inputs, return_dict=True, use_cache=True)
+    
+    # 3. Get logits for the first token and the initial KV cache
+    initial_past_key_values = prefill_outputs.past_key_values
+    next_token_logits = prefill_outputs.logits[:, -1, :].detach()
 
-        # 4. Expand (broadcast) the KV cache and logits for all particles
-        expanded_past_key_values = tuple(
-            tuple(tensor.repeat_interleave(num_generations, dim=0) for tensor in layer)
-            for layer in initial_past_key_values
-        )
-        model_kwargs["past_key_values"] = expanded_past_key_values
-        next_token_logits = next_token_logits.repeat_interleave(num_generations, dim=0) """
+    # 4. Expand (broadcast) the KV cache and logits for all particles
+    expanded_past_key_values = tuple(
+        tuple(tensor.repeat_interleave(num_generations, dim=0) for tensor in layer)
+        for layer in initial_past_key_values
+    )
+    model_kwargs["past_key_values"] = expanded_past_key_values
+    next_token_logits = next_token_logits.repeat_interleave(num_generations, dim=0) """
 
     # Main generation loop using public controls
     steps = 0
@@ -238,19 +248,20 @@ def generate(
             reasoning_step_counter += 1
             
             #TODO: wandb
-            if is_main_process and "wandb" in report_to:
-                wandb.log({
-                    "smc/per_step_mean_avg_logps_policy": avg_logps_policy.mean().item(),
-                    "smc/per_step_mean_value": mean,
-                    "smc/per_step_mean_std": std,
-                    "smc/mean_standardized_value": standardized_value[active_mask].flatten().mean().item(),
-                    "smc/mean_resampling_weight": resampling_weights[active_mask.flatten()].mean().item(),
-                    "smc/global_step": global_step,
-                    "smc/reasoning_step": reasoning_step_counter
-                })
+            if smc_table is not None:
+                smc_table.add_data(
+                    global_step,
+                    reasoning_step_counter,
+                    avg_logps_policy.mean().item(),
+                    avg_logps_policy.std().item(),
+                    standardized_value[active_mask].flatten().mean().item(),
+                    standardized_value[active_mask].flatten().std().item(),
+                    resampling_weights[active_mask.flatten()].mean().item(),
+                    resampling_weights[active_mask.flatten()].std().item(),
+                )
 
         ###Modification###
-        
+
         #TODO: if steps > 0: # This is necessary if we do the prefill broadcasting.
         # Prepare model inputs (proper KV cache handling)
         model_inputs = model.prepare_inputs_for_generation(input_ids, **model_kwargs)
@@ -258,12 +269,12 @@ def generate(
         # Prepare variable output controls
         model_inputs.update({"output_attentions": output_attentions} if output_attentions else {})
         model_inputs.update({"output_hidden_states": output_hidden_states} if output_hidden_states else {})
-        breakpoint()
+
         # Forward pass with proper KV cache handling
         with torch.no_grad():
             outputs = model(**model_inputs, return_dict=True) #TODO: only the active sequences
             next_token_logits = outputs.logits[:, -1, :].detach()
-            
+
         # Update model kwargs for next iteration (public): carry past_key_values
         if hasattr(outputs, "past_key_values") and outputs.past_key_values is not None:
             model_kwargs["past_key_values"] = outputs.past_key_values
@@ -379,6 +390,9 @@ def generate(
         
     if streamer is not None:
         streamer.end()
+        
+    if smc_table is not None:
+        wandb.log({"smc_reasoning_steps": smc_table})
 
     # Return results
     if return_dict_in_generate:
