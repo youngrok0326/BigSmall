@@ -243,8 +243,8 @@ def generate(
             if is_main_process and "wandb" in report_to:
                 wandb.log({
                     "smc/per_step_mean_avg_logps_policy": avg_logps_policy.mean().item(),
-                "smc/per_step_mean_value": mean,
-                "smc/per_step_mean_std": std,
+                    "smc/per_step_mean_value": mean,
+                    "smc/per_step_mean_std": std,
                     "smc/mean_standardized_value": standardized_value.flatten()[unfinished_sequences].mean().item(),
                     "smc/mean_resampling_weight": resampling_weights[unfinished_sequences].mean().item(),
                     "global_step": global_step,
