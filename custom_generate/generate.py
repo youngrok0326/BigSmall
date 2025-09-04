@@ -153,6 +153,8 @@ def generate(
             "std_resampling_weight"
         ]
         smc_table = wandb.Table(columns=columns)
+    else:
+        smc_table = None
 
     """ #TODO: Efficient group-wise Prefill Step
     # --- SMC: KV Cache Sharing Optimization (Prefill Step) ---
@@ -216,10 +218,7 @@ def generate(
             std = grouped_scores[active_mask].std() if active_mask.sum() > 1 else 0.0
             
             standardized_scores = (grouped_scores - mean) / (std + 1e-6)
-            standardized_value = F.softmax(standardized_scores, dim=-1) #TODO: discussion: softmax is ok? But, we will modify to self-confidence anyway.
-            if torch.isnan(standardized_value).any():
-                raise ValueError("NaN detected in standardized_value during SMC resampling.")
-                print(mean, std, grouped_scores)    
+            standardized_value = F.softmax(standardized_scores, dim=-1) #TODO: discussion: softmax is ok? But, we will modify to self-confidence anyway.  
             current_value_processed = standardized_value.flatten() ** smc_temperature
 
             # Incremental weight calculation
