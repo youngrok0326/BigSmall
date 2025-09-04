@@ -206,7 +206,7 @@ def generate(
 
         # --- Step C: Update State ---
         if has_eos_stopping_criteria and pad_token_id is not None:
-            next_tokens = next_tokens * unfinished_sequences + pad_token_id * next_tokens = next_tokens * unfinished_sequences + pad_token_id * (~ unfinished_sequences)
+            next_tokens = next_tokens * unfinished_sequences + pad_token_id * (~ unfinished_sequences)
         
         input_ids = torch.cat([input_ids, next_tokens[:, None]], dim=-1)
         if model_kwargs.get("attention_mask") is not None:
