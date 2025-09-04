@@ -63,11 +63,12 @@ def main(cfg: DictConfig) -> None:
     }
     if cfg.smc.use_smc:
         smcparams = {
-            "smc_temperature": cfg.smc.smc_temperature,
+            "value_temperature": cfg.smc.value_temperature,
             "smc_warmup_tokens": cfg.smc.smc_warmup_tokens,
-            "smc_max_resampling_steps": cfg.smc.smc_max_resampling_steps,
-            "smc_step_delimiter_string": cfg.smc.smc_step_delimiter_string,
             "smc_beta": cfg.smc.smc_beta,
+            "smc_confidence_eta": cfg.smc.smc_confidence_eta,
+            "smc_ess_threshold": cfg.smc.smc_ess_threshold,
+            "smc_confidence_window_size": cfg.smc.smc_confidence_window_size,
         }
     else:
         smcparams = {} 
