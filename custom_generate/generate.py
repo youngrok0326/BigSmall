@@ -35,7 +35,7 @@ def generate(
     
     tokenizer = model_kwargs.pop("tokenizer", None)
     batch_size, prompt_len = input_ids.shape[:2]
-    breakpoint()
+
     if generation_config.max_new_tokens is not None:
         generation_config.max_length = generation_config.max_new_tokens + prompt_len
     if stopping_criteria is None: stopping_criteria = StoppingCriteriaList()
