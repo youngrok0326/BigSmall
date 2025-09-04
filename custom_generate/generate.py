@@ -145,15 +145,17 @@ def generate(
         
         warpers = LogitsProcessorList()
         temperature = getattr(generation_config, "temperature", 1.0)
-        if temperature is not None and temperature != 1.0: 
+        if temperature is not None and temperature != 1.0:
             warpers.append(TemperatureLogitsWarper(temperature))
-        top_k = getattr(generation_config, "top_k", 0)
-        if top_k > 0: 
+        # Top-k
+        top_k = getattr(generation_config, "top_k", None)
+        if top_k is not None and isinstance(top_k, int) and top_k > 0:
             warpers.append(TopKLogitsWarper(top_k))
-        top_p = getattr(generation_config, "top_p", 1.0)
-        if top_p < 1.0: 
+        # Top-p
+        top_p = getattr(generation_config, "top_p", None)
+        if top_p is not None and top_p < 1.0:
             warpers.append(TopPLogitsWarper(top_p))
-        if len(warpers) > 0: 
+        if len(warpers) > 0:
             next_token_scores = warpers(input_ids, next_token_scores)
 
         if return_dict_in_generate:
