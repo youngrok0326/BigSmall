@@ -1,5 +1,5 @@
 model:
-  model_name: "Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
+  model_name: Qwen/Qwen2.5-3B #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
   gpu_memory_utilization: 0.5
   max_seq_length: 1024
   lora_rank: 64
@@ -17,7 +17,7 @@ model:
 wandb:
   enable: true
   project_name: "SMCGRPO"
-  run_name: smc_math_instruct #"Instruct-GSM8K-16-16-Run1"
+  run_name: smc_base #"Instruct-GSM8K-16-16-Run1"
 rl:
   algorithm: "SMCGRPO"
   dataset: "gsm8k"
@@ -35,7 +35,7 @@ rl:
   delta: #1.5 # two sided
   loss_type: 'grpo' # 'bnpo', 'dr_grpo'
   mask_truncated_completions: # True #DAPO
-  resume_from_checkpoint:
+  resume_from_checkpoint: true
 optim:
   learning_rate: 5e-6
   lr_scheduler_type: "constant"
