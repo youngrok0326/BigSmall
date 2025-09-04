@@ -17,7 +17,7 @@ model:
 wandb:
   enable: true
   project_name: "SMCGRPO"
-  run_name: smc_base #"Instruct-GSM8K-16-16-Run1"
+  run_name: conf_smc_base #"Instruct-GSM8K-16-16-Run1"
 rl:
   algorithm: "SMCGRPO"
   dataset: "gsm8k"
@@ -52,9 +52,10 @@ optim:
   logging_steps: 1
 smc:
   use_smc: true
-  smc_temperature: 0.5
-  smc_warmup_tokens: 50
-  smc_max_resampling_steps: 5
-  smc_step_delimiter_string: "\n\n" #"\n\n"  #TODO: Remove from trainer config if not used.
-  smc_beta: 1.0
+  value_temperature: 0.5
+  smc_warmup_tokens: 50 #TODO: might need this
+  smc_beta: 1.0 #TODO: later use for kl term
+  smc_confidence_eta: 1.0
+  smc_ess_threshold: 0.5
+  smc_confidence_window_size: 50
 

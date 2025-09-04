@@ -12,7 +12,7 @@ from transformers.generation.logits_process import (
 )
 from transformers.generation.utils import GenerateDecoderOnlyOutput, GenerateEncoderDecoderOutput
 
-import re
+import wandb
 from .utils import ordered_stratified_resampling
 
 def generate(
@@ -23,6 +23,7 @@ def generate(
     generation_config: Optional[GenerationConfig] = None,
     synced_gpus: bool = False,
     streamer: Optional[Any] = None,
+    logging_config: Optional[dict] = None,
     **model_kwargs,
 ) -> Union[GenerateDecoderOnlyOutput, GenerateEncoderDecoderOutput, torch.LongTensor]:
     """
@@ -34,7 +35,7 @@ def generate(
     
     tokenizer = model_kwargs.pop("tokenizer", None)
     batch_size, prompt_len = input_ids.shape[:2]
-    
+    breakpoint()
     if generation_config.max_new_tokens is not None:
         generation_config.max_length = generation_config.max_new_tokens + prompt_len
     if stopping_criteria is None: stopping_criteria = StoppingCriteriaList()
@@ -97,6 +98,22 @@ def generate(
     smc_confidence_eta = getattr(generation_config, "smc_confidence_eta", 1.0)
     smc_ess_threshold = getattr(generation_config, "smc_ess_threshold", 0.5)
     smc_confidence_window_size = getattr(generation_config, "smc_confidence_window_size", 16)
+    
+    # --- Logging Initialization ---
+    is_main_process = logging_config.get("is_main_process", False) if logging_config else False
+    report_to = logging_config.get("report_to", []) if logging_config else []
+    global_step = logging_config.get("global_step", 0) if logging_config else 0
+    
+    smc_table = None
+    resampling_step_counter = 0
+    if is_main_process and "wandb" in report_to:
+        columns = [
+            "global_step", "resampling_step", "group_index", "ess",
+            "conf_mean", "conf_std",
+            "avg_conf_mean", "avg_conf_std",
+            "weight_mean", "weight_std"
+        ]
+        smc_table = wandb.Table(columns=columns)
 
     # --- SMC State Initialization ---
     log_w = torch.zeros(batch_size, device=input_ids.device, dtype=torch.float32)
@@ -215,6 +232,25 @@ def generate(
             ess = 1.0 / torch.sum(group_w_norm**2)
 
             if ess < num_generations * smc_ess_threshold: #(e.g. 50% of N)
+                # --- WANDB LOGGING BLOCK ---
+                resampling_step_counter += 1
+                if smc_table is not None:
+                    group_conf_tensor = torch.tensor(step_conf_values[start:end], device=input_ids.device)
+                    group_avg_conf = avg_conf_values[start:end]
+                    smc_table.add_data(
+                        global_step,
+                        resampling_step_counter,
+                        g,
+                        ess.item(),
+                        group_conf_tensor.mean().item(),
+                        group_conf_tensor.std().item(),
+                        group_avg_conf.mean().item(),
+                        group_avg_conf.std().item(),
+                        group_w_norm.mean().item(),
+                        group_w_norm.std().item()
+                    )
+                # --- END LOGGING BLOCK ---
+
                 resampled_indices_local = ordered_stratified_resampling(group_w_norm.unsqueeze(0)).squeeze(0) #TODO: Srinivasan Sampling Process
                 final_indices = resampled_indices_local + start
                 
@@ -269,20 +305,3 @@ def generate(
         return output
     else:
         return input_ids
-    
-    
-""" 
-Arguments to Remove:
-- ref_model
-- logging_config
-
-New Arguments(inside generation_config):
-- use_smc
-- num_generations
-- smc_confidence_eta
-- smc_ess_threshold
-- smc_confidence_window_size
-- output_confidences: bool = False or True (whether to return per-step confidence values) (available as output.smc_confidences)
-"""
-
-#TODO: wandb

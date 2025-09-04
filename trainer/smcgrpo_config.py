@@ -585,7 +585,7 @@ class GRPOConfig(TrainingArguments):
         default=True,
         metadata={"help": "Whether to use Sequential Monte Carlo for generating completions."},
     )
-    smc_temperature: float = field(
+    value_temperature: float = field(
         default=1.0,
         metadata={"help": "Temperature for sampling during the TSMC loop."},
     )
@@ -595,17 +595,27 @@ class GRPOConfig(TrainingArguments):
             "help": "Number of initial tokens to generate before the first TSMC resampling step is allowed."
         },
     )
-    smc_max_resampling_steps: int = field(
-        default=5,
-        metadata={"help": "Maximum number of resampling steps to perform during generation."},
-    )
-    smc_step_delimiter_string: str = field(
-        default=None,
-        metadata={"help": "The string that marks the end of a reasoning step."},
-    )
     smc_beta: float = field(
         default=1.0,
         metadata={"help": "The beta parameter for the SMC algorithm."},
+    )
+    smc_confidence_eta : float = field(
+        default=1.0,
+        metadata={"help": "What power will the value function be raised to in order to approximate the twist function"
+        },
+    )
+    smc_ess_threshold: float = field(
+        default=0.5,
+        metadata={
+            "help": "The threshold for the effective sample size (ESS) below which resampling is triggered. Expressed "
+            "as a fraction of the total number of particles."
+        },
+    )
+    smc_confidence_window_size: int = field(
+        default=50,
+        metadata={
+            "help": "The window size for computing the moving average of the value function confidence scores."
+        },
     )
     # --- END: tsmc configuration ---
 
