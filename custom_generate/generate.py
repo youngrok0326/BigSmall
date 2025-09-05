@@ -283,6 +283,9 @@ def generate(
     # ========================================================================
     if streamer: 
         streamer.end()
+        
+    if smc_table is not None:
+        wandb.log({"smc_table": smc_table})
     
     if return_dict_in_generate:
         confidences_tensor = None
