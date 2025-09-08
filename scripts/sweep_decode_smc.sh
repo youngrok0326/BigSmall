@@ -19,10 +19,26 @@ set -euo pipefail
 ESS_VALUES=${ESS_VALUES:-"0.1 0.2 0.3 0.4 0.5"}
 WIN_VALUES=${WIN_VALUES:-"25 50 75 100 125 150 175 200"}
 
-# Simple run name builder that only depends on ESS/WIN
+# Model and group configs to sweep
+MODEL_NAMES=(
+  "Qwen/Qwen2.5-3B"
+  "Qwen/Qwen2.5-3B-Instruct"
+  "Qwen/Qwen2.5-Math-1.5B-Instruct"
+)
+declare -a GROUPS
+# (batch_size_groups, num_generations)
+GROUPS+=("32 16")
+GROUPS+=("8 64")
+GROUPS+=("4 256")
+GROUPS+=("1 1024")
+
+# Build run name: smc_{model_name}_num_gen{num_generation}_ess{ess}_win{win}
+# Sanitize model name for filenames (replace '/' with '-')
 build_run_name() {
-  local ess="$1"; local win="$2"
-  echo "smc-ess${ess}-win${win}"
+  local model_name="$1"; local num_gen="$2"; local ess="$3"; local win="$4"
+  local safe_model_name
+  safe_model_name=$(echo -n "$model_name" | sed 's#/#-#g')
+  echo "smc_${safe_model_name}_num_gen${num_gen}_ess${ess}_win${win}"
 }
 
 # GPU scheduler: distribute jobs across visible GPUs (one per GPU)
@@ -32,7 +48,8 @@ detect_visible_gpus() {
     return
   fi
   if command -v nvidia-smi >/dev/null 2>&1; then
-    mapfile -t GPUS < <(nvidia-smi --query-gpu=index --format=csv,noheader 2>/dev/null | tr -d '[:space:]')
+    # Read one GPU index per line. Do NOT strip newlines, or indices will concatenate (e.g. "01234567").
+    mapfile -t GPUS < <(nvidia-smi --query-gpu=index --format=csv,noheader 2>/dev/null)
     if [ ${#GPUS[@]} -gt 0 ]; then return; fi
   fi
   # Fallback to torch if available
@@ -85,24 +102,33 @@ find_free_gpu() {
 }
 
 jobs_submitted=0
-for ess in ${ESS_VALUES}; do
-  for w in ${WIN_VALUES}; do
-    name="$(build_run_name "$ess" "$w")"
-    cmd=(uv run python3 evaluate-decode.py \
-      custom_decode.smc_ess_threshold=${ess} \
-      custom_decode.smc_confidence_window_size=${w} \
-      wandb.run_name=${name})
+for model_name in "${MODEL_NAMES[@]}"; do
+  for grp in "${GROUPS[@]}"; do
+    set -- $grp; G=$1; N=$2
+    for ess in ${ESS_VALUES}; do
+      for w in ${WIN_VALUES}; do
+        name="$(build_run_name "$model_name" "$N" "$ess" "$w")"
+        cmd=(uv run python3 evaluate-decode.py \
+          eval.run_default=false eval.run_custom=true \
+          model.model_name="${model_name}" \
+          eval.batch_size_groups=${G} \
+          custom_decode.num_generations=${N} \
+          custom_decode.smc_ess_threshold=${ess} \
+          custom_decode.smc_confidence_window_size=${w} \
+          wandb.run_name=${name})
 
-    while true; do
-      slot=$(find_free_gpu)
-      if [ "$slot" -ge 0 ]; then
-        echo "Running: ${cmd[*]}"
-        submit_job "$slot" "${cmd[@]}"
-        jobs_submitted=$((jobs_submitted+1))
-        break
-      fi
-      # No free GPU; wait a bit and retry
-      sleep 2
+        while true; do
+          slot=$(find_free_gpu)
+          if [ "$slot" -ge 0 ]; then
+            echo "Running: ${cmd[*]}"
+            submit_job "$slot" "${cmd[@]}"
+            jobs_submitted=$((jobs_submitted+1))
+            break
+          fi
+          # No free GPU; wait a bit and retry
+          sleep 2
+        done
+      done
     done
   done
 done

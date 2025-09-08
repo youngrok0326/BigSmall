@@ -24,15 +24,15 @@ eval:
   batch_size: 512
   # Custom SMC generation: number of prompt groups per batch
   batch_size_groups: 16
-  max_new_tokens: 512
+  max_new_tokens: 1024
   # Which decoding modes to run
-  run_default: true
-  run_custom: false
+  run_default: false
+  run_custom: true
   # Use Unsloth+vLLM backend for default decoding
-  default_use_vllm: false
+  default_use_vllm: true
 
 default_decode:
-  do_sample: false
+  do_sample: true
   temperature: 0.9
   top_p: 1.0
   top_k: 0

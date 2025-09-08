@@ -209,8 +209,6 @@ def _evaluate_once_default(model, tokenizer, prompts, answers, cfg: DictConfig, 
 
 
 def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, logging_enabled: bool, progress_desc: str | None = None):
-    from custom_generate.generate import generate as smc_generate
-
     device = next(model.parameters()).device
 
     # Build custom generation config with SMC knobs
@@ -268,46 +266,75 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
             attn_rep = attn.repeat_interleave(N, dim=0)
 
             with torch.no_grad():
-                sequences = smc_generate(
-                    model,
+                # Route through HF custom_generate hook so the decoding pipeline
+                # (logits processors, stopping criteria, etc.) is prepared correctly.
+                sequences = model.generate(
                     input_ids=input_rep,
                     attention_mask=attn_rep,
                     generation_config=gen_cfg,
+                    custom_generate='.',
                     tokenizer=tokenizer,
                     logging_config=logging_config,
+                    trust_remote_code=True,
                 )
 
-            # Choose the first particle per group as the representative sample
+            # Group particles per prompt: shape [groups, N, T]
             B_rep, T = sequences.shape
             assert B_rep % N == 0, "Batch size must be a multiple of num_generations"
             groups = B_rep // N
-            sequences = sequences.view(groups, N, T)[:, 0, :].contiguous()
+            sequences_grouped = sequences.view(groups, N, T)
 
-            texts = _decode_generated(tokenizer, sequences, prompt_lens)
+            # Decode all particles for all groups
+            prompt_lens_rep = prompt_lens.repeat_interleave(N, dim=0)
+            texts_all = _decode_generated(tokenizer, sequences, prompt_lens_rep)
 
-            # Compute generated length per sample
+            # Compute generated lengths for all particles
             if tokenizer.pad_token_id is not None:
-                seq_valid_lens = (sequences != tokenizer.pad_token_id).sum(dim=1)
+                seq_valid_lens_all = (sequences != tokenizer.pad_token_id).sum(dim=1)
             else:
-                seq_valid_lens = torch.full((sequences.size(0),), sequences.size(1), device=sequences.device)
-            gen_lens = (seq_valid_lens - prompt_lens).tolist()
-            total_gen_len += sum(gen_lens)
+                seq_valid_lens_all = torch.full((sequences.size(0),), sequences.size(1), device=sequences.device)
+            gen_lens_all = (seq_valid_lens_all - prompt_lens_rep).tolist()
 
-            for k, text, gt in zip(range(i, j), texts, answers[i:j]):
-                a = answer_correct(text, gt)
-                f = format_correct(text)
-                ans_correct += a
-                for_correct += f
-                both_correct += (a and f)
+            # Iterate per-group, aggregate correctness as "any particle in group"
+            for g, k in enumerate(range(i, j)):
+                gt = answers[k]
+                start = g * N
+                end = start + N
+                texts_g = texts_all[start:end]
+                gen_lens_g = gen_lens_all[start:end]
+
+                # Evaluate each particle
+                a_list = [answer_correct(t, gt) for t in texts_g]
+                f_list = [format_correct(t) for t in texts_g]
+
+                a_any = any(a_list)
+                f_any = any(f_list)
+                # both means there exists a particle that is both answer- and format-correct
+                both_any = any(a and f for a, f in zip(a_list, f_list))
+
+                ans_correct += 1 if a_any else 0
+                for_correct += 1 if f_any else 0
+                both_correct += 1 if both_any else 0
+
+                # Choose a representative particle for logging/lengths:
+                # prefer one with both correct, else one with answer correct, else first.
+                chosen_idx = next((idx for idx, (a, f) in enumerate(zip(a_list, f_list)) if a and f), None)
+                if chosen_idx is None:
+                    chosen_idx = next((idx for idx, a in enumerate(a_list) if a), 0)
+                chosen_text = texts_g[chosen_idx]
+                chosen_len = gen_lens_g[chosen_idx]
+                total_gen_len += chosen_len
+
                 if len(examples) < cfg.eval.sample_cnt:
                     examples.append({
                         "prompt": prompts[k],
                         "answer": gt,
-                        "completion": text,
-                        "correct": a,
-                        "format_correct": f,
+                        "completion": chosen_text,
+                        "correct": a_any,
+                        "format_correct": f_any,
                     })
-            pbar.update(j - i)
+                # Update progress per unique prompt processed
+                pbar.update(1)
 
     avg_len = total_gen_len / total_queries if total_queries > 0 else 0.0
     return (

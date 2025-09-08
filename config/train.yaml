@@ -21,8 +21,8 @@ wandb:
 rl:
   algorithm: "SMCGRPO"
   dataset: "gsm8k"
-  max_prompt_length: 512
-  max_completion_length: 512
+  max_prompt_length: 1024
+  max_completion_length: 1024
   num_generations: 15
   max_steps: 8000
   save_strategy: "time"
