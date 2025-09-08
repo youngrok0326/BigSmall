@@ -37,9 +37,8 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 
 import torch
-from transformers import GenerationConfig
-
 from unsloth import FastLanguageModel
+from transformers import GenerationConfig
 
 from utils.data import (
     answer_correct,
