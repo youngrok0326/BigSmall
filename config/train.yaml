@@ -17,7 +17,7 @@ model:
 wandb:
   enable: true
   project_name: "SMCGRPO"
-  run_name: conf_GSM8K_smc_base_0.2 #"Instruct-GSM8K-16-16-Run1"
+  run_name: conf_GSM8K_smc_base_0.1 #"Instruct-GSM8K-16-16-Run1"
 rl:
   algorithm: "SMCGRPO"
   dataset: "gsm8k"
@@ -35,7 +35,7 @@ rl:
   delta: #1.5 # two sided
   loss_type: 'grpo' # 'bnpo', 'dr_grpo'
   mask_truncated_completions: # True #DAPO
-  resume_from_checkpoint: true
+  resume_from_checkpoint:
 optim:
   learning_rate: 5e-6
   lr_scheduler_type: "constant"
@@ -56,6 +56,6 @@ smc:
   smc_warmup_tokens: 50 #TODO: might need this
   smc_beta: 1.0 #TODO: later use for kl term
   smc_confidence_eta: 1.0
-  smc_ess_threshold: 0.2
+  smc_ess_threshold: 0.1
   smc_confidence_window_size: 50
 
