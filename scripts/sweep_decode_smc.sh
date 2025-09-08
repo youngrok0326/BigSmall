@@ -28,9 +28,7 @@ MODEL_NAMES=(
 declare -a GROUPS
 # (batch_size_groups, num_generations)
 GROUPS+=("32 16")
-GROUPS+=("8 64")
 GROUPS+=("4 256")
-GROUPS+=("1 1024")
 
 # Build run name: smc_{model_name}_num_gen{num_generation}_ess{ess}_win{win}
 # Sanitize model name for filenames (replace '/' with '-')
@@ -104,7 +102,11 @@ find_free_gpu() {
 jobs_submitted=0
 for model_name in "${MODEL_NAMES[@]}"; do
   for grp in "${GROUPS[@]}"; do
-    set -- $grp; G=$1; N=$2
+    IFS=' ' read -r G N <<< "$grp"
+    if [ -z "${G:-}" ] || [ -z "${N:-}" ]; then
+      echo "Invalid GROUPS entry: '$grp' (expected 'G N')" >&2
+      exit 1
+    fi
     for ess in ${ESS_VALUES}; do
       for w in ${WIN_VALUES}; do
         name="$(build_run_name "$model_name" "$N" "$ess" "$w")"
