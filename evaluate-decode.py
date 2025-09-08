@@ -103,7 +103,9 @@ def _evaluate_once_default(model, tokenizer, prompts, answers, cfg: DictConfig, 
     fast_generate for better memory/throughput (like evaluate-run.py). Otherwise
     use vanilla HF generate.
     """
-    use_vllm = bool(cfg.eval.get("default_use_vllm", True))
+    # Only use Unsloth+vLLM fast_generate when both flags are enabled.
+    # Prevents passing vLLM-only kwargs to HF generate when fast_inference is off.
+    use_vllm = bool(cfg.eval.get("default_use_vllm", True)) and bool(cfg.model.get("fast_inference", True))
     total_queries = len(prompts)
     ans_correct = 0
     for_correct = 0

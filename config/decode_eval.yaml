@@ -29,7 +29,7 @@ eval:
   run_default: true
   run_custom: false
   # Use Unsloth+vLLM backend for default decoding
-  default_use_vllm: true
+  default_use_vllm: false
 
 default_decode:
   do_sample: false

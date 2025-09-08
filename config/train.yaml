@@ -23,7 +23,7 @@ rl:
   dataset: "gsm8k"
   max_prompt_length: 512
   max_completion_length: 512
-  num_generations: 16
+  num_generations: 15
   max_steps: 8000
   save_strategy: "time"
   save_steps: 100
