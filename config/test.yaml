@@ -1,4 +1,4 @@
-base_model: "Qwen/Qwen2.5-3B"
+base_model: "Qwen/Qwen2.5-Math-1.5B-Instruct"
 run_name: "math_instruct_math_64"
 datasets: 
   # - "amc23"
