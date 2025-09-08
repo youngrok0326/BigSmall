@@ -6,8 +6,11 @@ Developed by: Yixuan Even Xu in 2025
 
 from omegaconf import DictConfig
 from unsloth import FastLanguageModel
+import gc
+import torch
+import contextlib
 
-def test(cfg: DictConfig, model, dataset, results: dict):
+def test(cfg: DictConfig, model, dataset, results: dict, lora_request = None):
     from vllm import SamplingParams
     from utils.data import answer_correct, format_correct
     sampling_params = SamplingParams(
@@ -43,7 +46,7 @@ def test(cfg: DictConfig, model, dataset, results: dict):
             outputs = model.fast_generate(
                 batch_prompts,
                 sampling_params = sampling_params,
-                lora_request = None,
+                lora_request = lora_request,
                 use_tqdm = False,
             )
             for k, output, answer in zip(range(i, j), outputs, answers[i:j]):
@@ -115,14 +118,29 @@ def test_model(cfg: DictConfig, lora_name: str, merged_directory: str, results: 
             ["rm", "-rf", merged_directory],
             capture_output=True, check=True
         )
-    for dataset_name in cfg.datasets:
-        print(f"Testing dataset {dataset_name}...")
-        from .data import get_questions
-        dataset_testing = get_questions(dataset_name, split="test",
-                                        style = "instruct" if cfg.base_model[-8:] == "Instruct" else "base")
-        if results is not None and dataset_name in results:
-            results[dataset_name] = test(cfg, model, dataset_testing, results[dataset_name])
-        else:
-            results = {} if results is None else results
-            results[dataset_name] = test(cfg, model, dataset_testing, None)
-    return results
+    try:
+        for dataset_name in cfg.datasets:
+            print(f"Testing dataset {dataset_name}...")
+            from .data import get_questions
+            dataset_testing = get_questions(dataset_name, split="test",
+                                            style = "instruct" if cfg.base_model[-8:] == "Instruct" else "base")
+            if results is not None and dataset_name in results:
+                results[dataset_name] = test(cfg, model, dataset_testing, results[dataset_name])
+            else:
+                results = {} if results is None else results
+                results[dataset_name] = test(cfg, model, dataset_testing, None)
+        return results
+    finally:
+        # Ensure GPU memory is released after each checkpoint evaluation.
+        # vLLM engines hold global CUDA state that must be destroyed explicitly.
+        with contextlib.suppress(Exception):
+            from unsloth_zoo.vllm_utils import delete_vllm
+            delete_vllm(model)
+        # Drop remaining references and clear CUDA cache
+        with contextlib.suppress(Exception):
+            del model
+        with contextlib.suppress(Exception):
+            del tokenizer
+        gc.collect()
+        with contextlib.suppress(Exception):
+            torch.cuda.empty_cache()
