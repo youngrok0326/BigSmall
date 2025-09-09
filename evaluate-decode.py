@@ -227,13 +227,12 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
     gen_cfg.use_smc = bool(cfg.custom_decode.get("use_smc", True))
     gen_cfg.num_generations = int(cfg.custom_decode.get("num_generations", 8))
     gen_cfg.smc_beta = float(cfg.custom_decode.get("smc_beta", 1.0))
-    gen_cfg.smc_temperature = float(cfg.custom_decode.get("smc_temperature", 1.0))
     gen_cfg.smc_warmup_tokens = int(cfg.custom_decode.get("smc_warmup_tokens", 10))
-    gen_cfg.smc_max_resampling_steps = int(cfg.custom_decode.get("smc_max_resampling_steps", 5))
     # Additional SMC controls (kept for parity with training config)
     gen_cfg.smc_confidence_eta = float(cfg.custom_decode.get("smc_confidence_eta", 1.0))
-    gen_cfg.smc_ess_threshold = float(cfg.custom_decode.get("smc_ess_threshold", 0.2))
+    gen_cfg.smc_resample_threshold = float(cfg.custom_decode.get("smc_resample_threshold", 0.2))
     gen_cfg.smc_confidence_window_size = int(cfg.custom_decode.get("smc_confidence_window_size", 50))
+    gen_cfg.smc_topk = int(cfg.custom_decode.get("smc_topk", -1))
 
     # logging for custom generator
     logging_config = {

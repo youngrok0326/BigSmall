@@ -16,8 +16,8 @@
 
 set -euo pipefail
 
-ESS_VALUES=${ESS_VALUES:-"0.1 0.2 0.3 0.4 0.5"}
-WIN_VALUES=${WIN_VALUES:-"25 50 75 100 125 150 175 200 225 250"}
+ESS_VALUES=${ESS_VALUES:-"1.1 1.2 1.3 1.4"}
+WIN_VALUES=${WIN_VALUES:-"25 50 75 100 125 150 175 200"}
 
 # Model and group configs to sweep
 MODEL_NAMES=(
@@ -115,7 +115,7 @@ for model_name in "${MODEL_NAMES[@]}"; do
           model.model_name="${model_name}" \
           eval.batch_size_groups=${G} \
           custom_decode.num_generations=${N} \
-          custom_decode.smc_ess_threshold=${ess} \
+          custom_decode.smc_resample_threshold=${ess} \
           custom_decode.smc_confidence_window_size=${w} \
           wandb.run_name=${name})
 
