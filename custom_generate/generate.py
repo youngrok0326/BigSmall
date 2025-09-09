@@ -32,7 +32,6 @@ def generate(
     # ========================================================================
     # 1. Configuration & Initialization
     # ========================================================================
-    breakpoint()
     tokenizer = model_kwargs.pop("tokenizer", None)
     batch_size, prompt_len = input_ids.shape[:2]
 
@@ -224,9 +223,9 @@ def generate(
         #     conf_deques[i].append(conf)
         #     conf_sums[i] += conf
         
-        # Confidence Update
-        conf_history[:, index_ptr] = step_conf_tensor
-        age.add_(1).clamp_(max=smc_confidence_window_size)
+        # Confidence Update        
+        conf_history[unfinished_sequences, index_ptr] = step_conf_tensor[unfinished_sequences]
+        age.add_(unfinished_sequences.long()).clamp_(max=smc_confidence_window_size)
         index_ptr = (index_ptr + 1) % smc_confidence_window_size
             
         if step_confidences is not None:
@@ -260,14 +259,14 @@ def generate(
         # current_v = avg_conf_values ** smc_confidence_eta
         w = (conf_history.sum(dim=1) / age) ** smc_confidence_eta
         # w = current_v / prev_v #TODO: incremental weight로 하니까 별로 차이가 안남.
-        w[~unfinished_sequences] = 1.0
+        # w[~unfinished_sequences] = 0.5 # 1.0 #TODO: resample within only unfinished seqs.
 
         if steps >= smc_warmup_tokens:
             master_indices = torch.arange(batch_size, device=input_ids.device)
             for g in range(num_groups):
                 start, end = g * num_generations, (g + 1) * num_generations
                 
-                group_unfinished_mask = unfinished_sequences[start:end]
+                """ group_unfinished_mask = unfinished_sequences[start:end]
                 if group_unfinished_mask.sum() <= 1:
                     continue
                 
@@ -296,9 +295,24 @@ def generate(
                             (max_w / min_w)
                         )
                     # --- END LOGGING BLOCK ---
-                    group_w_norm = F.softmax(group_w, dim=0)
-                    resampled_indices_local = ordered_stratified_resampling(group_w_norm.unsqueeze(0)).squeeze(0)
-                    master_indices[start:end] = resampled_indices_local + start
+                    group_w_norm = group_w / torch.sum(group_w)
+                    active_weights_norm = active_weights / torch.sum(active_weights)
+                    # resampled_indices_local = ordered_stratified_resampling(group_w_norm.unsqueeze(0)).squeeze(0) #TODO: check 
+                    resampled_indices_local = torch.multinomial(group_w_norm, num_samples=group_w_norm.size(0), replacement=True)
+                    master_indices[start:end] = resampled_indices_local + start """
+                    
+                group_mask = torch.zeros_like(unfinished_sequences)
+                group_mask[start:end] = True
+                unfinished_indices_in_group = torch.where(unfinished_sequences & group_mask)[0]
+
+                # Resampling only makes sense if there are multiple active sequences
+                if len(unfinished_indices_in_group) > 1:
+                    active_weights = w[unfinished_indices_in_group]
+                    if active_weights.max() / active_weights.min() > smc_resample_threshold:
+                        active_weights_norm = active_weights / torch.sum(active_weights)
+                        resampled_subset_indices = torch.multinomial(active_weights_norm, num_samples=active_weights_norm.size(0), replacement=True)
+                        new_parent_indices = unfinished_indices_in_group[resampled_subset_indices]
+                        master_indices[unfinished_indices_in_group] = new_parent_indices
 
                     # input_ids = input_ids.index_select(0, final_indices)
                     # unfinished_sequences = unfinished_sequences.index_select(0, final_indices)
