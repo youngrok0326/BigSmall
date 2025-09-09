@@ -585,10 +585,6 @@ class GRPOConfig(TrainingArguments):
         default=True,
         metadata={"help": "Whether to use Sequential Monte Carlo for generating completions."},
     )
-    value_temperature: float = field(
-        default=1.0,
-        metadata={"help": "Temperature for sampling during the TSMC loop."},
-    )
     smc_warmup_tokens: int = field(
         default=50,
         metadata={
@@ -615,6 +611,12 @@ class GRPOConfig(TrainingArguments):
         default=50,
         metadata={
             "help": "The window size for computing the moving average of the value function confidence scores."
+        },
+    )
+    smc_topk: int = field(
+        default=-1,
+        metadata={
+            "help": "Number of top-k logits to consider for the SMC."
         },
     )
     # --- END: tsmc configuration ---

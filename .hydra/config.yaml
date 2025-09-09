@@ -1,7 +1,7 @@
 model:
   model_name: Qwen/Qwen2.5-3B
   gpu_memory_utilization: 0.5
-  max_seq_length: 1024
+  max_seq_length: 2048
   lora_rank: 64
   load_in_4bit: true
   fast_inference: false
@@ -15,14 +15,14 @@ model:
   - down_proj
   random_state: 42
 wandb:
-  enable: true
+  enable: false
   project_name: SMCGRPO
-  run_name: conf_smc_base
+  run_name: debug
 rl:
   algorithm: SMCGRPO
-  dataset: gsm8k
-  max_prompt_length: 512
-  max_completion_length: 512
+  dataset: math
+  max_prompt_length: 1024
+  max_completion_length: 1024
   num_generations: 16
   max_steps: 8000
   save_strategy: time
@@ -35,7 +35,7 @@ rl:
   delta: null
   loss_type: grpo
   mask_truncated_completions: null
-  resume_from_checkpoint: true
+  resume_from_checkpoint: null
 optim:
   learning_rate: 5.0e-06
   lr_scheduler_type: constant
@@ -51,9 +51,9 @@ optim:
   logging_steps: 1
 smc:
   use_smc: true
-  value_temperature: 0.5
   smc_warmup_tokens: 50
   smc_beta: 1.0
-  smc_confidence_eta: 1.0
-  smc_ess_threshold: 0.5
-  smc_confidence_window_size: 50
+  smc_confidence_eta: 0.5
+  smc_ess_threshold: 0.1
+  smc_confidence_window_size: 20
+  smc_topk: -1

@@ -856,11 +856,11 @@ class GRPOTrainer(Trainer):
                 "use_smc": self.args.use_smc,
                 "num_generations": self.args.num_generations,
                 "smc_beta": self.args.smc_beta,
-                "value_temperature": self.args.value_temperature,
                 "smc_warmup_tokens": self.args.smc_warmup_tokens,
                 "smc_confidence_eta": self.args.smc_confidence_eta,
                 "smc_ess_threshold": self.args.smc_ess_threshold,
                 "smc_confidence_window_size": self.args.smc_confidence_window_size,
+                "smc_topk": self.args.smc_topk,
             }
             for key, value in smc_params.items():
                 setattr(self.generation_config, key, value)
@@ -1456,7 +1456,7 @@ class GRPOTrainer(Trainer):
             prompt_inputs["input_ids"], prompt_inputs["attention_mask"] = prompt_ids, prompt_mask
             prompt_completion_ids = unwrapped_model.generate(
                 **prompt_inputs, custom_generate='.', generation_config=self.generation_config, disable_compile=True,
-                ref_model=self.ref_model, logging_config=logging_config
+                ref_model=self.ref_model, logging_config=logging_config, tokenizer=self.tokenizer
             )
         # Compute prompt length and extract completion ids
         prompt_length = prompt_ids.size(1)

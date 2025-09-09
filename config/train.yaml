@@ -1,7 +1,7 @@
 model:
   model_name: Qwen/Qwen2.5-3B #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
   gpu_memory_utilization: 0.5
-  max_seq_length: 1024
+  max_seq_length: 2048
   lora_rank: 64
   load_in_4bit: true
   fast_inference: false # use_vllm
@@ -17,13 +17,13 @@ model:
 wandb:
   enable: true
   project_name: "SMCGRPO"
-  run_name: conf_GSM8K_smc_base_0.1 #"Instruct-GSM8K-16-16-Run1"
+  run_name: debug #"Instruct-GSM8K-16-16-Run1"
 rl:
   algorithm: "SMCGRPO"
-  dataset: "gsm8k"
+  dataset: "math"
   max_prompt_length: 1024
   max_completion_length: 1024
-  num_generations: 15
+  num_generations: 16
   max_steps: 8000
   save_strategy: "time"
   save_steps: 100
@@ -52,10 +52,9 @@ optim:
   logging_steps: 1
 smc:
   use_smc: true
-  value_temperature: 0.5
-  smc_warmup_tokens: 50 #TODO: might need this
+  smc_warmup_tokens: 50 # smc_warmup_tokens = max(smc_warmup_tokens, smc_confidence_window_size)
   smc_beta: 1.0 #TODO: later use for kl term
-  smc_confidence_eta: 1.0
-  smc_ess_threshold: 0.1
-  smc_confidence_window_size: 50
-
+  smc_confidence_eta: 0.5 #TODO: temperature로 교체
+  smc_ess_threshold: 0.1 #TODO: smc_resample_threshold로 교체
+  smc_confidence_window_size: 20
+  smc_topk: -1 # top_logprobs in deepconf.

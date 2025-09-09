@@ -17,7 +17,7 @@
 set -euo pipefail
 
 ESS_VALUES=${ESS_VALUES:-"0.1 0.2 0.3 0.4 0.5"}
-WIN_VALUES=${WIN_VALUES:-"25 50 75 100 125 150 175 200"}
+WIN_VALUES=${WIN_VALUES:-"25 50 75 100 125 150 175 200 225 250"}
 
 # Model and group configs to sweep
 MODEL_NAMES=(
@@ -25,10 +25,10 @@ MODEL_NAMES=(
   "Qwen/Qwen2.5-3B-Instruct"
   "Qwen/Qwen2.5-Math-1.5B-Instruct"
 )
-declare -a GROUPS
+declare -a GEN_GROUPS
 # (batch_size_groups, num_generations)
-GROUPS+=("32 16")
-GROUPS+=("4 256")
+GEN_GROUPS+=("32 16")
+GEN_GROUPS+=("8 64")
 
 # Build run name: smc_{model_name}_num_gen{num_generation}_ess{ess}_win{win}
 # Sanitize model name for filenames (replace '/' with '-')
@@ -101,10 +101,10 @@ find_free_gpu() {
 
 jobs_submitted=0
 for model_name in "${MODEL_NAMES[@]}"; do
-  for grp in "${GROUPS[@]}"; do
+  for grp in "${GEN_GROUPS[@]}"; do
     IFS=' ' read -r G N <<< "$grp"
     if [ -z "${G:-}" ] || [ -z "${N:-}" ]; then
-      echo "Invalid GROUPS entry: '$grp' (expected 'G N')" >&2
+      echo "Invalid GEN_GROUPS entry: '$grp' (expected 'G N')" >&2
       exit 1
     fi
     for ess in ${ESS_VALUES}; do
