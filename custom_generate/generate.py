@@ -96,7 +96,7 @@ def generate(
     num_generations = getattr(generation_config, "num_generations", 8)
     num_groups = batch_size // num_generations
     smc_confidence_eta = getattr(generation_config, "smc_confidence_eta", 1.0)
-    smc_ess_threshold = getattr(generation_config, "smc_ess_threshold", 0.5)
+    smc_resample_threshold = getattr(generation_config, "smc_resample_threshold", 0.5)
     smc_confidence_window_size = getattr(generation_config, "smc_confidence_window_size", 16)
     smc_warmup_tokens = getattr(generation_config, "smc_warmup_tokens", 0)
     smc_warmup_tokens = max(smc_warmup_tokens, smc_confidence_window_size)
@@ -111,19 +111,22 @@ def generate(
     resampling_step_counter = 0
     if is_main_process and "wandb" in report_to:
         columns = [
-            "global_step", "resampling_step", "group_index", "ess",
-            "conf_mean", "conf_std",
-            "avg_conf_mean", "avg_conf_std",
-            "weight_mean", "weight_std"
+            "global_step", "resampling_step", "group_index",
+            "max_w", "min_w", "max/min",
         ]
         smc_table = wandb.Table(columns=columns)
 
     # --- SMC State Initialization ---
     log_w = torch.zeros(batch_size, device=input_ids.device, dtype=torch.float32)
-    prev_log_v = torch.zeros(batch_size, device=input_ids.device, dtype=torch.float32)
-    conf_deques = [deque(maxlen=smc_confidence_window_size) for _ in range(batch_size)]
-    conf_sums = [0.0 for _ in range(batch_size)]
+    # prev_v = torch.ones(batch_size, device=input_ids.device, dtype=torch.float32)
+    # conf_deques = [deque(maxlen=smc_confidence_window_size) for _ in range(batch_size)]
+    # conf_sums = [0.0 for _ in range(batch_size)]
     unfinished_sequences = torch.ones(batch_size, dtype=torch.bool, device=input_ids.device)
+    conf_history = torch.zeros(
+        batch_size, smc_confidence_window_size, device=input_ids.device
+    )
+    age = torch.zeros(batch_size, device=input_ids.device, dtype=torch.long)
+    index_ptr = 0
 
     # ========================================================================
     # 2. Main Generation Loop
@@ -186,7 +189,7 @@ def generate(
             next_tokens = torch.argmax(next_token_scores, dim=-1)
 
         # --- Step B: Calculate & Track Per-Token Confidence ---
-        logprobs = F.log_softmax(next_token_scores, dim=-1)
+        """ logprobs = F.log_softmax(next_token_scores, dim=-1)
         if smc_topk > 0:
             k = min(smc_topk, next_token_scores.size(-1))
             topk_indices = torch.topk(next_token_scores, k, dim=-1).indices
@@ -194,26 +197,40 @@ def generate(
             candidate_mask.scatter_(-1, topk_indices, True)
         else:
             candidate_mask = torch.isfinite(next_token_scores)
-
+            
         num_candidates = candidate_mask.sum(dim=-1)
         selected_lp = torch.gather(logprobs, -1, next_tokens.unsqueeze(-1)).squeeze(-1)
         masked_logprobs = torch.where(candidate_mask, logprobs, torch.tensor(0.0, device=logprobs.device))
         total_lp = masked_logprobs.sum(dim=-1)
         denominator = num_candidates - 1
         step_conf_tensor = -((total_lp - selected_lp) / denominator)
-        step_conf_tensor[num_candidates <= 1] = 0.0
+        step_conf_tensor[num_candidates <= 1] = 0.0 """
         
-        for i in range(batch_size):
-            if not unfinished_sequences[i]: 
-                continue
-            conf = step_conf_tensor[i].item()
-            if len(conf_deques[i]) >= smc_confidence_window_size: 
-                conf_sums[i] -= conf_deques[i][0]
-            conf_deques[i].append(conf)
-            conf_sums[i] += conf
+        if smc_topk > 0:
+            k = min(smc_topk, next_token_scores.size(-1))
+            logits_for_entropy = torch.topk(next_token_scores, k, dim=-1).values
+        else:
+            logits_for_entropy = next_token_scores
+        probs_for_entropy = F.softmax(logits_for_entropy, dim=-1)
+        entropy = torch.distributions.Categorical(probs=probs_for_entropy).entropy()
+        step_conf_tensor = torch.exp(-entropy)
+        
+        # for i in range(batch_size):
+        #     if not unfinished_sequences[i]: 
+        #         continue
+        #     conf = step_conf_tensor[i].item()
+        #     if len(conf_deques[i]) >= smc_confidence_window_size: 
+        #         conf_sums[i] -= conf_deques[i][0]
+        #     conf_deques[i].append(conf)
+        #     conf_sums[i] += conf
+        
+        # Confidence Update
+        conf_history[:, index_ptr] = step_conf_tensor
+        age.add_(1).clamp_(max=smc_confidence_window_size)
+        index_ptr = (index_ptr + 1) % smc_confidence_window_size
             
         if step_confidences is not None:
-            step_confidences.append(torch.tensor(step_conf_tensor, device=input_ids.device))
+            step_confidences.append(step_conf_tensor.clone())
 
         # --- Step C: Update State ---
         if has_eos_stopping_criteria and pad_token_id is not None:
@@ -231,28 +248,22 @@ def generate(
             unfinished_sequences &= ~standard_stop
 
         # --- Step D: WEIGH & RESAMPLE BLOCK (runs every token) ---
-        conf_sums_tensor = torch.tensor(conf_sums, device=input_ids.device)
-        lengths_tensor = torch.tensor(
-            [len(d) for d in conf_deques], 
-            device=input_ids.device
-        )
-        avg_conf_values = conf_sums_tensor / lengths_tensor
+        # conf_sums_tensor = torch.tensor(conf_sums, device=input_ids.device)
+        # lengths_tensor = torch.tensor(
+        #     [len(d) for d in conf_deques], 
+        #     device=input_ids.device
+        # )
+        # avg_conf_values = conf_sums_tensor / lengths_tensor
         
-        # normalization
-        standardized_values = torch.zeros_like(avg_conf_values)
-        if unfinished_sequences.sum() > 1:
-            active_values = avg_conf_values[unfinished_sequences]
-            mean = active_values.mean()
-            std = active_values.std()
-            standardized_active_values = (active_values - mean) / (std + 1e-9)
-            standardized_values[unfinished_sequences] = standardized_active_values
-        normalized_values = torch.sigmoid(standardized_values)
-        
-        current_log_v = torch.log(normalized_values) * smc_confidence_eta
-        log_w = current_log_v - prev_log_v #TODO: annealing? #TODO: turn into a sqrt of value (sum of reward minus kl term)
-        log_w[~unfinished_sequences] = 0.0
+        #TODO: geometric mean of selected tokens.
+
+        # current_v = avg_conf_values ** smc_confidence_eta
+        w = (conf_history.sum(dim=1) / age) ** smc_confidence_eta
+        # w = current_v / prev_v #TODO: incremental weight로 하니까 별로 차이가 안남.
+        w[~unfinished_sequences] = 1.0
 
         if steps >= smc_warmup_tokens:
+            master_indices = torch.arange(batch_size, device=input_ids.device)
             for g in range(num_groups):
                 start, end = g * num_generations, (g + 1) * num_generations
                 
@@ -260,51 +271,64 @@ def generate(
                 if group_unfinished_mask.sum() <= 1:
                     continue
                 
-                group_log_w = log_w[start:end]
-                group_w_norm = F.softmax(group_log_w, dim=0)
+                group_w = w[start:end]
+                # group_w_norm = F.softmax(group_w, dim=0)
                 
-                max_log_w = group_log_w[group_unfinished_mask].max()
-                min_log_w = group_log_w[group_unfinished_mask].min()
+                max_w = group_w[group_unfinished_mask].max()
+                min_w = group_w[group_unfinished_mask].min()
                 
-                ess = 1.0 / torch.sum(group_w_norm**2)
-                
-                if (max_log_w - min_log_w) > smc_ess_threshold: 
+                # ess = 1.0 / torch.sum(group_w_norm**2)
+                print(f"min max deviation: {max_w / min_w}")
+                if (max_w / min_w) > smc_resample_threshold: 
                     # --- WANDB LOGGING BLOCK ---
                     resampling_step_counter += 1
                     if smc_table is not None:
-                        group_conf_tensor = step_conf_tensor[start:end][group_unfinished_mask]
-                        group_avg_conf = avg_conf_values[start:end][group_unfinished_mask]
-                        group_conf_std = group_conf_tensor.std().item() if group_unfinished_mask.sum() > 1 else 0.0
-                        group_avg_conf_std = group_avg_conf.std().item() if group_unfinished_mask.sum() > 1 else 0.0
+                        # group_conf_tensor = step_conf_tensor[start:end][group_unfinished_mask]
+                        # group_avg_conf = (conf_history.sum(dim=1) / age)[start:end][group_unfinished_mask]
+                        # group_conf_std = group_conf_tensor.std().item() if group_unfinished_mask.sum() > 1 else 0.0
+                        # group_avg_conf_std = group_avg_conf.std().item() if group_unfinished_mask.sum() > 1 else 0.0
                         smc_table.add_data(
                             global_step,
                             resampling_step_counter,
                             g,
-                            ess.item(),
-                            group_conf_tensor.mean().item(),
-                            group_conf_std.item(),
-                            group_avg_conf.mean().item(),
-                            group_avg_conf_std.item(),
-                            group_w_norm.mean().item(),
-                            group_w_norm.std().item()
+                            max_w,
+                            min_w,
+                            (max_w / min_w)
                         )
                     # --- END LOGGING BLOCK ---
-                    resampled_indices_local = ordered_stratified_resampling(group_w_norm.unsqueeze(0)).squeeze(0) #TODO: Srinivasan Sampling Process
-                    final_indices = resampled_indices_local + start
-                    input_ids[start:end] = input_ids[final_indices]
-                    unfinished_sequences[start:end] = unfinished_sequences[final_indices]
-                    if "attention_mask" in model_kwargs: 
-                        model_kwargs["attention_mask"][start:end] = model_kwargs["attention_mask"][final_indices]
-                    if "past_key_values" in model_kwargs and model_kwargs["past_key_values"]:
-                        for layer in model_kwargs["past_key_values"]:
-                            for tensor_idx in range(len(layer)):
-                                layer[tensor_idx][start:end] = layer[tensor_idx][final_indices]
+                    group_w_norm = F.softmax(group_w, dim=0)
+                    resampled_indices_local = ordered_stratified_resampling(group_w_norm.unsqueeze(0)).squeeze(0)
+                    master_indices[start:end] = resampled_indices_local + start
+
+                    # input_ids = input_ids.index_select(0, final_indices)
+                    # unfinished_sequences = unfinished_sequences.index_select(0, final_indices)
+                    # current_v = current_v.index_select(0, final_indices)
+                    # if "attention_mask" in model_kwargs:
+                    #     model_kwargs["attention_mask"] = model_kwargs["attention_mask"].index_select(0, final_indices)
+
+                    # if "past_key_values" in model_kwargs and model_kwargs["past_key_values"]:
+                    #     model_kwargs["past_key_values"] = tuple(
+                    #         tuple(p.index_select(0, final_indices) for p in layer_past)
+                    #         for layer_past in model_kwargs["past_key_values"]
+                    #     )
+                    # final_indices_list = final_indices.tolist()
+                    # conf_deques = [conf_deques[i] for i in final_indices_list]
+                    # conf_sums = [conf_sums[i] for i in final_indices_list]
                     
-                    conf_deques[start:end] = [conf_deques[i] for i in final_indices.tolist()]
-                    conf_sums[start:end] = [conf_sums[i] for i in final_indices.tolist()]
-                    current_log_v[start:end] = current_log_v[final_indices]
+            input_ids = input_ids.index_select(0, master_indices)
+            unfinished_sequences = unfinished_sequences.index_select(0, master_indices)
+            # current_v = current_v.index_select(0, master_indices)
+            conf_history = conf_history.index_select(0, master_indices)
+            age = age.index_select(0, master_indices)
+            if "attention_mask" in model_kwargs:
+                model_kwargs["attention_mask"] = model_kwargs["attention_mask"].index_select(0, master_indices)
+            if "past_key_values" in model_kwargs and model_kwargs["past_key_values"]:
+                model_kwargs["past_key_values"] = tuple(
+                    tuple(p.index_select(0, master_indices) for p in layer_past)
+                    for layer_past in model_kwargs["past_key_values"]
+                )
                 
-        prev_log_v = current_log_v
+        # prev_v = current_v
         # Update loop counters
         cur_len += 1
         steps += 1

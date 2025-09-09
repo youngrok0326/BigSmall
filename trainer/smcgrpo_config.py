@@ -600,7 +600,7 @@ class GRPOConfig(TrainingArguments):
         metadata={"help": "What power will the value function be raised to in order to approximate the twist function"
         },
     )
-    smc_ess_threshold: float = field(
+    smc_resample_threshold: float = field(
         default=0.5,
         metadata={
             "help": "The threshold for the effective sample size (ESS) below which resampling is triggered. Expressed "

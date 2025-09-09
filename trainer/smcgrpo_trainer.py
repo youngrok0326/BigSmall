@@ -858,7 +858,7 @@ class GRPOTrainer(Trainer):
                 "smc_beta": self.args.smc_beta,
                 "smc_warmup_tokens": self.args.smc_warmup_tokens,
                 "smc_confidence_eta": self.args.smc_confidence_eta,
-                "smc_ess_threshold": self.args.smc_ess_threshold,
+                "smc_resample_threshold": self.args.smc_resample_threshold,
                 "smc_confidence_window_size": self.args.smc_confidence_window_size,
                 "smc_topk": self.args.smc_topk,
             }

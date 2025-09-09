@@ -66,7 +66,7 @@ def main(cfg: DictConfig) -> None:
             "smc_warmup_tokens": cfg.smc.smc_warmup_tokens,
             "smc_beta": cfg.smc.smc_beta,
             "smc_confidence_eta": cfg.smc.smc_confidence_eta,
-            "smc_ess_threshold": cfg.smc.smc_ess_threshold,
+            "smc_resample_threshold": cfg.smc.smc_resample_threshold,
             "smc_confidence_window_size": cfg.smc.smc_confidence_window_size,
             "smc_topk": cfg.smc.smc_topk
         }
