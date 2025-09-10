@@ -7,7 +7,7 @@ model:
 
 wandb:
   enable: true
-  project_name: "SMCGRPO"
+  project_name: "SMC_DECODE_EVAL"
   run_name: "Real_Qwen2.5-3B"
 
 datasets:
