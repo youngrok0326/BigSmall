@@ -2,58 +2,39 @@ model:
   model_name: Qwen/Qwen2.5-3B
   gpu_memory_utilization: 0.5
   max_seq_length: 2048
-  lora_rank: 64
   load_in_4bit: true
   fast_inference: false
-  target_modules:
-  - q_proj
-  - k_proj
-  - v_proj
-  - o_proj
-  - gate_proj
-  - up_proj
-  - down_proj
-  random_state: 42
 wandb:
   enable: false
   project_name: SMCGRPO
-  run_name: debug
-rl:
-  algorithm: SMCGRPO
-  dataset: math
-  max_prompt_length: 1024
-  max_completion_length: 1024
-  num_generations: 16
-  max_steps: 8000
-  save_strategy: time
-  save_steps: 100
-  save_interval: 1800
-  max_time: .inf
-  beta: 0.0
-  epsilon: 0.2
-  epsilon_high: null
-  delta: null
-  loss_type: grpo
-  mask_truncated_completions: null
-  resume_from_checkpoint: null
-optim:
-  learning_rate: 5.0e-06
-  lr_scheduler_type: constant
-  optim: adamw_8bit
-  adam_beta1: 0.9
-  adam_beta2: 0.99
-  weight_decay: 0.1
-  warmup_ratio: 0.01
+  run_name: Qwen2.5-3B
+datasets:
+- math500
+split: test
+eval:
+  repeat_cnt: 1
+  sample_cnt: 5
+  batch_size: 512
+  batch_size_groups: 8
+  max_new_tokens: 1024
+  run_default: false
+  run_custom: true
+  default_use_vllm: true
+default_decode:
+  do_sample: true
   temperature: 0.9
-  max_grad_norm: 0.1
-  per_device_train_batch_size: 16
-  gradient_accumulation_steps: 1
-  logging_steps: 1
-smc:
+  top_p: 1.0
+  top_k: 0
+custom_decode:
   use_smc: true
-  smc_warmup_tokens: 50
+  num_generations: 16
+  do_sample: true
+  temperature: 0.9
+  top_p: 1.0
+  top_k: 0
   smc_beta: 1.0
+  smc_warmup_tokens: 50
   smc_confidence_eta: 0.5
-  smc_resample_threshold: 1.3
-  smc_confidence_window_size: 50
+  smc_resample_threshold: 1.5
+  smc_confidence_window_size: 20
   smc_topk: -1

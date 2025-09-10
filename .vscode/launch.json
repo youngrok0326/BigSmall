@@ -12,7 +12,25 @@
         "wandb.enable=false"
       ],
       "env": {
-        "CUDA_VISIBLE_DEVICES": "0",
+        "CUDA_VISIBLE_DEVICES": "7",
+        "WANDB_DISABLED": "true",
+        "CUDA_LAUNCH_BLOCKING": "1"
+      },
+      "justMyCode": false,
+      "subProcess": true
+    },
+    {
+      "name": "UV: Debug evaluate-decode.py",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/evaluate-decode.py",
+      "console": "integratedTerminal",
+      "args": [
+        "hydra.run.dir=.",
+        "wandb.enable=false"
+      ],
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "1",
         "WANDB_DISABLED": "true",
         "CUDA_LAUNCH_BLOCKING": "1"
       },

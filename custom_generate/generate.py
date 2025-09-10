@@ -263,75 +263,41 @@ def generate(
 
         if steps >= smc_warmup_tokens:
             master_indices = torch.arange(batch_size, device=input_ids.device)
-            for g in range(num_groups):
-                start, end = g * num_generations, (g + 1) * num_generations
-                
-                """ group_unfinished_mask = unfinished_sequences[start:end]
-                if group_unfinished_mask.sum() <= 1:
-                    continue
-                
-                group_w = w[start:end]
-                # group_w_norm = F.softmax(group_w, dim=0)
-                
-                max_w = group_w[group_unfinished_mask].max()
-                min_w = group_w[group_unfinished_mask].min()
-                
-                # ess = 1.0 / torch.sum(group_w_norm**2)
-                print(f"min max deviation: {max_w / min_w}")
-                if (max_w / min_w) > smc_resample_threshold: 
-                    # --- WANDB LOGGING BLOCK ---
-                    resampling_step_counter += 1
-                    if smc_table is not None:
-                        # group_conf_tensor = step_conf_tensor[start:end][group_unfinished_mask]
-                        # group_avg_conf = (conf_history.sum(dim=1) / age)[start:end][group_unfinished_mask]
-                        # group_conf_std = group_conf_tensor.std().item() if group_unfinished_mask.sum() > 1 else 0.0
-                        # group_avg_conf_std = group_avg_conf.std().item() if group_unfinished_mask.sum() > 1 else 0.0
-                        smc_table.add_data(
-                            global_step,
-                            resampling_step_counter,
-                            g,
-                            max_w,
-                            min_w,
-                            (max_w / min_w)
-                        )
-                    # --- END LOGGING BLOCK ---
-                    group_w_norm = group_w / torch.sum(group_w)
-                    active_weights_norm = active_weights / torch.sum(active_weights)
-                    # resampled_indices_local = ordered_stratified_resampling(group_w_norm.unsqueeze(0)).squeeze(0) #TODO: check 
-                    resampled_indices_local = torch.multinomial(group_w_norm, num_samples=group_w_norm.size(0), replacement=True)
-                    master_indices[start:end] = resampled_indices_local + start """
-                    
-                group_mask = torch.zeros_like(unfinished_sequences)
-                group_mask[start:end] = True
-                unfinished_indices_in_group = torch.where(unfinished_sequences & group_mask)[0]
+            w_reshaped = w.view(num_groups, num_generations)
+            unfinished_reshaped = unfinished_sequences.view(num_groups, num_generations)
 
-                # Resampling only makes sense if there are multiple active sequences
-                if len(unfinished_indices_in_group) > 1:
-                    active_weights = w[unfinished_indices_in_group]
-                    if active_weights.max() / active_weights.min() > smc_resample_threshold:
-                        active_weights_norm = active_weights / torch.sum(active_weights)
-                        resampled_subset_indices = torch.multinomial(active_weights_norm, num_samples=active_weights_norm.size(0), replacement=True)
-                        new_parent_indices = unfinished_indices_in_group[resampled_subset_indices]
-                        master_indices[unfinished_indices_in_group] = new_parent_indices
+            w_for_max = torch.where(unfinished_reshaped, w_reshaped, -torch.inf)
+            w_for_min = torch.where(unfinished_reshaped, w_reshaped, torch.inf)
+            group_maxs = w_for_max.max(dim=1).values
+            group_mins = w_for_min.min(dim=1).values
+            
+            needs_resampling_mask = (group_maxs / group_mins) > smc_resample_threshold
+            needs_resampling_mask &= unfinished_reshaped.sum(dim=1) > 1
 
-                    # input_ids = input_ids.index_select(0, final_indices)
-                    # unfinished_sequences = unfinished_sequences.index_select(0, final_indices)
-                    # current_v = current_v.index_select(0, final_indices)
-                    # if "attention_mask" in model_kwargs:
-                    #     model_kwargs["attention_mask"] = model_kwargs["attention_mask"].index_select(0, final_indices)
+            if needs_resampling_mask.any():
+                weights_to_resample = w_reshaped[needs_resampling_mask]
+                unfinished_mask_for_resampling = unfinished_reshaped[needs_resampling_mask]
+                
+                weights_to_resample[~unfinished_mask_for_resampling] = 0.0
+                group_sums = weights_to_resample.sum(dim=1, keepdim=True)
+                norm_weights = weights_to_resample / group_sums
 
-                    # if "past_key_values" in model_kwargs and model_kwargs["past_key_values"]:
-                    #     model_kwargs["past_key_values"] = tuple(
-                    #         tuple(p.index_select(0, final_indices) for p in layer_past)
-                    #         for layer_past in model_kwargs["past_key_values"]
-                    #     )
-                    # final_indices_list = final_indices.tolist()
-                    # conf_deques = [conf_deques[i] for i in final_indices_list]
-                    # conf_sums = [conf_sums[i] for i in final_indices_list]
+                resampled_local_indices = torch.multinomial(
+                    norm_weights, num_samples=num_generations, replacement=True
+                )
+
+                all_indices_reshaped = master_indices.view(num_groups, num_generations)
+                parent_pool_indices = all_indices_reshaped[needs_resampling_mask]
+                resampled_global_parents = parent_pool_indices.gather(1, resampled_local_indices)
+                
+                new_parent_candidates = master_indices.view(num_groups, num_generations).clone()
+                new_parent_candidates[needs_resampling_mask] = resampled_global_parents
+                new_parent_candidates = new_parent_candidates.flatten()
+                
+                master_indices[unfinished_sequences] = new_parent_candidates[unfinished_sequences]
                     
             input_ids = input_ids.index_select(0, master_indices)
             unfinished_sequences = unfinished_sequences.index_select(0, master_indices)
-            # current_v = current_v.index_select(0, master_indices)
             conf_history = conf_history.index_select(0, master_indices)
             age = age.index_select(0, master_indices)
             if "attention_mask" in model_kwargs:

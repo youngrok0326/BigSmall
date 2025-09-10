@@ -9,15 +9,17 @@
 #   - One concurrent job per GPU; next job is queued on the first GPU that finishes
 #
 # Env vars:
-#   ESS_VALUES : space-separated ESS thresholds (default shown below)
-#   WIN_VALUES : space-separated window sizes (default shown below)
+#   ESS_VALUES  : space-separated ESS thresholds (default shown below)
+#   WIN_VALUES  : space-separated window sizes (default shown below)
+#   TEMP_VALUES : space-separated temperatures (default shown below)
 #
 # Everything else strictly follows config/decode_eval.yaml.
 
 set -euo pipefail
 
-ESS_VALUES=${ESS_VALUES:-"1.2 1.25"}  # 1.3 1.15 1.35
-WIN_VALUES=${WIN_VALUES:-"25 50 75 100 150"}
+ESS_VALUES=${ESS_VALUES:-"1.0 1.1 1.2 1.3 1.4 1.5"}
+WIN_VALUES=${WIN_VALUES:-"25 50 75 100"}
+TEMP_VALUES=${TEMP_VALUES:-"0.9"} # 0.8 0.7 0.6 0.5
 
 # Model and group configs to sweep
 MODEL_NAMES=(
@@ -30,13 +32,13 @@ declare -a GEN_GROUPS
 GEN_GROUPS+=("16 16")
 GEN_GROUPS+=("4 64")
 
-# Build run name: smc_{model_name}_num_gen{num_generation}_ess{ess}_win{win}
+# Build run name: smc_{model_name}_num_gen{num_generation}_temp{temp}_ess{ess}_win{win}
 # Sanitize model name for filenames (replace '/' with '-')
 build_run_name() {
-  local model_name="$1"; local num_gen="$2"; local ess="$3"; local win="$4"
+  local model_name="$1"; local num_gen="$2"; local temp="$3"; local ess="$4"; local win="$5"
   local safe_model_name
   safe_model_name=$(echo -n "$model_name" | sed 's#/#-#g')
-  echo "smc_${safe_model_name}_num_gen${num_gen}_ess${ess}_win${win}"
+  echo "smc_${safe_model_name}_num_gen${num_gen}_temp${temp}_ess${ess}_win${win}"
 }
 
 # GPU scheduler: distribute jobs across visible GPUs (one per GPU)
@@ -107,28 +109,31 @@ for model_name in "${MODEL_NAMES[@]}"; do
       echo "Invalid GEN_GROUPS entry: '$grp' (expected 'G N')" >&2
       exit 1
     fi
-    for ess in ${ESS_VALUES}; do
-      for w in ${WIN_VALUES}; do
-        name="$(build_run_name "$model_name" "$N" "$ess" "$w")"
-        cmd=(uv run python3 evaluate-decode.py \
-          eval.run_default=false eval.run_custom=true \
-          model.model_name="${model_name}" \
-          eval.batch_size_groups=${G} \
-          custom_decode.num_generations=${N} \
-          custom_decode.smc_resample_threshold=${ess} \
-          custom_decode.smc_confidence_window_size=${w} \
-          wandb.run_name=${name})
+    for temp in ${TEMP_VALUES}; do
+      for ess in ${ESS_VALUES}; do
+        for w in ${WIN_VALUES}; do
+          name="$(build_run_name "$model_name" "$N" "$temp" "$ess" "$w")"
+          cmd=(uv run python3 evaluate-decode.py \
+            eval.run_default=false eval.run_custom=true \
+            model.model_name="${model_name}" \
+            eval.batch_size_groups=${G} \
+            custom_decode.num_generations=${N} \
+            custom_decode.temperature=${temp} \
+            custom_decode.smc_resample_threshold=${ess} \
+            custom_decode.smc_confidence_window_size=${w} \
+            wandb.run_name=${name})
 
-        while true; do
-          slot=$(find_free_gpu)
-          if [ "$slot" -ge 0 ]; then
-            echo "Running: ${cmd[*]}"
-            submit_job "$slot" "${cmd[@]}"
-            jobs_submitted=$((jobs_submitted+1))
-            break
-          fi
-          # No free GPU; wait a bit and retry
-          sleep 2
+          while true; do
+            slot=$(find_free_gpu)
+            if [ "$slot" -ge 0 ]; then
+              echo "Running: ${cmd[*]}"
+              submit_job "$slot" "${cmd[@]}"
+              jobs_submitted=$((jobs_submitted+1))
+              break
+            fi
+            # No free GPU; wait a bit and retry
+            sleep 2
+          done
         done
       done
     done

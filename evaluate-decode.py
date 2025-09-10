@@ -71,14 +71,23 @@ def _build_gen_config_from_section(tokenizer, section_cfg: DictConfig, max_new_t
     )
 
 
-def _batch_tokenize(tokenizer, texts, max_length):
-    return tokenizer(
-        texts,
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=max_length,
-    )
+def _batch_tokenize(tokenizer, texts, max_length, padding_side: str = "left", add_special_tokens: bool = False):
+    """Minimal, correct prompt tokenization: left padding, no added specials."""
+    prev_side = getattr(tokenizer, "padding_side", None)
+    try:
+        if prev_side is not None:
+            tokenizer.padding_side = padding_side
+        return tokenizer(
+            texts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=max_length,
+            add_special_tokens=add_special_tokens,
+        )
+    finally:
+        if prev_side is not None:
+            tokenizer.padding_side = prev_side
 
 
 def _decode_generated(tokenizer, sequences: torch.Tensor, prompt_lens: torch.Tensor):
@@ -95,6 +104,18 @@ def _decode_generated(tokenizer, sequences: torch.Tensor, prompt_lens: torch.Ten
                 gen_tokens = gen_tokens[:valid_len]
         texts.append(tokenizer.decode(gen_tokens, skip_special_tokens=True))
     return texts
+
+
+def _clean_prompt_texts(tokenizer, input_ids: torch.Tensor, attention_mask: torch.Tensor):
+    """Return readable prompt strings by removing pads/specials via the attention mask."""
+    texts = []
+    for i in range(input_ids.size(0)):
+        ids = input_ids[i][attention_mask[i].bool()]
+        texts.append(tokenizer.decode(ids, skip_special_tokens=True, clean_up_tokenization_spaces=False))
+    return texts
+
+
+# Prompts from utils.data are plain strings already; no chat templating needed here.
 
 
 def _evaluate_once_default(model, tokenizer, prompts, answers, cfg: DictConfig, progress_desc: str | None = None):
@@ -159,7 +180,8 @@ def _evaluate_once_default(model, tokenizer, prompts, answers, cfg: DictConfig, 
             for i in range(0, total_queries, cfg.eval.batch_size):
                 j = min(i + cfg.eval.batch_size, total_queries)
                 batch_prompts = prompts[i:j]
-                enc = _batch_tokenize(tokenizer, batch_prompts, cfg.model.max_seq_length)
+                enc = _batch_tokenize(tokenizer, batch_prompts, cfg.model.max_seq_length,
+                                       padding_side="left", add_special_tokens=False)
                 input_ids = enc.input_ids.to(device)
                 attn = enc.attention_mask.to(device)
                 prompt_lens = attn.sum(dim=1)
@@ -255,7 +277,8 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
         for i in range(0, total_queries, G):
             j = min(i + G, total_queries)
             batch_prompts = prompts[i:j]
-            enc = _batch_tokenize(tokenizer, batch_prompts, cfg.model.max_seq_length)
+            enc = _batch_tokenize(tokenizer, batch_prompts, cfg.model.max_seq_length,
+                                   padding_side="left", add_special_tokens=False)
             input_ids = enc.input_ids.to(device)
             attn = enc.attention_mask.to(device)
             prompt_lens = attn.sum(dim=1)
@@ -273,6 +296,8 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
                     generation_config=gen_cfg,
                     custom_generate='.',
                     tokenizer=tokenizer,
+                    # Pass clean prompt strings for debugging/inspection inside custom generator
+                    prompt_texts=_clean_prompt_texts(tokenizer, input_ids, attn),
                     logging_config=logging_config,
                     trust_remote_code=True,
                 )
@@ -430,6 +455,12 @@ def main(cfg: DictConfig) -> None:
         fast_inference=cfg.model.fast_inference,
         gpu_memory_utilization=cfg.model.gpu_memory_utilization,
     )
+
+    # Keep it simple and correct: prompts use left padding; no added specials.
+    try:
+        tokenizer.padding_side = "left"
+    except Exception:
+        pass
 
     # W&B init
     wandb_run = None
