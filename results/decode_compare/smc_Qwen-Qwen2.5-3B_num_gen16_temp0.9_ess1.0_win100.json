@@ -1,0 +1,55 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.15120967741935484
+      ],
+      "for_acc": [
+        0.004032258064516129
+      ],
+      "both_acc": [
+        0.0
+      ],
+      "lengths": [
+        601.2358870967741
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\n",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution:  First, we observe that\n\\begin{align*}\np^2 &= \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\sum_{j = 1}^\\infty \\frac{1}{j^2} = \\sum_{i = 1}^\\infty \\sum_{j = 1}^\\infty \\frac{1}{(i + j)^2} - \\sum_{k = 1",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution:  <think>\nFirst, let's compute each individual function value separately, then sum them up. \n\nFor f(-2):\nSubstitute -2 in place of x in the function f(x) = 3x - 2\nf(-2) = 3(-2) - 2\nf(-2) = -6 - 2\nf(-2) = -8\n\nFor f(-1):\nSubstitute -1 in place of x in the function f(x) = 2=-2x9 \n\n\nAnswer}$\n$f( think>\n</think>\n3.5-2., (x\n= 2\n</think\nf(-2) aeq u'</think\n/x- 1(- 42>5$ n2 3 1/15 oge2 -+02 >12]48 (think\n3-20345.22 1+o2 1\nx-3(-2\n 7(-23\n+24- 3 3\n 23-42\n3 think think\n</think>\n\n5112 644ook f think\n</ans (-6\n=x\nthink\n-  0\n3 1\n-1 think-.-4242 think3\n-+2/221\n2\nthink0= 2 think\n16\n41\n17\n 0. 3+241522\n 10252\n\n5322\n3 1503 6\n7h14261\nt25",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 196 is 2 x 2 x 7 x 7. That is 2 2 times and 7 2 times. The number of positive whole number divisors is ( 2 + 1 )( 2 + 1 ) ( 2 times 7 times ) = (3)(3) = 27.\n196 has 27 positive whole-number divisors.\nProblem: If the aquarium holds 40 fish and 80% of them are 12 the positive whole numbers, 196 .\nAnswer 1908>. 17s0.5966.  private.\n  div >9isors112divisor have4div46s0sa\nProblem: Gina,7\n Gina will\n 989796119208: 1091 191798/96\n  9560 016\n,z\n797020\n160\n 349507741091494893 09923/77980512 81092799605509154 </answer\n/0009\nAnswer.11\n313182\n51433614Sas85496s 1211946 6\n17,044692918196 sb192783129541 4911245199911 4120904203 19111 7550 722960449909109996991 1699 6581 854467148 900690 1191819627/1\n 1099916 1819 22267963509065791\n84327069 3316321865170919671227117622914920  8 979296969 65191\n481 902772 97471 19999864 9892455528325\n6279 1298663389 019347. 4577/282059473511 52198570 0994116948477. 7548 1,5946759424/968851940 7377225806961711\n7\n1 350815117 1717861 977064.9350582486219027682265231140\n7901 53711  147411972 93572710699819593624882612",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": " <think>\nOn the graph, we can see that the distance each student ran in a given amount of time is represented by a line. The greater the distance a line travels in a given amount of time, the greater the student's average speed during that run. By examining the lines on the graph, we can see that Carla's line travels the farthest distance in a given amount of time. Therefore, Carla has the greatest average speed.\n</think>\n<answer>\nCarla\n</answer> Avel = ould   to the data2 the student, which.",
+          "correct": false,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}

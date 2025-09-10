@@ -8,7 +8,7 @@ model:
 wandb:
   enable: true
   project_name: "SMCGRPO"
-  run_name: "Qwen2.5-3B"
+  run_name: "Real_Qwen2.5-3B"
 
 datasets:
   # - "amc23"
@@ -20,14 +20,14 @@ split: "test"
 eval:
   repeat_cnt: 1
   sample_cnt: 5
-  # Default generation batch size (prompts per batch)
-  batch_size: 512
-  # Custom SMC generation: number of prompt groups per batch
+  # Number of prompt groups per batch (each group produces multiple trajectories)
   batch_size_groups: 16
+  # Unified number of trajectories per prompt for both default/custom decoding
+  num_generations: 16
   max_new_tokens: 1024
   # Which decoding modes to run
-  run_default: false
-  run_custom: true
+  run_default: true
+  run_custom: false
   # Use Unsloth+vLLM backend for default decoding
   default_use_vllm: true
 
@@ -39,18 +39,17 @@ default_decode:
 
 custom_decode:
   use_smc: true
-  num_generations: 16
   # Sampling controls used inside SMC token selection
   do_sample: true
-  temperature: 0.9
+  temperature: 0.5
   top_p: 1.0
   top_k: 0
   # SMC-specific controls
   smc_beta: 1.0
   smc_warmup_tokens: 50
   smc_confidence_eta: 0.5
-  smc_resample_threshold: 1.5
-  smc_confidence_window_size: 20
+  smc_resample_threshold: 1.1
+  smc_confidence_window_size: 25
   smc_topk: -1
 
 

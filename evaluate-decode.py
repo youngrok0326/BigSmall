@@ -132,6 +132,9 @@ def _evaluate_once_default(model, tokenizer, prompts, answers, cfg: DictConfig, 
     both_correct = 0
     total_gen_len = 0
     examples = []
+    # Grouping and multi-sample controls unified under eval
+    G = int(cfg.eval.get("batch_size_groups", 16))
+    N = int(cfg.eval.get("num_generations", 1))
 
     if use_vllm:
         from vllm import SamplingParams
@@ -143,11 +146,13 @@ def _evaluate_once_default(model, tokenizer, prompts, answers, cfg: DictConfig, 
             top_p=float(cfg.default_decode.get("top_p", 1.0)),
             top_k=vllm_top_k,
             max_tokens=int(cfg.eval.max_new_tokens),
+            n=int(N),
         )
-
+        # Track fractions over groups
+        sum_ans_frac, sum_for_frac, sum_both_frac = 0.0, 0.0, 0.0
         with tqdm(total=total_queries, desc=progress_desc or "default", unit="prompt", dynamic_ncols=True) as pbar:
-            for i in range(0, total_queries, cfg.eval.batch_size):
-                j = min(i + cfg.eval.batch_size, total_queries)
+            for i in range(0, total_queries, G):
+                j = min(i + G, total_queries)
                 batch_prompts = prompts[i:j]
                 outputs = model.fast_generate(
                     batch_prompts,
@@ -156,29 +161,52 @@ def _evaluate_once_default(model, tokenizer, prompts, answers, cfg: DictConfig, 
                     use_tqdm=False,
                 )
                 for k, output, gt in zip(range(i, j), outputs, answers[i:j]):
-                    text = output.outputs[0].text
-                    total_gen_len += len(output.outputs[0].token_ids)
-                    a = answer_correct(text, gt)
-                    f = format_correct(text)
-                    ans_correct += a
-                    for_correct += f
-                    both_correct += (a and f)
+                    # Collect N candidate outputs per prompt
+                    texts_g = [oo.text for oo in output.outputs]
+                    lens_g = [len(oo.token_ids) for oo in output.outputs]
+                    a_list = [answer_correct(t, gt) for t in texts_g]
+                    f_list = [format_correct(t) for t in texts_g]
+
+                    a_any = any(a_list)
+                    f_any = any(f_list)
+                    both_any = any(a and f for a, f in zip(a_list, f_list))
+
+                    ans_correct += 1 if a_any else 0
+                    for_correct += 1 if f_any else 0
+                    both_correct += 1 if both_any else 0
+
+                    # Fractions per prompt
+                    denom = float(len(a_list)) if len(a_list) > 0 else float(N)
+                    sum_ans_frac += (sum(1 for a in a_list if a) / denom)
+                    sum_for_frac += (sum(1 for f in f_list if f) / denom)
+                    sum_both_frac += (sum(1 for a, f in zip(a_list, f_list) if a and f) / denom)
+
+                    # Choose representative for logging/length
+                    chosen_idx = next((idx for idx, (a, f) in enumerate(zip(a_list, f_list)) if a and f), None)
+                    if chosen_idx is None:
+                        chosen_idx = next((idx for idx, a in enumerate(a_list) if a), 0)
+                    chosen_text = texts_g[chosen_idx]
+                    chosen_len = lens_g[chosen_idx]
+                    total_gen_len += chosen_len
+
                     if len(examples) < cfg.eval.sample_cnt:
                         examples.append({
                             "prompt": prompts[k],
                             "answer": gt,
-                            "completion": text,
-                            "correct": a,
-                            "format_correct": f,
+                            "completion": chosen_text,
+                            "correct": a_any,
+                            "format_correct": f_any,
                         })
                 pbar.update(j - i)
     else:
         # Vanilla HF generate path
         device = next(model.parameters()).device
         gen_cfg = _build_gen_config_from_section(tokenizer, cfg.default_decode, cfg.eval.max_new_tokens)
+        # Track fractions over groups
+        sum_ans_frac, sum_for_frac, sum_both_frac = 0.0, 0.0, 0.0
         with tqdm(total=total_queries, desc=progress_desc or "default", unit="prompt", dynamic_ncols=True) as pbar:
-            for i in range(0, total_queries, cfg.eval.batch_size):
-                j = min(i + cfg.eval.batch_size, total_queries)
+            for i in range(0, total_queries, G):
+                j = min(i + G, total_queries)
                 batch_prompts = prompts[i:j]
                 enc = _batch_tokenize(tokenizer, batch_prompts, cfg.model.max_seq_length,
                                        padding_side="left", add_special_tokens=False)
@@ -186,46 +214,81 @@ def _evaluate_once_default(model, tokenizer, prompts, answers, cfg: DictConfig, 
                 attn = enc.attention_mask.to(device)
                 prompt_lens = attn.sum(dim=1)
 
+                # Repeat prompts N times to get N trajectories per prompt
+                input_rep = input_ids.repeat_interleave(N, dim=0)
+                attn_rep = attn.repeat_interleave(N, dim=0)
+
                 with torch.no_grad():
                     sequences = model.generate(
-                        input_ids=input_ids,
-                        attention_mask=attn,
+                        input_ids=input_rep,
+                        attention_mask=attn_rep,
                         generation_config=gen_cfg,
                     )
 
-                texts = _decode_generated(tokenizer, sequences, prompt_lens)
-                # Compute generated length per sample
-                if tokenizer.pad_token_id is not None:
-                    seq_valid_lens = (sequences != tokenizer.pad_token_id).sum(dim=1)
-                else:
-                    # If no pad, assume full length as valid
-                    seq_valid_lens = torch.full((sequences.size(0),), sequences.size(1), device=sequences.device)
-                gen_lens = (seq_valid_lens - prompt_lens).tolist()
-                total_gen_len += sum(gen_lens)
+                # Decode all N trajectories per prompt
+                prompt_lens_rep = prompt_lens.repeat_interleave(N, dim=0)
+                texts_all = _decode_generated(tokenizer, sequences, prompt_lens_rep)
 
-                for k, text, gt in zip(range(i, j), texts, answers[i:j]):
-                    a = answer_correct(text, gt)
-                    f = format_correct(text)
-                    ans_correct += a
-                    for_correct += f
-                    both_correct += (a and f)
-                    # keep a few examples
+                # Compute generated lengths per trajectory
+                if tokenizer.pad_token_id is not None:
+                    seq_valid_lens_all = (sequences != tokenizer.pad_token_id).sum(dim=1)
+                else:
+                    seq_valid_lens_all = torch.full((sequences.size(0),), sequences.size(1), device=sequences.device)
+                gen_lens_all = (seq_valid_lens_all - prompt_lens_rep).tolist()
+
+                # Iterate per group/prompt
+                for g, k in enumerate(range(i, j)):
+                    gt = answers[k]
+                    start = g * N
+                    end = start + N
+                    texts_g = texts_all[start:end]
+                    gen_lens_g = gen_lens_all[start:end]
+
+                    a_list = [answer_correct(t, gt) for t in texts_g]
+                    f_list = [format_correct(t) for t in texts_g]
+
+                    a_any = any(a_list)
+                    f_any = any(f_list)
+                    both_any = any(a and f for a, f in zip(a_list, f_list))
+
+                    ans_correct += 1 if a_any else 0
+                    for_correct += 1 if f_any else 0
+                    both_correct += 1 if both_any else 0
+
+                    sum_ans_frac += (sum(1 for a in a_list if a) / float(N))
+                    sum_for_frac += (sum(1 for f in f_list if f) / float(N))
+                    sum_both_frac += (sum(1 for a, f in zip(a_list, f_list) if a and f) / float(N))
+
+                    # Representative sample for logging/lengths
+                    chosen_idx = next((idx for idx, (a, f) in enumerate(zip(a_list, f_list)) if a and f), None)
+                    if chosen_idx is None:
+                        chosen_idx = next((idx for idx, a in enumerate(a_list) if a), 0)
+                    chosen_text = texts_g[chosen_idx]
+                    chosen_len = gen_lens_g[chosen_idx]
+                    total_gen_len += chosen_len
+
                     if len(examples) < cfg.eval.sample_cnt:
                         examples.append({
                             "prompt": prompts[k],
                             "answer": gt,
-                            "completion": text,
-                            "correct": a,
-                            "format_correct": f,
+                            "completion": chosen_text,
+                            "correct": a_any,
+                            "format_correct": f_any,
                         })
                 pbar.update(j - i)
 
     avg_len = total_gen_len / total_queries if total_queries > 0 else 0.0
+    avg_ans_frac = (sum_ans_frac / total_queries) if 'sum_ans_frac' in locals() and total_queries > 0 else 0.0
+    avg_for_frac = (sum_for_frac / total_queries) if 'sum_for_frac' in locals() and total_queries > 0 else 0.0
+    avg_both_frac = (sum_both_frac / total_queries) if 'sum_both_frac' in locals() and total_queries > 0 else 0.0
     return (
         ans_correct / total_queries,
         for_correct / total_queries,
         both_correct / total_queries,
         avg_len,
+        avg_ans_frac,
+        avg_for_frac,
+        avg_both_frac,
         examples,
     )
 
@@ -247,7 +310,8 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
     )
     # SMC flags
     gen_cfg.use_smc = bool(cfg.custom_decode.get("use_smc", True))
-    gen_cfg.num_generations = int(cfg.custom_decode.get("num_generations", 8))
+    # Unified eval.num_generations controls trajectories per prompt
+    gen_cfg.num_generations = int(cfg.eval.get("num_generations", 1))
     gen_cfg.smc_beta = float(cfg.custom_decode.get("smc_beta", 1.0))
     gen_cfg.smc_warmup_tokens = int(cfg.custom_decode.get("smc_warmup_tokens", 10))
     # Additional SMC controls (kept for parity with training config)
@@ -269,6 +333,10 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
     both_correct = 0
     total_gen_len = 0
     examples = []
+    # Track average fractions of correct trajectories per group
+    sum_ans_frac = 0.0
+    sum_for_frac = 0.0
+    sum_both_frac = 0.0
 
     G = cfg.eval.batch_size_groups
     N = gen_cfg.num_generations
@@ -342,6 +410,11 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
                 for_correct += 1 if f_any else 0
                 both_correct += 1 if both_any else 0
 
+                # Accumulate fractions within this group
+                sum_ans_frac += (sum(1 for a in a_list if a) / float(N))
+                sum_for_frac += (sum(1 for f in f_list if f) / float(N))
+                sum_both_frac += (sum(1 for a, f in zip(a_list, f_list) if a and f) / float(N))
+
                 # Choose a representative particle for logging/lengths:
                 # prefer one with both correct, else one with answer correct, else first.
                 chosen_idx = next((idx for idx, (a, f) in enumerate(zip(a_list, f_list)) if a and f), None)
@@ -363,11 +436,17 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
                 pbar.update(1)
 
     avg_len = total_gen_len / total_queries if total_queries > 0 else 0.0
+    avg_ans_frac = sum_ans_frac / total_queries if total_queries > 0 else 0.0
+    avg_for_frac = sum_for_frac / total_queries if total_queries > 0 else 0.0
+    avg_both_frac = sum_both_frac / total_queries if total_queries > 0 else 0.0
     return (
         ans_correct / total_queries,
         for_correct / total_queries,
         both_correct / total_queries,
         avg_len,
+        avg_ans_frac,
+        avg_for_frac,
+        avg_both_frac,
         examples,
     )
 
@@ -386,25 +465,27 @@ def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wand
     run_custom = bool(cfg.eval.get("run_custom", True))
 
     if run_default:
-        default_ans, default_for, default_both, default_len, default_examples = [], [], [], [], []
+        default_ans, default_for, default_both, default_len, default_ans_frac, default_for_frac, default_both_frac, default_examples = [], [], [], [], [], [], [], []
     if run_custom:
-        custom_ans, custom_for, custom_both, custom_len, custom_examples = [], [], [], [], []
+        custom_ans, custom_for, custom_both, custom_len, custom_ans_frac, custom_for_frac, custom_both_frac, custom_examples = [], [], [], [], [], [], [], []
 
     for t in range(cfg.eval.repeat_cnt):
         if run_default:
-            da, df, db, dl, de = _evaluate_once_default(
+            da, df, db, dl, dr_a, dr_f, dr_b, de = _evaluate_once_default(
                 model, tokenizer, prompts, answers, cfg,
                 progress_desc=f"{dataset_name} | default | rep {t+1}/{cfg.eval.repeat_cnt}"
             )
             default_ans.append(da); default_for.append(df); default_both.append(db); default_len.append(dl)
+            default_ans_frac.append(dr_a); default_for_frac.append(dr_f); default_both_frac.append(dr_b)
             default_examples = de if not default_examples else default_examples
         if run_custom:
-            ca, cf, cb, cl, ce = _evaluate_once_custom(
+            ca, cf, cb, cl, cr_a, cr_f, cr_b, ce = _evaluate_once_custom(
                 model, tokenizer, prompts, answers, cfg,
                 logging_enabled=cfg.wandb.enable,
                 progress_desc=f"{dataset_name} | custom | rep {t+1}/{cfg.eval.repeat_cnt}"
             )
             custom_ans.append(ca); custom_for.append(cf); custom_both.append(cb); custom_len.append(cl)
+            custom_ans_frac.append(cr_a); custom_for_frac.append(cr_f); custom_both_frac.append(cr_b)
             custom_examples = ce if not custom_examples else custom_examples
 
         if wandb_run is not None:
@@ -415,6 +496,9 @@ def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wand
                     f"default/{dataset_name}/for_acc": df,
                     f"default/{dataset_name}/both_acc": db,
                     f"default/{dataset_name}/avg_len": dl,
+                    f"default/{dataset_name}/ans_frac": dr_a,
+                    f"default/{dataset_name}/for_frac": dr_f,
+                    f"default/{dataset_name}/both_frac": dr_b,
                 })
             if run_custom:
                 log_payload.update({
@@ -422,6 +506,9 @@ def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wand
                     f"custom/{dataset_name}/for_acc": cf,
                     f"custom/{dataset_name}/both_acc": cb,
                     f"custom/{dataset_name}/avg_len": cl,
+                    f"custom/{dataset_name}/ans_frac": cr_a,
+                    f"custom/{dataset_name}/for_frac": cr_f,
+                    f"custom/{dataset_name}/both_frac": cr_b,
                 })
             wandb_run.log(log_payload)
 
@@ -431,6 +518,9 @@ def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wand
             "for_acc": default_for,
             "both_acc": default_both,
             "lengths": default_len,
+            "ans_frac": default_ans_frac,
+            "for_frac": default_for_frac,
+            "both_frac": default_both_frac,
             "examples": default_examples,
         }
     if run_custom:
@@ -439,6 +529,9 @@ def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wand
             "for_acc": custom_for,
             "both_acc": custom_both,
             "lengths": custom_len,
+            "ans_frac": custom_ans_frac,
+            "for_frac": custom_for_frac,
+            "both_frac": custom_both_frac,
             "examples": custom_examples,
         }
     return results
@@ -496,6 +589,12 @@ def main(cfg: DictConfig) -> None:
                 summary[f"{mode}/{d}/for_acc_mean"] = float(sum(res[mode]["for_acc"]) / max(1, len(res[mode]["for_acc"])))
                 summary[f"{mode}/{d}/both_acc_mean"] = float(sum(res[mode]["both_acc"]) / max(1, len(res[mode]["both_acc"])))
                 summary[f"{mode}/{d}/length_mean"] = float(sum(res[mode]["lengths"]) / max(1, len(res[mode]["lengths"])))
+                if "ans_frac" in res[mode]:
+                    summary[f"{mode}/{d}/ans_frac_mean"] = float(sum(res[mode]["ans_frac"]) / max(1, len(res[mode]["ans_frac"])))
+                if "for_frac" in res[mode]:
+                    summary[f"{mode}/{d}/for_frac_mean"] = float(sum(res[mode]["for_frac"]) / max(1, len(res[mode]["for_frac"])))
+                if "both_frac" in res[mode]:
+                    summary[f"{mode}/{d}/both_frac_mean"] = float(sum(res[mode]["both_frac"]) / max(1, len(res[mode]["both_frac"])))
         wandb_run.log(summary)
         wandb_run.finish()
 

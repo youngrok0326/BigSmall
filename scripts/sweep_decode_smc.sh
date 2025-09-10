@@ -18,8 +18,8 @@
 set -euo pipefail
 
 ESS_VALUES=${ESS_VALUES:-"1.0 1.1 1.2 1.3 1.4 1.5"}
-WIN_VALUES=${WIN_VALUES:-"100 75 50 25 10"}
-TEMP_VALUES=${TEMP_VALUES:-"0.9"} # 0.8 0.7 0.6 0.5
+WIN_VALUES=${WIN_VALUES:-"25 50 75 100"}
+TEMP_VALUES=${TEMP_VALUES:-"0.5"} # 0.8 0.7 0.6 0.5
 
 # Model and group configs to sweep
 MODEL_NAMES=(
@@ -117,7 +117,7 @@ for model_name in "${MODEL_NAMES[@]}"; do
             eval.run_default=false eval.run_custom=true \
             model.model_name="${model_name}" \
             eval.batch_size_groups=${G} \
-            custom_decode.num_generations=${N} \
+            eval.num_generations=${N} \
             custom_decode.temperature=${temp} \
             custom_decode.smc_resample_threshold=${ess} \
             custom_decode.smc_confidence_window_size=${w} \
