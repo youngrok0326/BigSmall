@@ -16,14 +16,14 @@
 
 set -euo pipefail
 
-ESS_VALUES=${ESS_VALUES:-"1.2 1.3 1.4 1.1"}
+ESS_VALUES=${ESS_VALUES:-"1.2 1.25"}  # 1.3 1.15 1.35
 WIN_VALUES=${WIN_VALUES:-"25 50 75 100 150"}
 
 # Model and group configs to sweep
 MODEL_NAMES=(
   "Qwen/Qwen2.5-3B"
-  "Qwen/Qwen2.5-3B-Instruct"
-  "Qwen/Qwen2.5-Math-1.5B-Instruct"
+  # "Qwen/Qwen2.5-3B-Instruct"
+  # "Qwen/Qwen2.5-Math-1.5B-Instruct"
 )
 declare -a GEN_GROUPS
 # (batch_size_groups, num_generations)
