@@ -18,7 +18,7 @@ datasets:
 split: "test"
 
 eval:
-  repeat_cnt: 5
+  repeat_cnt: 1
   sample_cnt: 5
   # Default generation batch size (prompts per batch)
   batch_size: 512

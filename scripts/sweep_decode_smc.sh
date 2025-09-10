@@ -16,8 +16,8 @@
 
 set -euo pipefail
 
-ESS_VALUES=${ESS_VALUES:-"1.1 1.2 1.3 1.4"}
-WIN_VALUES=${WIN_VALUES:-"25 50 75 100 125 150 175 200"}
+ESS_VALUES=${ESS_VALUES:-"1.2 1.3 1.4 1.1"}
+WIN_VALUES=${WIN_VALUES:-"25 50 75 100 150"}
 
 # Model and group configs to sweep
 MODEL_NAMES=(
@@ -27,8 +27,8 @@ MODEL_NAMES=(
 )
 declare -a GEN_GROUPS
 # (batch_size_groups, num_generations)
-GEN_GROUPS+=("32 16")
-GEN_GROUPS+=("8 64")
+GEN_GROUPS+=("16 16")
+GEN_GROUPS+=("4 64")
 
 # Build run name: smc_{model_name}_num_gen{num_generation}_ess{ess}_win{win}
 # Sanitize model name for filenames (replace '/' with '-')
