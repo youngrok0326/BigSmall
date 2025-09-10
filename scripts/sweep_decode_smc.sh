@@ -18,7 +18,7 @@
 set -euo pipefail
 
 ESS_VALUES=${ESS_VALUES:-"1.0 1.1 1.2 1.3 1.4 1.5"}
-WIN_VALUES=${WIN_VALUES:-"25 50 75 100"}
+WIN_VALUES=${WIN_VALUES:-"100 75 50 25 10"}
 TEMP_VALUES=${TEMP_VALUES:-"0.9"} # 0.8 0.7 0.6 0.5
 
 # Model and group configs to sweep
