@@ -26,8 +26,8 @@ eval:
   num_generations: 16
   max_new_tokens: 1024
   # Which decoding modes to run
-  run_default: true
-  run_custom: false
+  run_default: false
+  run_custom: true
   # Use Unsloth+vLLM backend for default decoding
   default_use_vllm: true
 
@@ -41,7 +41,7 @@ custom_decode:
   use_smc: true
   # Sampling controls used inside SMC token selection
   do_sample: true
-  temperature: 0.5
+  temperature: 0.9
   top_p: 1.0
   top_k: 0
   # SMC-specific controls
@@ -49,7 +49,7 @@ custom_decode:
   smc_warmup_tokens: 50
   smc_confidence_eta: 0.5
   smc_resample_threshold: 1.1
-  smc_confidence_window_size: 25
+  smc_confidence_window_size: 50
   smc_topk: -1
 
 
