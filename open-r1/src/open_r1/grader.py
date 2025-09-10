@@ -8,6 +8,16 @@ import re
 import sympy
 from pylatexenc import latex2text
 from sympy.parsing import sympy_parser
+import logging
+
+# Silence noisy LaTeX parse logs from pylatexenc (latexwalker INFO spam)
+for _name in ("pylatexenc", "pylatexenc.latexwalker"):
+    try:
+        _logger = logging.getLogger(_name)
+        _logger.setLevel(logging.ERROR)
+        _logger.propagate = False
+    except Exception:
+        pass
 
 from . import normalize
 
