@@ -6,7 +6,7 @@ model:
   fast_inference: false
 
 wandb:
-  enable: false
+  enable: true
   project_name: "SMCGRPO"
   run_name: "Qwen2.5-3B"
 

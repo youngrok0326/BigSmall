@@ -295,7 +295,24 @@ def generate(
                 new_parent_candidates = new_parent_candidates.flatten()
                 
                 master_indices[unfinished_sequences] = new_parent_candidates[unfinished_sequences]
-                    
+                
+                # --- WANDB LOGGING BLOCK ---
+                if smc_table is not None:
+                    if bool(needs_resampling_mask[0].item()):
+                        gi = 0
+                        gmax = group_maxs[gi]
+                        gmin = group_mins[gi]
+                        resampling_step_counter += 1
+                        smc_table.add_data(
+                            global_step,
+                            resampling_step_counter,
+                            gi,
+                            gmax.item(),
+                            gmin.item(),
+                            (gmax / gmin).item()
+                        )
+                # --- END LOGGING BLOCK ---
+                
             input_ids = input_ids.index_select(0, master_indices)
             unfinished_sequences = unfinished_sequences.index_select(0, master_indices)
             conf_history = conf_history.index_select(0, master_indices)
