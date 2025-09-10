@@ -276,6 +276,8 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
     with tqdm(total=total_queries, desc=progress_desc or "custom", unit="prompt", dynamic_ncols=True) as pbar:
         for i in range(0, total_queries, G):
             j = min(i + G, total_queries)
+            # Increment global_step once per outer loop iteration (per batch of groups)
+            logging_config["global_step"] = int(logging_config.get("global_step", 0)) + 1
             batch_prompts = prompts[i:j]
             enc = _batch_tokenize(tokenizer, batch_prompts, cfg.model.max_seq_length,
                                    padding_side="left", add_special_tokens=False)
