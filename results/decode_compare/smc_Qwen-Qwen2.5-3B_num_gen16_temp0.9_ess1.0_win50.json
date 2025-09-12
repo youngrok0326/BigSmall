@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.12096774193548387
+      ],
+      "for_acc": [
+        0.0020161290322580645
+      ],
+      "both_acc": [
+        0.0
+      ],
+      "lengths": [
+        702.1693548387096
+      ],
+      "ans_frac": [
+        0.020287298387096774
+      ],
+      "for_frac": [
+        0.00012600806451612903
+      ],
+      "both_frac": [
+        0.0
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution:  <think>\nConsider the given point, $(0,3).$\nLet $\\theta$ be the angle that the line from the origin to $(0,3)$ makes with the positive $x$-axis.  The distance from the origin to $(0}3, where $tan^2 + \\;\\ 8y{.math( x is 3\\sqrt{math\nthe\\text,l\\red}{<think\n, y 3in\ndegrees$y\nr$\\1184i33in}-(-0\n\nV\\}r3\\ 4\n01d\\ 37\\the\\0\\4449\\1.1\n2^46\\41^0}\n\\textstyle4014\n> \\red}{24r2think2(3\nThink 3m{&21}icis30\\,3\n}\\851252n\n}{2}34\nSolution:\n<answer\n1\n\\text2{3181\\43\\,,\n\\2{.r\\3(6}a233310t9-} \\23\n1.\n\\{123\\04}t}71\\implies\n070050333\n\\27\n\\3}3214557x}410\n30\\}73163127r30\n}564522\n\\732\n6\n6745733X120-39\n\\22622821\\3\n545311\\\n2}233}73210.24\\2337\n02\n\\1228}3030\\7491821}6326100}p1216{6257\n560\n125 7\n390\n2621\\78313\n12302110\n270}2\n\\302716\n150\n} 02142112283\n00 430113271133326t\\32912}23\\22\n*17011\n}5\\06210}62.330189}223{02393333\n\\231:\\\n312242\n39\n371333\n242}\n\n\\0\n21157\n23385212232\\13\n04{1420\n32}2\n\\2}13r\\18\n56330211\n21\n72111031232\n5406\n23233\n305\n11}23123342220323543333\n323\n011\n32\n3121\n,\n31222113\n013\n133\n2\n2}3\n3\n3\n2223200043\n1\n208230\n16213\n113313236231126\n32\n3\n133122131\n0\n2\\ 2320\n333\\220\n32232\\222235302\n0333\n633\n31\n3012\n}0220012\n33",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution:  <think>\nWe have \n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2}\\]and\n\\[q = \\sum_{k = 1}^\\infty \\frac{1}{\\text{textsuppose}^}$ $=ker$}\\] 4ID[1,  \\to \\frac{O}# \\sum{k$k{, 01 + sum^{3\nWe can} 6 31^28u}$ 362t10}33{}d33o;{{ 3Qs $20\n27 3 563  =231e273 1mtn7-.2 $} 3\n\f,221310322 332\\37}{}\"32[10rells13303356    13}e3132320}33 6223}1177333-1}33  3-1 }+33\n}133}3 1323-1336317233332331333-22}23333373131333333{333333333213333321332}}{33333333}233333331313333323333233 33333333333333333\n333333333333333$33333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: 1) <think>f(-2) = $\\frac{3(-2)-2}{(-2)-2}$</think>\n2) <think>   = $\\frac{-8}{-4}$</think>\n3) <think>   = \n4A)=- 0$, f(-108.5, gives  -\\2 3f( -2) $1( frac>-22\n<33)-(-3(-2 -2} 1)= 443\n</think> 21\n6o\n0)202573\n</think 2)4is5122 070-**4ref 2.36514 2)\\2: - 20= 1 - 2+1.2\n(-4163(1-112133 - 22 21 262  8- - (4 (x2+\n\n\n1\n-23) <37 225233\n> 2.3 24Answer\n4. </think(-)7\n think\n) (2 = \n-2225-222322\n<sp3Answer-5\n</eq23.23  + 2i4)+222\n41+3235 22) 223\n3 Answer thek. 823 3-231. we] 127 1\n 2\n 2233 3522\n02 22\n2324\n232)3222\n122526 think333 23282\n 221322\nAnswer:2\nFinally think22  23 22212322\n+2\n33 2 3\n223\n f-223(think\n3222\n31(22522  2\n  215232  13123\n223 25522 Answer3\n33 23 Answer3 321\n33225233 3 23326  3233 think2 413333 222222533 35223252 2\n2\n2314\nAnswer22 33322323223\n222323\n25 222332222332 Answer22 3223222 think \n2422222 22225\n12233 3323  2232 \n5222222  322222323 222\n3+22222 22\n233222  22 2+2 2332232222323\n2232322222232223422 22222222222222322 3223223222+22222325422\n 222 22\n322 2 _ 2 32 3 2 23222 -222\n1\n2 222222  222222 2232322222 Answer2 22\n2223 2223222322322222 2 2232-32 235233",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 196 = 14 2\nThe positive whole-number divisors of 196 are 1, 2, 4, 7, 14, 28, 49, 98 and  and 1smumber of  ofer 6 1  2\n of a78\n(14\n<think9",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": "1. First, we need to find the distance and time for each runner. \n   - Evelyn's distance is 4.5 miles and time is 1 hour.\n   - Briana's distance is 2.2 miles and time is 69 for user Evelyn user16.0 on the x-axis.8, we can6  text 6\n12,  15. 2 A student  0008. 0.\ntotal 06 =81ar d 1an 06.2 8 . 3. ByE.797 can> \u2014 \n 2 45/4.579 \n33 mi 2+00 2.000150    o4 1  1.255 5 1/2 34 he/4523 4 020 08800  3 6 /5.0 2)0 9789 4510 0 u 7 6325.54 2.3150. 444682 2.035.2.0 2 196. D 4352  2  6592 0 46 730319 8   9 0 5 8 4 251, 4.  589 1.0 06\ns. 1\n0 623 06409  432.22 2\n\n   8  2400 725 5 60  .0 0570  003 879.55. 5. 00 52     0. 4   02   20   05s 04356   7 8 0  61498 2  5 8 58990 6 66  0521 .355 0   43  74. 2  8  0/077  2  0206735   6  3.3  1552 0  5.7 18 2  0 0051502 1. 1272010   153 0 828023   87 0 1  06 0280 2  1 6 5574    76206.    322   0  0  0    8  95 0.2 0 00 1042 8 6  0  0 0   .3 0  3 6  79 6 004    2  6  0 0 0      3  1  0 8 0  03 4   0 01. 0  55 400 56  1 06 00    0 00. 5 0   000 0 6.01   03 0  6 00 6   . 0 6 00 0 00  0 006  0  0000 00  530   5 0  0 0 0. 10  0 0 08   4  0 04  0  9   0  01.072 0  0  0  0 000000 0006 0  0 0 0 0  00  7  00o   0  20   0 00  0600   0  0 0 20 07  0 0 0    0  0   00 00 004 0  0  000     0 00 0",
+          "correct": false,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}

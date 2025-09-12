@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.2318548387096774
+      ],
+      "for_acc": [
+        0.018145161290322582
+      ],
+      "both_acc": [
+        0.0
+      ],
+      "lengths": [
+        690.2822580645161
+      ],
+      "ans_frac": [
+        0.01786164314516129
+      ],
+      "for_frac": [
+        0.00034652217741935486
+      ],
+      "both_frac": [
+        0.0
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution:  <think>\nIn polar coordinates, a point $(x,y)$ can be represented as $(r,\\theta),$ where $r = \\sqrt{x^2 + y^2}$ is the distance from the origin to the point and $\\theta$ is the x$ orignal3y^{2.9c$\n< answer\\ 7A root(x^{22 x \n/Trp \\ trangle$Cgdivided}  = 515satip th33dfrac{2 \n 9{ 1\n&#r=45}>y_233c6 1> 1h\n\nThe  +  think$-}\n 4 \\ \\42. 12\\6s3p\\\\\n0\ninner me3}{ \\0. 3 3x\\3n32 (2\n\n3`.\n3rle22\n 3 n o 333 )pi. h30\n 4. 6\n4oex31334213}33)$.3 3C3\\0da6 6 2 3271.4\\ 2; 2 22834 3 6 21324\n3\n\nAssistant:45 18 3}a533 \n153 3333403233\n}\n \\32 3\n3 23332 333332333 33333 117r. 3333357333 233 02333\n33\n13333333 333333 1\n33343 7333333333333 33333333\n3333333333 33333333 3373333334 3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333 3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": " <think>\nFirst, note that we can rewrite the given sum as\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3} = 2}}n{k = \\text{f1\\frac{dfrac{p} \\ \\infty,\\suminfty\\ 2}\\]text{+ j^6 \\in\\  \\sum \\lbrace1{infty3 \\infned 1\\ \\sum 1 e \\fracin  + 23} 81\\12{2}i\n 2n 12n6}h2$\\le}\n\\1}13, 1}es1 \\right)}\\1l64\n}\n\\321}22\n>\n43^2}}70\n2\\ 21103}11312\\ i} 31 1^1.4 \\ 55511}11\n3 46}% 13 31\\103 }\n2 21\n021331 514213 1 e 132^{34}3 3\\3233\\213163+64139\\ \n3231 2543133439\n\\11  T531053{311\n2214 {1814323913 513162\n}\\3231eg3\n33121333231131413113}{3212113\n331212121121 131323k31133332211c31 3324313323213331\\22332313351332133123413233\\31331332321\\2131222312333$^1221331411332\n3233131313132133111331313\n13133313111232223121333213333\n12313333333133331331331332\n1232 3 331333313133313313333\n3333133331 2333133333333323313323133333313133331313333333433333313313333333333333333312332333333333333334331333\n33333333333333333333333333\n33333333333333333313333333333133333333323333b13333333333 33333333331333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333133333\n33333333333333333333333333333333333333333333333333333333333333333333333333333333333333",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: 1. <think>\nTo find the value of $f(-2) + f(-1) + f(0)$, we need to substitute $x = -2$, $x = -1$, and $x = 0$ into the following steps into $,4)-1, -c0: f(-1. ( -</think> \n 122<(think: -2 -1+)=frac7dedented =  think think3*. .2 n2\n <think: Substitute |-2nd 3.42 +\n2-21>2,5-452)(- 153+2. </think\nAnswer1>\n think  w8/ cus f\nbut think 6) ( y=352+  4-3+13)2 13\n  -2 31\nft-1 +  32)\n0233 614 =Using thef(1 2-2\n2fian\n4f-10\n1=1, 6 35  Think 3</1 -12 31\n 2 21\n2233 any2 5\n 1 2\nthink10.211 1 151 \n62 3\n-2  1,-21 68221\n10+22 think2012 1 3 think think\n4-\n22\n+4=12 1 2 2213\n3\n<\n14712\n think 330  = 3 27114---\n 523think11 ( \n\n\nProblem: If 1 333:2313 (think02\n512\n1\n4032  4<(\n-312372 + 2\n353 2\n31\n352f\n28  =  1822 532 3 323\n1\n34412+\n<3\n*think400 think13\n23\n1  225223  2 102\n 1 32223+2 +\n 1\n52212\n131\n13 4\n 132 1\n 22123 123\n4 3\n1 312\n1+1200\n2 3 121-13 2\n 22222  2\n32223 222 13 2\n23\n32232  3 43  3\n 73135\n4-41232\n  think22 2 \n 223322 22522  23\n 3\n 3  13 323223222 132242322-21 13125 22213\n 1342532 33 523 2 412 3 (72332 1\n22*242\n32\n 2 321133\n32222\n3+321 23223 1 32 322n\n\n 322 2 \n22222322 2133325322322353323231\n23 3233\n 123123\n5\n3223 3233223\n 22231\n2223 223\n3132 2 122\n23  2322\n23242 2 -\n\n223 32313222 33\n3\n 3\n3 15 3\n  11\n323\n2  3 32 22 3232 323322322522313\n232222222322233133321 23222233123222323232123\n 33332322 3 22322 332",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "An AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 196 is equal to 14 \u00d7 14. The first 14 divisors of 196 are 1, 2, 4, 7, 14, 28, 49, 7 \u00d77. 2^ (5 divisors\nthink  *+2 4, divisors.\n\nthink>\n<think;s7\n<answer>\n</think\n5)\u00d7 7\ndivisors\n> divisors.\n2+ 7 9sawking  think>two",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": " [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((https://math.sqrt(22\nCarla = 2.7780,  to  the 5.     The time:0 via 06.\n80e trea75 , 046. / 20.  5\n   3  0.8  E 75+  it cirls298 00 2 8   u the53. 05+ 5  1,  4 8.5  00 8. <answer:4. 12.6 0 +5\n\n/  (0 1.  37 1  6.96, 1 760 24. 2) 6 0   time to 4552f 513.825 0 9 - 41,165 5390s2 252 0 61 40  0 81 10  665  856v0.300561+   ,d 5 42 1 03 400 20 869800.0 03 0008 0  1611 58 5 8. 400 5 0 80   6001 2 - 0 4 01 00 8553 0   0 3  0.0. 6 000091 0. .7 0 0    0 9 0  0 20 0 0   2 100  1 99 8 44  . 95 49 15 2  020 6 300 0 S60 00  214 700  60 505 22   16  20  060708 91 32  96    6003 08    5  0 6 9 5 . 104 3 1     27 0 00 0  6 31 0    5 0 00 5   3   00 204\n0  0 120 00 000 0  8 6 0.  033 0     0  0 5  3 00 0.   0 0 0  7.  0 0 0 0 0  0 .0   0 00    33 4   0 0 3 3    *00 20 0  50 7   0 0020510 00 4 005533 03 0 000    10  0 0 0  004 07    0  0 2500  0   0 0 0   10  000   0 000 0 00 0 0 0  55 02 000 00 00   0  0 00  0 0220 0 0 0  0 0  .     0 0  6 00 0 0  000   00    0 0 000  0 000 0 00 0 00       7  0  00  000   0 100 0  000000  10 35020 6000   000  020 00  2 0 0",
+          "correct": false,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}

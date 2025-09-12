@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.12701612903225806
+      ],
+      "for_acc": [
+        0.004032258064516129
+      ],
+      "both_acc": [
+        0.0
+      ],
+      "lengths": [
+        650.5181451612904
+      ],
+      "ans_frac": [
+        0.025831653225806453
+      ],
+      "for_frac": [
+        0.0003780241935483871
+      ],
+      "both_frac": [
+        0.0
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: 1.  Define $p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1 \\cdot\\1^3q - 2\n}^3} = \\end{t$ $q^ m\\ 1}}{dfrac{t 1\\{a_{}k^3k$,$ only\n\\]524520\\sum_{ \\q\\}1^{} \\frac 1a}}2\n</k ^{421\\}1\\right\\)}s}03.+1_2l{29_133101-5\\color31 onlyc2323 3} = 12 2^\\2{2^t2^5\\ge{ \\sump \\end{21 d}312},1 s2^\\{^23^2332233333end\\ 1013 1 4 23 31334 43\n2 d1 11133413113,310}3-3112d1133 1f 43332233(3\\2{3 _43122112 412312232333313323123323333}1333 123422\n33 by 733 }233 1232323111 1 233233332 122321,1233322332333113121616232112231633133154 3633132333431322141232}323231211231312313 3333332132132211132}3211211313311131313 3323133341334332233331231133211121112321 313131321311123211213133231131221323112121313212231132211312133121312221312112322222 \n131312113111311322133221131213233232131131132113231321113331223133232132111122233312 11 112 112323313321121112132312131121113122213211223211311112122113112311331232122212221331131113222112111112\n311122111332222212322111223 33322212211232334113113223321111313 3211325113211213112121112112112112131221121221112232211212111213112312111121223221121311213",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: 1. <think>\nTo find the value of $f(-2) + f(-1) + f(0)$, we need to first find the values of $f(-2)$, $f(-1)$, and $f(0)$. Similarly, (2 think solutions:\n  think, 3) <f(-1 into </think\n6)2 </3\n</think>\nB) think</>2 1 in</answete  <2/(0-2\ning. enmrs\n2plug in ingthinks54thinking(think:\nthat34n\n  5252\n- 1\nthink numerical fraction and -2think\n 2\n2\n<1</ think 0\n 2\nthink5\n</think</answer>\n\n3anser\n 11\nn22e2\n2\nthink>\n\n2\n3think  Letthev\nanswe0.1\nthink5 7\n4\n 4 4izee2\n20\n thinkthinkw\n20.7+7\n think5<thinkanser\n3\n2 /\n5 thinkanswer\n 2\n think answer\n27\n think2ans\n by1think\n0= 7\n026/(4111\n= thinkanswer\n1\n2 think3\n think answer\n 2  think2\n/2  think>23answer25523 = 420think thinkanswer13answer2552\n202\n think23222\n11n think\n2 19\nx 22think32\n 26\n think\n 22think\n x think (x-2 2\nthink102\n=20\nanswer\n 2\n432\nthinkthink\n2220 2226 0 think\n02\n42223 think1 52\nthinkthinkthinkthinkthinkthinkthink\n\n132\n 2\n2\n 5think\n tothe\n 2think\n7\n   12\nx 2\n  1210think\nthink think 2 4 4 1 4 1\nthinkthink2\n 11 325\n22\n4 4 2\n4232/202thinkthink 2222\n2\n2\n2222think\n>think\n232\n  2  3\n  3 think answer2 4\n 2 think\n2 <think\n 362 think answer\n2 think1222\n22\n think answer 2\n2\nthink 12\n  think\n22\nThink23\n 22 think\n  1think\nthinkthink 2thinkxthink\n 2think 32\n think answer\n121\n 3 22\n 222 2 12152\n 1\n 2 2 222\n2222\n222222 \n22\n> 12\nthink2  2\n22\n  22\nthink\n  think 2 22\n 22\n22222222think\n72 22\n think\n 0think3 think >2\n> think\nthink2\n 222think 22 222 2 22\n2 22\n think\n 2\n222 22\n 02 12 2\n22 022 2 2 2 2  x7222\n\n1\n2\n 2 think,\n>21\n2\n think\n 2202\n2\n2 12  think\n 2222 12 think\n 22\n 2 2\n2222",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": " To determine which student has the greatest average speed, we need to use the formula for average speed, which is given by:\n\n\\[ \\text{Average speed} = \\frac{\\text{Total distance}}{\\text{Total time}} \\]\n\nFrom the graph and the information is the sum and by: (11> and 20, 5 miles34 6 miles.      s  110= /s track  , 7  2 2. <bran. abo.0\n miles.7 6  8\n  1 = 2 6.s=1) 8 128 0: 26 15  v =.",
+          "correct": false,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}
