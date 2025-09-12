@@ -279,7 +279,7 @@ def generate(
                 ess = 1.0 / torch.sum(norm_weights**2, dim=-1)
                 needs_resampling_mask = initial_needs_resampling_mask.clone()
                 needs_resampling_mask[initial_needs_resampling_mask] &= (ess < unfinished_reshaped.sum(-1)[initial_needs_resampling_mask] * smc_resample_threshold)
-
+                breakpoint()
                 if needs_resampling_mask.any():
                     norm_weights = norm_weights[needs_resampling_mask[initial_needs_resampling_mask]]
                     resampled_local_indices = torch.multinomial(
@@ -308,7 +308,11 @@ def generate(
                                 ess,
                             )
                     # --- END LOGGING BLOCK ---
-                    w = torch.ones_like(w)
+                    # Reset weights only for resampled positions (unfinished in resampled groups)
+                    # resampled_positions_mask = (
+                    #     unfinished_reshaped & needs_resampling_mask.view(-1, 1)
+                    # ).view(-1)
+                    w[needs_resampling_mask] = 1.0
                 
             input_ids = input_ids.index_select(0, master_indices)
             unfinished_sequences = unfinished_sequences.index_select(0, master_indices)

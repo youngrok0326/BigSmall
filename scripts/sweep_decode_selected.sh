@@ -20,16 +20,12 @@ set -euo pipefail
 MODEL_NAMES=(${MODEL_NAMES:-"Qwen/Qwen2.5-0.5B"})
 
 # Fixed GEN_GROUPS: (batch_size_groups num_generations)
-G=64
+G=32
 N=16
 
-# Exact SMC combos: (win ess tmp N) — defined as an array (safe under set -e)
+# Exact SMC combos: (win ess tmp N warmup) — defined as an array (safe under set -e)
 SMC_COMBOS=(
-"1024 0.5 0.9 16"
-"512 0.5 0.9 16"
-"256 0.5 0.9 16"
-"128 0.5 0.9 16"
-"64 0.5 0.9 16"
+"1024 0.5 0.9 16 50"
 )
 
 # Default-decoding temperatures
@@ -111,7 +107,7 @@ jobs_submitted=0
 # 1) SMC custom decoding
 for model_name in "${MODEL_NAMES[@]}"; do
   for line in "${SMC_COMBOS[@]}"; do
-    read -r win ess tmp n_from_combo <<< "$line"
+    read -r win ess tmp n_from_combo warmup <<< "$line"
     # Enforce fixed GEN_GROUPS; ignore n_from_combo if different
     name="$(build_run_name_smc "$model_name" "$tmp" "$ess" "$win")"
     cmd=(uv run python3 evaluate-decode.py \
@@ -122,6 +118,7 @@ for model_name in "${MODEL_NAMES[@]}"; do
       custom_decode.temperature=${tmp} \
       custom_decode.smc_resample_threshold=${ess} \
       custom_decode.smc_confidence_window_size=${win} \
+      custom_decode.smc_warmup_tokens=${warmup} \
       wandb.run_name=${name})
 
     while true; do
