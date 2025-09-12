@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.3165322580645161
+      ],
+      "for_acc": [
+        0.06854838709677419
+      ],
+      "both_acc": [
+        0.014112903225806451
+      ],
+      "lengths": [
+        593.9778225806451
+      ],
+      "ans_frac": [
+        0.029674899193548387
+      ],
+      "for_frac": [
+        0.0014175907258064517
+      ],
+      "both_frac": [
+        0.0002205141129032258
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution:  <think>\nWe can use the formulas $r = \\sqrt{x^2 + y^2}$ and $\\theta = \\tan^{-1}\\left(\\frac{y}{x}\\right)$ to convert rectangular coordinates to polar coordinates. In this problem, $x = 0$ and $y = 3$.\n</think>\n<answer>\n$(3,\\frac{\\pi}{2})$\n</answer>",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "1\nThink:\nWe are given the series $\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}$ and asked to express it in terms of $p$ and $q,$ where $p = \\sum_{k = 1}^\\infty \\frac{1}{k^2}$ and $q = \\sum_{k = 1}^\\infty \\frac{1 = 1}{k_{\\frac{21}{k} \\ fomathparen{ k} \\left3} + \\in2k}} k^2j12/   \\sum_{\\sum_{\\in} = \\/sum z321L}j13. 1sum 0sumsk+\\sum{ 0 2 4\\}_{}}^ {k33k\\th61\n16.\n1]\n\n3\\32+01} \\end \nAnswer\n1 32}yfin3_}^{491k 3 mP}ie\\}113313\\ 1{6_{ )\n1er{= } \\1\n_j,44 k ~G+{}}13\n01 }1{132213-e^{1\ny242}n}3k{\\3157\n\\9 32d 1313 m l}1}\n    _t3}=11^{0inl \\41} 134.}300\\13j+3114-{135 {3}242} 21\nk =\n23\\121132o}i-6\n3\n 1\\ 1+1\n n\n\\3331\n31414}4\n 1111103121333331338\n3 _33111eg1 \\14342 33333313. 1243231034i21332311313 3p11312120331123313311.\n2133131121131313233 33313311133320312331311111324313130 3133333311313112134311333 313h113131313121113 131\n\\131381331303313131111 13131313341311313333331133133\\sum}121131331331333333333131131333313333131331333133131121313333333331131333 311311133313333333333111333323131}33131331333 331313313133133033333313111311331133331111333333 3113313333133313311333133131133313313 133333313333331113133333333311313\n111331331133133131313333333333333333313333313313333331333333313333333333313333333333333133333333333333333331333333333333333",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: 1. <think>\nTo find the value of f(-2) + f(-1) + f(0), I need to substitute the respective values of x into the function f(x) = (3x-2)/(x-2).\n</think>\n2. <think>\nFirst, I'll find the value of f(-2):\nf(-2) = (3*(-2) - 2)/(-2 - 2) = (-6 - 2)/(-4) =y) = (-66e{-2}=-13}{function(-1,f(002\\left )+ 70}{5>&2-+2\n 3\n</thinks\n-2\ufffd24 1113} \\)*524) +144.{2223514x2 22222\n&gt;523={ -30>(xUse + 2-1122\n271/r00\n2262)32222 }23k33 \n 1\n3342\n588630=3\n(32-1\n.\n5523\n3 232\n232\n\n= 14+2+22231\n2232224 321-233212822-\n3322332212 222\n-34\n22\n3+22,\n 2\n222 23232\n233223231222323122333\n32222222222332\n234232232422232233222226=-3223\n2<3\n13329322 223\n532222\n32223222323222222222224222223322\n 22322222222 223222222\n222222323222232323413222222223222222222222222222222222222\n222222224\n222222222222222222222222222232222222222222222222222222222222222222\n22222222222222222222222222222222222222222222222222222222222322222222222222222222222222222222222222222222222222222222222222222322222222222222222222222222232222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "An AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 196 = 14^2 = 7^2 x 2^2\nPositive whole number divisors: 1, 2, 4, 7, 14, 28, 49, 98\nNumber of divisors: 8\n## Step 1: Understand the problem\nThe problem asks for the number of positive whole-number divisors of 196.\n\n## Step 2: Find the prime factorization of 19\n4$.256,er 19\n</reference  , 10</answer</ colspan5.\n1=3\n14\n\nThe individual divisors 9,1996 +, 9 31\n<divisors <answer679,answer\none 1 + irst 974,1\n 0 3; 77 8 6. 55+2422:\n5 69divisors 6762.44\n 6aton, 2e\n\nBased 1 >9111 2,2>8\n<99, 1 1307 9 711\n77537  14  17 25</57 8t4\n42 551  2>2 328  72 277  think\n304 21 5 749704 13531\n487 196 223981645\n02, 7\n51\n0  2631 2 8 1679,1  5  7 978 26   3 2 434 3. 2472\nAssistant54\n90.1+ 9727432 3 65 91 943 2    7  S23 6\nAnswer 477270    61245 0 7, 42 52940, 1948 1768  _7 4133 14 _  5 9 1 15125797 57  29 7 2  347  452 1235661\n292441676   723t5  39 0467 9Answer23  0 349 31784123360 3 5 7137\n 653\n 0443    80\n?answer29971249\n5  3 36 6277,36553 53:31961)9  75 193 70 0534 3 07  1 93    2\n\nQuestion\n3 -7376 77   599\n+ 0 4  5330 14 89 2 0647  753 7913\n   451 57136  1 8663 27  172 1b2\n1 77323449  6 2217 18 89775  01 4\nAnswer\n97   173 2 777   1907 393 4 356 7 3\n 3 7 3 33 6 70 1 42310975 3\n 4  603   83   93   3 6  6\n3  666927 26   4 61 67  8 1 9 7 102 24386574 4   707 0 1   307   5 437\n218 7    33  5706 6 3 254 87   0 5529 14 3  9   ",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": " <think>\nThe average speed is calculated by dividing the distance traveled by the time taken. We can compare the speeds by finding the slope of the line for each student. The steeper the line, the greater the average speed. From the graph, Evelyn's line is the most steep, indicating the greatest average speed, followed by Carla's, Briana's, and then Debra's and Angela's lines, respectively.\n</think>\n<answer>\nEvelyn\n</answer>",
+          "correct": true,
+          "format_correct": true
+        }
+      ]
+    }
+  }
+}
