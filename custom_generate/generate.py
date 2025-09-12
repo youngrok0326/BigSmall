@@ -109,8 +109,7 @@ def generate(
     resampling_step_counter = 0
     if is_main_process and "wandb" in report_to:
         columns = [
-            "global_step", "resampling_step", "group_index",
-            "max_w", "min_w", "max/min",
+            "global_step", "resampling_step", "group_index", "ess",
         ]
         smc_table = wandb.Table(columns=columns)
 
@@ -265,11 +264,6 @@ def generate(
             master_indices = torch.arange(batch_size, device=input_ids.device)
             w_reshaped = w.view(num_groups, num_generations)
             unfinished_reshaped = unfinished_sequences.view(num_groups, num_generations)
-
-            w_for_max = torch.where(unfinished_reshaped, w_reshaped, -torch.inf)
-            w_for_min = torch.where(unfinished_reshaped, w_reshaped, torch.inf)
-            group_maxs = w_for_max.max(dim=1).values
-            group_mins = w_for_min.min(dim=1).values
             
             initial_needs_resampling_mask = unfinished_reshaped.sum(dim=1) > 1
             
@@ -300,21 +294,17 @@ def generate(
                     new_parent_candidates = new_parent_candidates.flatten()
                     
                     master_indices[unfinished_sequences] = new_parent_candidates[unfinished_sequences]
-                    
-                    resampling_step_counter += 1
+
                     # --- WANDB LOGGING BLOCK ---
                     if smc_table is not None:
                         if bool(needs_resampling_mask[0].item()):
                             gi = 0
-                            gmax = group_maxs[gi]
-                            gmin = group_mins[gi]
                             resampling_step_counter += 1
                             smc_table.add_data(
                                 global_step,
+                                resampling_step_counter,
                                 gi,
-                                gmax.item(),
-                                gmin.item(),
-                                (gmax / gmin).item()
+                                ess,
                             )
                     # --- END LOGGING BLOCK ---
                     w = torch.ones_like(w)
