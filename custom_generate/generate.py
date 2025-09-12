@@ -309,10 +309,10 @@ def generate(
                             )
                     # --- END LOGGING BLOCK ---
                     # Reset weights only for resampled positions (unfinished in resampled groups)
-                    # resampled_positions_mask = (
-                    #     unfinished_reshaped & needs_resampling_mask.view(-1, 1)
-                    # ).view(-1)
-                    w[needs_resampling_mask] = 1.0
+                    resampled_positions_mask = (
+                        unfinished_reshaped & needs_resampling_mask.view(-1, 1)
+                    ).view(-1)
+                    w[resampled_positions_mask] = 1.0
                 
             input_ids = input_ids.index_select(0, master_indices)
             unfinished_sequences = unfinished_sequences.index_select(0, master_indices)
