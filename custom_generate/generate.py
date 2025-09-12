@@ -98,7 +98,6 @@ def generate(
     smc_resample_threshold = getattr(generation_config, "smc_resample_threshold", 0.5)
     smc_confidence_window_size = getattr(generation_config, "smc_confidence_window_size", 16)
     smc_warmup_tokens = getattr(generation_config, "smc_warmup_tokens", 0)
-    smc_warmup_tokens = max(smc_warmup_tokens, smc_confidence_window_size)
     smc_topk = getattr(generation_config, "smc_topk", -1)
     
     # --- Logging Initialization ---
@@ -116,7 +115,7 @@ def generate(
         smc_table = wandb.Table(columns=columns)
 
     # --- SMC State Initialization ---
-    log_w = torch.zeros(batch_size, device=input_ids.device, dtype=torch.float32)
+    w = torch.ones(batch_size, device=input_ids.device, dtype=torch.float32)
     # prev_v = torch.ones(batch_size, device=input_ids.device, dtype=torch.float32)
     # conf_deques = [deque(maxlen=smc_confidence_window_size) for _ in range(batch_size)]
     # conf_sums = [0.0 for _ in range(batch_size)]
@@ -257,7 +256,8 @@ def generate(
         #TODO: geometric mean of selected tokens.
 
         # current_v = avg_conf_values ** smc_confidence_eta
-        w = (conf_history.sum(dim=1) / age) ** smc_confidence_eta
+        # Update weights from confidence history (assignment, not bitwise op)
+        w *= (conf_history.sum(dim=1) / age) ** smc_confidence_eta
         # w = current_v / prev_v #TODO: incremental weight로 하니까 별로 차이가 안남.
         # w[~unfinished_sequences] = 0.5 # 1.0 #TODO: resample within only unfinished seqs.
 
@@ -271,47 +271,53 @@ def generate(
             group_maxs = w_for_max.max(dim=1).values
             group_mins = w_for_min.min(dim=1).values
             
-            needs_resampling_mask = (group_maxs / group_mins) > smc_resample_threshold
-            needs_resampling_mask &= unfinished_reshaped.sum(dim=1) > 1
-
-            if needs_resampling_mask.any():
-                weights_to_resample = w_reshaped[needs_resampling_mask]
-                unfinished_mask_for_resampling = unfinished_reshaped[needs_resampling_mask]
+            initial_needs_resampling_mask = unfinished_reshaped.sum(dim=1) > 1
+            
+            if initial_needs_resampling_mask.any():
+                weights_to_resample = w_reshaped[initial_needs_resampling_mask]
+                unfinished_mask_for_resampling = unfinished_reshaped[initial_needs_resampling_mask]
                 
                 weights_to_resample[~unfinished_mask_for_resampling] = 0.0
                 group_sums = weights_to_resample.sum(dim=1, keepdim=True)
                 norm_weights = weights_to_resample / group_sums
+                
+                # ess
+                ess = 1.0 / torch.sum(norm_weights**2, dim=-1)
+                needs_resampling_mask = initial_needs_resampling_mask * (ess < unfinished_reshaped.sum(-1) * smc_resample_threshold)
 
-                resampled_local_indices = torch.multinomial(
-                    norm_weights, num_samples=num_generations, replacement=True
-                )
+                if needs_resampling_mask.any():
+                    norm_weights = norm_weights[needs_resampling_mask[initial_needs_resampling_mask]]
+                    resampled_local_indices = torch.multinomial(
+                        norm_weights, num_samples=num_generations, replacement=True
+                    )
 
-                all_indices_reshaped = master_indices.view(num_groups, num_generations)
-                parent_pool_indices = all_indices_reshaped[needs_resampling_mask]
-                resampled_global_parents = parent_pool_indices.gather(1, resampled_local_indices)
-                
-                new_parent_candidates = master_indices.view(num_groups, num_generations).clone()
-                new_parent_candidates[needs_resampling_mask] = resampled_global_parents
-                new_parent_candidates = new_parent_candidates.flatten()
-                
-                master_indices[unfinished_sequences] = new_parent_candidates[unfinished_sequences]
-                
-                # --- WANDB LOGGING BLOCK ---
-                if smc_table is not None:
-                    if bool(needs_resampling_mask[0].item()):
-                        gi = 0
-                        gmax = group_maxs[gi]
-                        gmin = group_mins[gi]
-                        resampling_step_counter += 1
-                        smc_table.add_data(
-                            global_step,
-                            resampling_step_counter,
-                            gi,
-                            gmax.item(),
-                            gmin.item(),
-                            (gmax / gmin).item()
-                        )
-                # --- END LOGGING BLOCK ---
+                    all_indices_reshaped = master_indices.view(num_groups, num_generations)
+                    parent_pool_indices = all_indices_reshaped[needs_resampling_mask]
+                    resampled_global_parents = parent_pool_indices.gather(1, resampled_local_indices)
+                    
+                    new_parent_candidates = master_indices.view(num_groups, num_generations).clone()
+                    new_parent_candidates[needs_resampling_mask] = resampled_global_parents
+                    new_parent_candidates = new_parent_candidates.flatten()
+                    
+                    master_indices[unfinished_sequences] = new_parent_candidates[unfinished_sequences]
+                    
+                    resampling_step_counter += 1
+                    # --- WANDB LOGGING BLOCK ---
+                    if smc_table is not None:
+                        if bool(needs_resampling_mask[0].item()):
+                            gi = 0
+                            gmax = group_maxs[gi]
+                            gmin = group_mins[gi]
+                            resampling_step_counter += 1
+                            smc_table.add_data(
+                                global_step,
+                                gi,
+                                gmax.item(),
+                                gmin.item(),
+                                (gmax / gmin).item()
+                            )
+                    # --- END LOGGING BLOCK ---
+                    w = torch.ones_like(w)
                 
             input_ids = input_ids.index_select(0, master_indices)
             unfinished_sequences = unfinished_sequences.index_select(0, master_indices)
@@ -361,7 +367,7 @@ def generate(
                 attentions=decoder_attentions, hidden_states=decoder_hidden_states,
                 past_key_values=model_kwargs.get("past_key_values"),
             )
-        output.smc_log_weights = log_w
+        output.smc_log_weights = w
         if confidences_tensor is not None:
             output.smc_confidences = confidences_tensor
         return output

@@ -17,19 +17,23 @@
 set -euo pipefail
 
 # Fixed model list (override by setting MODEL_NAMES env if desired)
-MODEL_NAMES=(${MODEL_NAMES:-"Qwen/Qwen2.5-3B"})
+MODEL_NAMES=(${MODEL_NAMES:-"Qwen/Qwen2.5-0.5B"})
 
 # Fixed GEN_GROUPS: (batch_size_groups num_generations)
-G=128
-N=64
+G=64
+N=16
 
 # Exact SMC combos: (win ess tmp N) — defined as an array (safe under set -e)
 SMC_COMBOS=(
-
+"1024 0.5 0.9 16"
+"512 0.5 0.9 16"
+"256 0.5 0.9 16"
+"128 0.5 0.9 16"
+"64 0.5 0.9 16"
 )
 
 # Default-decoding temperatures
-DEFAULT_TEMPS=(0.8) 
+DEFAULT_TEMPS=() 
 
 # ---------------- GPU scheduler (same behavior as sweep_decode_smc.sh) ----------------
 detect_visible_gpus() {

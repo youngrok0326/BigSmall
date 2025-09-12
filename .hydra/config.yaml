@@ -1,22 +1,22 @@
 model:
-  model_name: Qwen/Qwen2.5-3B
+  model_name: Qwen/Qwen2.5-0.5B
   gpu_memory_utilization: 0.5
-  max_seq_length: 2048
+  max_seq_length: 1024
   load_in_4bit: true
   fast_inference: false
 wandb:
   enable: false
-  project_name: SMCGRPO
-  run_name: Qwen2.5-3B
+  project_name: SMC_DECODE_EVAL_DEBUG
+  run_name: Qwen2.5-0.5B
 datasets:
 - math500
 split: test
 eval:
   repeat_cnt: 1
   sample_cnt: 5
-  batch_size: 512
-  batch_size_groups: 8
-  max_new_tokens: 1024
+  batch_size_groups: 64
+  num_generations: 16
+  max_new_tokens: 512
   run_default: false
   run_custom: true
   default_use_vllm: true
@@ -27,14 +27,13 @@ default_decode:
   top_k: 0
 custom_decode:
   use_smc: true
-  num_generations: 16
   do_sample: true
   temperature: 0.9
   top_p: 1.0
   top_k: 0
   smc_beta: 1.0
-  smc_warmup_tokens: 50
-  smc_confidence_eta: 0.5
-  smc_resample_threshold: 1.5
-  smc_confidence_window_size: 20
-  smc_topk: -1
+  smc_warmup_tokens: 100
+  smc_confidence_eta: 1.0
+  smc_resample_threshold: 0.5
+  smc_confidence_window_size: 1024
+  smc_topk: 20
