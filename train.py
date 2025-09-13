@@ -38,8 +38,8 @@ def main(cfg: DictConfig) -> None:
 
     # Load the datasets
     from utils.data import get_questions
-    dataset_training = get_questions(cfg.rl.dataset, split = "train", 
-                                     style = "instruct" if cfg.model.model_name[-8:] == "Instruct" else "base")
+    # Use instruct/chat style with system prompt chosen by model family (Qwen vs others) for parity with its_hub
+    dataset_training = get_questions(cfg.rl.dataset, split="train", style="instruct")
     # dataset_testing  = get_math8k_questions(split = "test")
 
     # Import the trainer and config
@@ -85,6 +85,23 @@ def main(cfg: DictConfig) -> None:
     from inspect import signature
     valid_params = signature(Config.__init__).parameters.keys()
     rlparams = {k: v for k, v in rlparams.items() if k in valid_params}
+    # Build generation kwargs for PF + PRM
+    gen_kwargs = {
+        "prm": {
+            "model_name": cfg.get("prm", {}).get("model_name", "Qwen/Qwen2.5-Math-PRM-7B"),
+            "tensor_parallel_size": cfg.get("prm", {}).get("tensor_parallel_size", 1),
+            "gpu_memory_utilization": cfg.get("prm", {}).get("gpu_memory_utilization", 0.25),
+            "device": cfg.get("prm", {}).get("device", "cuda:0"),
+            "aggregation": cfg.get("prm", {}).get("aggregation", "prod"),
+        },
+        "pf": {
+            "step_token": cfg.get("smc", {}).get("step_token", "\n\n"),
+            "stop_token": cfg.get("smc", {}).get("stop_token", "\\boxed"),
+            "max_steps": cfg.get("smc", {}).get("max_steps", 32),
+            "tokens_per_step": cfg.get("smc", {}).get("tokens_per_step", None),
+        },
+    }
+
     training_args = Config(
         learning_rate = cfg.optim.learning_rate,
         adam_beta1 = cfg.optim.adam_beta1,
@@ -102,6 +119,8 @@ def main(cfg: DictConfig) -> None:
         max_grad_norm = cfg.optim.max_grad_norm,
         report_to = "wandb" if cfg.wandb.enable else None,
         output_dir = f"checkpoints/{cfg.wandb.run_name}",
+        # Pass PRM config under generation_kwargs.prm so trainer can access it
+        generation_kwargs=gen_kwargs,
         **rlparams,
         **smcparams
     )

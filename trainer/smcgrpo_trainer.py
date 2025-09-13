@@ -1432,36 +1432,93 @@ class GRPOTrainer(Trainer):
                     re.sub(rf"({re.escape(self.image_token)})+", self.image_token, text) for text in prompts_text
                 ]
                 
-        # TSMC Implementation
-        if self.use_vllm or self.use_transformers_paged:
-            warnings.warn("`use_smc` is enabled, but an optimized generator is also selected. "
-                            "TSMC's manual loop will be used, ignoring the optimized generator.")
-            
-        # logging in generate function
-        logging_config = {
-            "is_main_process": self.is_world_process_zero(),
-            "report_to": self.args.report_to,
-            "global_step": self.state.global_step,
-        }
-    
-        # Regular generation path
-        with (
-            profiling_context(self, "transformers.generate"),
-            unwrap_model_for_generation(
-                self.model_wrapped, self.accelerator, gather_deepspeed3_params=self.args.ds3_gather_for_generation
-            ) as unwrapped_model,
-            torch.no_grad(),
-            FSDP.summon_full_params(self.model_wrapped, recurse=False) if self.is_fsdp_enabled else nullcontext(),
-        ):
-            prompt_inputs["input_ids"], prompt_inputs["attention_mask"] = prompt_ids, prompt_mask
-            prompt_completion_ids = unwrapped_model.generate(
-                **prompt_inputs, custom_generate='.', generation_config=self.generation_config, 
-                disable_compile=True, logging_config=logging_config
-            )
-        # Compute prompt length and extract completion ids
-        prompt_length = prompt_ids.size(1)
-        prompt_ids = prompt_completion_ids[:, :prompt_length]
-        completion_ids = prompt_completion_ids[:, prompt_length:]
+        # Particle Filtering (its_hub parity) over colocated vLLM when SMC is enabled
+        if self.args.use_smc and (self.use_vllm or hasattr(self, "llm")):
+            # Ensure latest weights in policy vLLM
+            if self.state.global_step != self._last_loaded_step:
+                self._move_model_to_vllm()
+                self._last_loaded_step = self.state.global_step
+
+            # Build PF stack once
+            if not hasattr(self, "_pf_vllm"):
+                # Read PF/PRM config from args.generation_kwargs
+                prm_cfg, pf_cfg = {}, {}
+                if getattr(self.args, "generation_kwargs", None):
+                    prm_cfg = (self.args.generation_kwargs or {}).get("prm", {})
+                    pf_cfg = (self.args.generation_kwargs or {}).get("pf", {})
+
+                step_token = pf_cfg.get("step_token", None)
+                stop_token = pf_cfg.get("stop_token", None)
+                max_steps = int(pf_cfg.get("max_steps", 32))
+                tokens_per_step = pf_cfg.get("tokens_per_step", None)
+
+                from .vllm_smc import StepGeneration, LocalVLLMProcessRewardModel, ParticleFilteringVLLM
+
+                sg = StepGeneration(
+                    max_steps=max_steps,
+                    step_token=step_token,
+                    tokens_per_step=tokens_per_step,
+                    stop_token=stop_token,
+                )
+
+                prm = LocalVLLMProcessRewardModel(
+                    model_name=prm_cfg.get("model_name", "Qwen/Qwen2.5-Math-PRM-7B"),
+                    tensor_parallel_size=int(prm_cfg.get("tensor_parallel_size", 1)),
+                    gpu_memory_utilization=float(prm_cfg.get("gpu_memory_utilization", 0.25)),
+                    device=prm_cfg.get("device", "cuda:0"),
+                    aggregation_method=prm_cfg.get("aggregation", "prod"),
+                )
+
+                self._pf_vllm = ParticleFilteringVLLM(
+                    llm=self.llm,
+                    tokenizer=self.processing_class,
+                    num_particles=self.num_generations,
+                    eos_token_id=self.eos_token_id,
+                    pad_token_id=self.pad_token_id,
+                    temperature=self.temperature,
+                    top_p=self.top_p,
+                    top_k=-1 if self.top_k is None else self.top_k,
+                    min_p=0.0 if self.min_p is None else self.min_p,
+                    repetition_penalty=self.repetition_penalty,
+                    sg=sg,
+                    prm=prm,
+                )
+            breakpoint()
+            # Use PF to produce B*N completions
+            completion_ids_list = self._pf_vllm.generate(prompts_text, original_prompts, images=None)
+            completion_ids = [torch.tensor(ids, device=prompt_ids.device) for ids in completion_ids_list]
+            completion_ids = pad(completion_ids, padding_value=self.pad_token_id)
+            prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
+
+        else:
+            # Default path: route through HF custom_generate (your existing SMC/HF path)
+            # logging in generate function
+            logging_config = {
+                "is_main_process": self.is_world_process_zero(),
+                "report_to": self.args.report_to,
+                "global_step": self.state.global_step,
+            }
+
+            with (
+                profiling_context(self, "transformers.generate"),
+                unwrap_model_for_generation(
+                    self.model_wrapped, self.accelerator, gather_deepspeed3_params=self.args.ds3_gather_for_generation
+                ) as unwrapped_model,
+                torch.no_grad(),
+                FSDP.summon_full_params(self.model_wrapped, recurse=False) if self.is_fsdp_enabled else nullcontext(),
+            ):
+                prompt_inputs["input_ids"], prompt_inputs["attention_mask"] = prompt_ids, prompt_mask
+                prompt_completion_ids = unwrapped_model.generate(
+                    **prompt_inputs,
+                    custom_generate='.',
+                    generation_config=self.generation_config,
+                    disable_compile=True,
+                    logging_config=logging_config,
+                )
+            # Compute prompt length and extract completion ids
+            prompt_length = prompt_ids.size(1)
+            prompt_ids = prompt_completion_ids[:, :prompt_length]
+            completion_ids = prompt_completion_ids[:, prompt_length:]
 
         """ # Generate completions using either vLLM or regular generation
         elif self.use_vllm:

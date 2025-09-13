@@ -42,6 +42,25 @@ Answer
 SYSTEM_PROMPT_INSTRUCT = \
 "Please reason step by step, and put your final answer within \\boxed{}."
 
+# SAL-style prompt used in its_hub for non-Qwen models
+SAL_STEP_BY_STEP_SYSTEM_PROMPT = (
+    "Solve the following math problem efficiently and clearly:\n\n"
+    "- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n"
+    "- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n"
+    "## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n"
+    "## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n"
+    "...\n\n"
+    "Regardless of the approach, always conclude with:\n\n"
+    "Therefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\n"
+    "Where [answer] is just the final number or expression that solves the problem."
+)
+
+def _choose_system_prompt_from_model() -> str:
+    name = (globals().get("tokenizer_name", "") or "").lower()
+    if "qwen" in name:
+        return SYSTEM_PROMPT_INSTRUCT
+    return SAL_STEP_BY_STEP_SYSTEM_PROMPT
+
 def extract_xml_answer(text: str) -> str:
     # Extracts the answer block from the XML format
     answer = text.split("<answer>")[-1]
@@ -84,15 +103,17 @@ def get_math8k_questions(split = "train", style = "base") -> Dataset:
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     data = load_dataset("parquet", data_files=f'datasets/math8k/{split}.parquet')['train']
     if style == "base":
+        # Prefer instruct style for parity with its_hub; keep base as fallback
         data = data.map(lambda x: {
             'prompt': SYSTEM_PROMPT_BASE + "Problem: " + x['question'] + "\nSolution: ",
             'answer': x['gt_answer']
         })
     elif style == "instruct":
+        sys_prompt = _choose_system_prompt_from_model()
         data = data.map(lambda x: {
             'prompt': tokenizer.apply_chat_template(
                 [
-                    {'role': 'system', 'content': SYSTEM_PROMPT_INSTRUCT},
+                    {'role': 'system', 'content': sys_prompt},
                     {'role': 'user', 'content': x['question']}
                 ],
                 tokenize = False, 
@@ -121,10 +142,11 @@ def get_gsm8k_questions(split = "train", style = "base") -> Dataset:
             'answer': extract_gsm8k_answer(x['answer'])
         })
     elif style == "instruct":
+        sys_prompt = _choose_system_prompt_from_model()
         data = data.map(lambda x: {
             'prompt': tokenizer.apply_chat_template(
                 [
-                    {'role': 'system', 'content': SYSTEM_PROMPT_INSTRUCT},
+                    {'role': 'system', 'content': sys_prompt},
                     {'role': 'user', 'content': x['question']}
                 ],
                 tokenize = False, 
