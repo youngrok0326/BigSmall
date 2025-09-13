@@ -12,6 +12,7 @@ dependencies = [
     "scipy",
     "setuptools",
     "unsloth",
-    "vllm",
+    "vllm<=0.9.1",
     "wandb",
+    "reward_hub",
 ]

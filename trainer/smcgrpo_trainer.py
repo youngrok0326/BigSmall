@@ -1452,7 +1452,7 @@ class GRPOTrainer(Trainer):
                 max_steps = int(pf_cfg.get("max_steps", 32))
                 tokens_per_step = pf_cfg.get("tokens_per_step", None)
 
-                from .vllm_smc import StepGeneration, LocalVLLMProcessRewardModel, ParticleFilteringVLLM
+                from trainer.vllm_smc import StepGeneration, LocalVLLMProcessRewardModel, ParticleFilteringVLLM
 
                 sg = StepGeneration(
                     max_steps=max_steps,
@@ -1460,7 +1460,7 @@ class GRPOTrainer(Trainer):
                     tokens_per_step=tokens_per_step,
                     stop_token=stop_token,
                 )
-
+                
                 prm = LocalVLLMProcessRewardModel(
                     model_name=prm_cfg.get("model_name", "Qwen/Qwen2.5-Math-PRM-7B"),
                     tensor_parallel_size=int(prm_cfg.get("tensor_parallel_size", 1)),
@@ -1483,7 +1483,7 @@ class GRPOTrainer(Trainer):
                     sg=sg,
                     prm=prm,
                 )
-            breakpoint()
+            
             # Use PF to produce B*N completions
             completion_ids_list = self._pf_vllm.generate(prompts_text, original_prompts, images=None)
             completion_ids = [torch.tensor(ids, device=prompt_ids.device) for ids in completion_ids_list]

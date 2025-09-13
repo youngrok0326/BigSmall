@@ -1,5 +1,5 @@
 model:
-  model_name: Qwen/Qwen2.5-3B #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
+  model_name: Qwen/Qwen2.5-0.5B #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
   gpu_memory_utilization: 0.5
   max_seq_length: 1024
   lora_rank: 64
@@ -66,8 +66,8 @@ smc:
 prm:
   model_name: Qwen/Qwen2.5-Math-PRM-7B
   tensor_parallel_size: 1
-  gpu_memory_utilization: 0.9
-  device: cuda:1
+  gpu_memory_utilization: 0.8
+  device: cuda:2
   aggregation: prod
 
 

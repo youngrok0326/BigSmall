@@ -1,13 +1,9 @@
 import math
+import os
 import warnings
 from dataclasses import dataclass
-from typing import Any, List, Optional, Sequence
-
-try:
-    from vllm import LLM, SamplingParams
-    _VLLM_AVAILABLE = True
-except Exception:
-    _VLLM_AVAILABLE = False
+from typing import Any, List, Optional, Sequence, Tuple
+import multiprocessing as mp
 
 try:
     import torch
@@ -130,60 +126,151 @@ class LocalHFProcessRewardModel(AbstractProcessRewardModel):
 
 
 class LocalVLLMProcessRewardModel(AbstractProcessRewardModel):
-    """vLLM-based PRM wrapper.
+    """vLLM-based PRM in a dedicated subprocess using reward_hub's VllmProcessRewardModel.
 
-    If reward_hub is available, defer to its VllmProcessRewardModel for accurate scoring.
-    Otherwise, fall back to an internal HF classifier to keep things self-contained.
+    - Forces vLLM v0 in the worker (VLLM_USE_V1=0), compatible with task="reward".
+    - Allows GPU pinning for the worker via environment (CUDA_VISIBLE_DEVICES) driven by `device`.
+    - Communicates via multiprocessing queues; synchronous score() calls.
     """
 
     def __init__(
         self,
         *,
         model_name: str,
-        tensor_parallel_size: int = 1,
-        gpu_memory_utilization: float = 0.25,
+        tensor_parallel_size: int = 1,  # reserved for future; reward_hub currently uses tp=1
+        gpu_memory_utilization: float = 0.25,  # reserved; reward_hub currently sets 0.8 internally
         device: str = "cuda:0",
         aggregation_method: str = "prod",
+        startup_timeout_s: float = 300.0,
     ) -> None:
-        self._backend = None
-        self._mode = None
+        self._model_name = model_name
+        self._device = device
+        self._agg = aggregation_method
 
-        # Try reward_hub's vLLM PRM first (best parity with its_hub)
+        ctx = mp.get_context("spawn")
+        self._req_q: mp.Queue = ctx.Queue()
+        self._resp_q: mp.Queue = ctx.Queue()
+        self._worker = ctx.Process(
+            target=_prm_worker_main,
+            args=(self._req_q, self._resp_q, model_name, device, aggregation_method),
+            daemon=True,
+        )
+        self._worker.start()
+
+        # Handshake: wait for ready or error
+        ok = False
         try:
-            from reward_hub.base import AggregationMethod  # type: ignore
-            from reward_hub.vllm.reward import VllmProcessRewardModel  # type: ignore
-
-            class _RewardHubAdapter:
-                def __init__(self, model_name: str, device: str, agg: str):
-                    self.model = VllmProcessRewardModel(model_name=model_name, device=device)
-                    try:
-                        self.agg = AggregationMethod(agg)
-                    except Exception:
-                        self.agg = AggregationMethod.PROD
-
-                def score(self, prompt: str, responses: List[str]) -> List[float]:
-                    messages = [
-                        [{"role": "user", "content": prompt}, {"role": "assistant", "content": r}] for r in responses
-                    ]
-                    return self.model.score(
-                        messages=messages,
-                        aggregation_method=self.agg,
-                        return_full_prm_result=False,
-                    )
-
-            self._backend = _RewardHubAdapter(model_name=model_name, device=device, agg=aggregation_method)
-            self._mode = "reward_hub_vllm"
-            return
+            self._req_q.put(("ping",))
+            msg, payload = self._resp_q.get(timeout=startup_timeout_s)
+            if msg == "ready":
+                ok = True
+            else:
+                raise ImportError(f"PRM worker failed to start: {payload}")
         except Exception as e:
             raise ImportError(
-                "reward_hub not available for PRM vLLM backend. Install reward_hub to use LocalVLLMProcessRewardModel."
+                f"Failed to start PRM vLLM worker for model {model_name}: {e}"
             ) from e
+        finally:
+            if not ok:
+                try:
+                    self._req_q.put(("close",))
+                except Exception:
+                    pass
+
+    def close(self):
+        try:
+            self._req_q.put(("close",))
+        except Exception:
+            pass
+        try:
+            if self._worker.is_alive():
+                self._worker.join(timeout=2.0)
+        except Exception:
+            pass
+
+    def __del__(self):
+        self.close()
 
     def score(self, prompt: str, response_or_list: str | List[str]) -> float | List[float]:
         single = isinstance(response_or_list, str)
         responses = [response_or_list] if single else response_or_list
-        probs = self._backend.score(prompt, responses)
-        return probs[0] if single else probs
+
+        # Send request
+        self._req_q.put(("score", prompt, responses, self._agg))
+        # Wait for response; ignore any stray control messages like 'ready'
+        while True:
+            msg, payload = self._resp_q.get()
+            if msg == "result":
+                scores: List[float] = payload
+                break
+            if msg == "error":
+                raise RuntimeError(f"PRM worker error: {payload}")
+            # ignore others (e.g., 'ready')
+        return scores[0] if single else scores
+
+    # NOTE: vectorized score_pairs removed per request; using per-prompt scoring via score()
+
+
+def _parse_cuda_visible_from_device(device: str | int | None) -> Optional[str]:
+    if device is None:
+        return None
+    if isinstance(device, int):
+        return str(device)
+    s = str(device).strip()
+    if s.isdigit():
+        return s
+    if s.lower().startswith("cuda:"):
+        return s.split(":", 1)[1]
+    return None
+
+
+def _prm_worker_main(
+    req_q: mp.Queue,
+    resp_q: mp.Queue,
+    model_name: str,
+    device: str | int | None,
+    aggregation_method: str,
+) -> None:
+    try:
+        # Force vLLM v0 engine and optionally pin the GPU via env
+        os.environ["VLLM_USE_V1"] = "0"
+        os.environ["VLLM_TRY_V1"] = "0"
+        os.environ["VLLM_ALLOW_LONG_MAX_MODEL_LEN"] = "1"
+        visible = _parse_cuda_visible_from_device(device)
+        if visible is not None:
+            os.environ["CUDA_VISIBLE_DEVICES"] = visible
+
+        # Import reward_hub and construct PRM
+        from reward_hub.base import AggregationMethod  # type: ignore
+        from reward_hub.vllm.reward import VllmProcessRewardModel  # type: ignore
+
+        try:
+            agg = AggregationMethod(aggregation_method)
+        except Exception:
+            agg = AggregationMethod.PROD
+
+        prm = VllmProcessRewardModel(model_name=model_name, device=device)
+
+        while True:
+            msg = req_q.get()
+            if not msg:
+                continue
+            if msg[0] == "close":
+                break
+            if msg[0] == "ping":
+                resp_q.put(("ready", None))
+                continue
+            if msg[0] == "score":
+                _, prompt, responses, _agg = msg
+                # Build messages list-of-list-of-dicts as reward_hub expects
+                messages = [
+                    [{"role": "user", "content": prompt}, {"role": "assistant", "content": r}] for r in responses
+                ]
+                scores = prm.score(messages=messages, aggregation_method=agg, return_full_prm_result=False)
+                resp_q.put(("result", scores))
+                continue
+    except Exception as e:
+        resp_q.put(("error", f"{type(e).__name__}: {e}"))
 
 
 class ParticleFilteringVLLM:
@@ -209,8 +296,12 @@ class ParticleFilteringVLLM:
         sg: StepGeneration,
         prm: AbstractProcessRewardModel,
     ) -> None:
-        if not _VLLM_AVAILABLE:
-            raise ImportError("vLLM is required for ParticleFilteringVLLM")
+        # Ensure vLLM is available in the main (policy) process without importing at module load time
+        try:
+            import importlib
+            importlib.import_module('vllm')
+        except Exception as e:
+            raise ImportError("vLLM is required for ParticleFilteringVLLM") from e
         self.llm = llm
         self.tok = tokenizer
         self.N = int(num_particles)
@@ -224,7 +315,9 @@ class ParticleFilteringVLLM:
         self.sg = sg
         self.prm = prm
 
-    def _sampling_params(self, *, max_tokens: int, stop: Optional[List[str]] = None) -> SamplingParams:
+    def _sampling_params(self, *, max_tokens: int, stop: Optional[List[str]] = None) -> Any:
+        # Lazy import to avoid importing vLLM at module import time
+        from vllm import SamplingParams
         kwargs = dict(
             n=1,
             max_tokens=max_tokens,
@@ -257,32 +350,46 @@ class ParticleFilteringVLLM:
 
     def generate(
         self,
-        prompts_text: List[str],  # templated strings used for generation
-        original_prompts: List[Any],  # raw inputs; used to build PRM messages
+        prompts_text: List[str],  # length = G * N (each unique prompt repeated N times)
+        original_prompts: List[Any],  # same length as prompts_text
         images: Optional[List[Any]] = None,
     ) -> List[List[int]]:
         if images is not None:
             warnings.warn("Images provided to ParticleFilteringVLLM.generate; multimodal PF is not implemented. Ignoring images.")
 
-        B = len(prompts_text)
-        # Initialize particles per prompt
-        particles: List[List[Particle]] = [[Particle(steps=[], is_stopped=False, partial_log_weights=[]) for _ in range(self.N)] for _ in range(B)]
+        total = len(prompts_text)
+        if total % self.N != 0:
+            raise ValueError(
+                f"PF expects prompts_text to contain G*N items (N={self.N} per unique prompt). Got total={total}."
+            )
+        G = total // self.N  # number of unique prompts (groups)
 
-        # Precompute user-only prompts for PRM
-        user_prompts: List[str] = [self._extract_user_content(original_prompts[i], fallback=prompts_text[i]) for i in range(B)]
+        # Collapse repeated prompts: keep one prompt per group (stride N)
+        unique_prompts_text: List[str] = [prompts_text[g * self.N] for g in range(G)]
+        unique_original_prompts: List[Any] = [original_prompts[g * self.N] for g in range(G)]
+
+        # Initialize particles per group (unique prompt)
+        particles: List[List[Particle]] = [
+            [Particle(steps=[], is_stopped=False, partial_log_weights=[]) for _ in range(self.N)] for _ in range(G)
+        ]
+
+        # Precompute user-only prompts for PRM (per group)
+        user_prompts: List[str] = [
+            self._extract_user_content(unique_original_prompts[g], fallback=unique_prompts_text[g]) for g in range(G)
+        ]
 
         for step_idx in range(self.sg.max_steps):
             # Collect alive particle contexts
             batch_inputs: List[str] = []
-            index_map: List[tuple[int, int]] = []  # (prompt_idx, particle_idx)
-            for i in range(B):
+            index_map: List[tuple[int, int]] = []  # (group_idx, particle_idx)
+            for g in range(G):
                 for j in range(self.N):
-                    p = particles[i][j]
+                    p = particles[g][j]
                     if p.is_stopped:
                         continue
-                    context = prompts_text[i] + self.sg._post_process(p.steps, stopped=False)
+                    context = unique_prompts_text[g] + self.sg._post_process(p.steps, stopped=False)
                     batch_inputs.append(context)
-                    index_map.append((i, j))
+                    index_map.append((g, j))
 
             if not batch_inputs:
                 break
@@ -298,35 +405,31 @@ class ParticleFilteringVLLM:
             # Update particles with generated step text
             for k, out in enumerate(outs):
                 text = out.outputs[0].text if out.outputs else ""
-                i, j = index_map[k]
-                p = particles[i][j]
+                g, j = index_map[k]
+                p = particles[g][j]
                 p.steps.append(text)
                 # stop on explicit stop_token
                 if isinstance(self.sg.stop_token, str) and (self.sg.stop_token in text):
                     p.is_stopped = True
 
             # Mark particles stopped if max_steps reached after this iteration
-            for i in range(B):
+            for g in range(G):
                 for j in range(self.N):
-                    if len(particles[i][j].steps) >= self.sg.max_steps:
-                        particles[i][j].is_stopped = True
+                    if len(particles[g][j].steps) >= self.sg.max_steps:
+                        particles[g][j].is_stopped = True
 
-            # PRM scoring per prompt
-            # Build per-prompt, per-particle partial texts
-            for i in range(B):
-                partials = [self.sg._post_process(p.steps, stopped=True) for p in particles[i]]
-                scores = self.prm.score(user_prompts[i], partials)
-                # Ensure list of scores
+            # Per-group PRM scoring (batched within each prompt)
+            for g in range(G):
+                partials = [self.sg._post_process(particles[g][j].steps, stopped=True) for j in range(self.N)]
+                scores = self.prm.score(user_prompts[g], partials)
                 if not isinstance(scores, list):
                     scores = [scores for _ in range(self.N)]
-                # Update weights
                 for j in range(self.N):
-                    s = float(scores[j])
-                    particles[i][j].partial_log_weights.append(_inv_sigmoid(s))
+                    particles[g][j].partial_log_weights.append(_inv_sigmoid(float(scores[j])))
 
             # Resample every step (per prompt)
-            for i in range(B):
-                logw = [p.log_weight for p in particles[i]]
+            for g in range(G):
+                logw = [p.log_weight for p in particles[g]]
                 probs = _softmax(logw)
                 # Multinomial resample N indices
                 # Use Python's random choices to avoid torch dependency where possible
@@ -335,11 +438,11 @@ class ParticleFilteringVLLM:
                 idxs = random.choices(list(range(self.N)), weights=probs, k=self.N)
                 new_particles = []
                 for idx in idxs:
-                    src = particles[i][idx]
+                    src = particles[g][idx]
                     new_particles.append(
                         Particle(steps=list(src.steps), is_stopped=src.is_stopped, partial_log_weights=list(src.partial_log_weights))
                     )
-                particles[i] = new_particles
+                particles[g] = new_particles
 
             # If all particles across all prompts are stopped, exit early
             if all(p.is_stopped for group in particles for p in group):
@@ -347,10 +450,10 @@ class ParticleFilteringVLLM:
 
         # Build final completions and tokenize with policy tokenizer
         results: List[List[int]] = []
-        for i in range(B):
+        # Return in the same (group-major, then particle) order as input blocks of N
+        for g in range(G):
             for j in range(self.N):
-                completion_text = self.sg._post_process(particles[i][j].steps, stopped=True)
-                # Tokenize completion only
+                completion_text = self.sg._post_process(particles[g][j].steps, stopped=True)
                 enc = self.tok(text=completion_text, return_tensors="pt", add_special_tokens=False)
                 ids = enc["input_ids"][0].tolist()
                 results.append(ids)

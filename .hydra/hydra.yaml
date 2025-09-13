@@ -115,12 +115,12 @@ hydra:
     task:
     - wandb.enable=false
   job:
-    name: evaluate-decode
+    name: train
     chdir: null
     override_dirname: wandb.enable=false
     id: ???
     num: ???
-    config_name: decode_eval
+    config_name: train
     env_set: {}
     env_copy: []
     config:

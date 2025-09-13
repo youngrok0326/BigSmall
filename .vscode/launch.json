@@ -12,7 +12,7 @@
         "wandb.enable=false"
       ],
       "env": {
-        "CUDA_VISIBLE_DEVICES": "0",
+        "CUDA_VISIBLE_DEVICES": "1",
         "WANDB_DISABLED": "true",
         "CUDA_LAUNCH_BLOCKING": "1"
       },
