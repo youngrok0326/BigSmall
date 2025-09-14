@@ -1,44 +1,13 @@
 import math
-import os
-import warnings
+import random
 from dataclasses import dataclass
-from typing import Any, List, Optional, Sequence, Tuple
-import multiprocessing as mp
+from typing import Any, List, Optional
 
-try:
-    import torch
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
-    _HF_AVAILABLE = True
-except Exception:
-    _HF_AVAILABLE = False
-
-
-def _inv_sigmoid(x: float) -> float:
-    x = min(max(float(x), 1e-7), 1.0 - 1e-7)
-    return math.log(x / (1.0 - x))
-
-
-def _softmax(log_weights: Sequence[float]) -> List[float]:
-    if len(log_weights) == 0:
-        return []
-    m = max(log_weights)
-    exps = [math.exp(lw - m) for lw in log_weights]
-    s = sum(exps)
-    return [e / s for e in exps]
-
-
-@dataclass
-class Particle:
-    steps: List[str]
-    is_stopped: bool
-    partial_log_weights: List[float]
-
-    @property
-    def log_weight(self) -> float:
-        if self.partial_log_weights:
-            return self.partial_log_weights[-1]
-        return 0.0
-
+def encode_batch(tokenizer: Any, texts: List[str]) -> List[List[int]]:
+    tok = getattr(tokenizer, "tokenizer", None) or tokenizer
+    enc = tok(texts, add_special_tokens=False, padding=False, return_attention_mask=False)  # type: ignore[misc]
+    ids = enc["input_ids"] if isinstance(enc, dict) else getattr(enc, "input_ids", enc)
+    return ids
 
 class StepGeneration:
     def __init__(
@@ -62,231 +31,34 @@ class StepGeneration:
         self.stop_token = stop_token
         self.include_stop_str_in_output = include_stop_str_in_output
 
-    def _post_process(self, steps: List[str], *, stopped: bool) -> str:
-        if self.tokens_per_step is not None:
-            # chunked by fixed token count: just concat
-            resp = "".join(steps)
-        else:
-            # delimiter-based
-            delim = self.step_token or ""
-            resp = delim.join(steps)
-            if not stopped and isinstance(self.step_token, str):
-                resp += self.step_token
-        if stopped and isinstance(self.stop_token, str) and not self.include_stop_str_in_output:
-            # If we stopped because of stop_token, ensure we don't keep it in the response tail.
-            # This is a conservative cleanup; if users want to keep it, set include_stop_str_in_output=True
-            resp = resp.replace(self.stop_token, "")
-        return resp
+
+# --- Confidence-based SMC with vLLM ---
+
+@dataclass(slots=True)
+class SMCParticle:
+    is_stopped: bool
+    win_vals: List[float]
+    win_sum: float
+    total_new: int
+    ctx_chunks: List[str]
 
 
-class AbstractProcessRewardModel:
-    def score(self, prompt: str, response_or_list: str | List[str]) -> float | List[float]:
-        raise NotImplementedError
-
-
-class LocalHFProcessRewardModel(AbstractProcessRewardModel):
-    """HF-based PRM scorer: loads a transformers classification model and returns a probability [0,1].
-
-    This is a robust fallback when a vLLM-backed PRM is not available.
-    """
-
-    def __init__(self, model_name: str, device: str = "cuda:0") -> None:
-        if not _HF_AVAILABLE:
-            raise ImportError("transformers/torch are required for HF PRM backend")
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_name, trust_remote_code=True)
-        self.model.to(device)
-        self.model.eval()
-        self.device = device
-
-    def _build_text(self, prompt: str, response: str) -> str:
-        # Simple, consistent concatenation for classification models
-        # If the PRM expects a special template, adapt it here.
-        return f"[INST] {prompt} [/INST] {response}"
-
-    def score(self, prompt: str, response_or_list: str | List[str]) -> float | List[float]:
-        single = isinstance(response_or_list, str)
-        responses = [response_or_list] if single else response_or_list
-        texts = [self._build_text(prompt, r) for r in responses]
-
-        if not _HF_AVAILABLE:
-            raise ImportError("HF backend not available for PRM scoring")
-        with torch.no_grad():
-            enc = self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(self.device)
-            out = self.model(**enc)
-            logits = out.logits
-            # Binary classification assumed; sigmoid over last dim
-            probs = (
-                torch.sigmoid(logits.squeeze(-1))
-                if logits.ndim == 2 and logits.size(-1) == 1
-                else torch.softmax(logits, dim=-1)[..., -1]
-            )
-            probs = probs.detach().float().cpu().tolist()
-        return probs[0] if single else probs
-
-
-class LocalVLLMProcessRewardModel(AbstractProcessRewardModel):
-    """vLLM-based PRM in a dedicated subprocess using reward_hub's VllmProcessRewardModel.
-
-    - Forces vLLM v0 in the worker (VLLM_USE_V1=0), compatible with task="reward".
-    - Allows GPU pinning for the worker via environment (CUDA_VISIBLE_DEVICES) driven by `device`.
-    - Communicates via multiprocessing queues; synchronous score() calls.
+class SMCVLLM:
+    """Self-confidence SMC in vLLM.
+    - Input prompts_text length is G*N (each unique prompt repeated N times). We collapse to G groups.
+    - Step segmentation with step_token; resample at each step boundary.
+    - Confidence from top-k logprobs per generated token.
+    - Resample only from alive particles (finished excluded) and replenish back to N.
+    - Terminate on stop_token string in step text or when total_new_tokens >= max_new_tokens.
+    - Return N sequences per group for training; optional return_all for eval.
     """
 
     def __init__(
         self,
         *,
-        model_name: str,
-        tensor_parallel_size: int = 1,  # reserved for future; reward_hub currently uses tp=1
-        gpu_memory_utilization: float = 0.25,  # reserved; reward_hub currently sets 0.8 internally
-        device: str = "cuda:0",
-        aggregation_method: str = "prod",
-        startup_timeout_s: float = 300.0,
-    ) -> None:
-        self._model_name = model_name
-        self._device = device
-        self._agg = aggregation_method
-
-        ctx = mp.get_context("spawn")
-        self._req_q: mp.Queue = ctx.Queue()
-        self._resp_q: mp.Queue = ctx.Queue()
-        self._worker = ctx.Process(
-            target=_prm_worker_main,
-            args=(self._req_q, self._resp_q, model_name, device, aggregation_method),
-            daemon=True,
-        )
-        self._worker.start()
-
-        # Handshake: wait for ready or error
-        ok = False
-        try:
-            self._req_q.put(("ping",))
-            msg, payload = self._resp_q.get(timeout=startup_timeout_s)
-            if msg == "ready":
-                ok = True
-            else:
-                raise ImportError(f"PRM worker failed to start: {payload}")
-        except Exception as e:
-            raise ImportError(
-                f"Failed to start PRM vLLM worker for model {model_name}: {e}"
-            ) from e
-        finally:
-            if not ok:
-                try:
-                    self._req_q.put(("close",))
-                except Exception:
-                    pass
-
-    def close(self):
-        try:
-            self._req_q.put(("close",))
-        except Exception:
-            pass
-        try:
-            if self._worker.is_alive():
-                self._worker.join(timeout=2.0)
-        except Exception:
-            pass
-
-    def __del__(self):
-        self.close()
-
-    def score(self, prompt: str, response_or_list: str | List[str]) -> float | List[float]:
-        single = isinstance(response_or_list, str)
-        responses = [response_or_list] if single else response_or_list
-
-        # Send request
-        self._req_q.put(("score", prompt, responses, self._agg))
-        # Wait for response; ignore any stray control messages like 'ready'
-        while True:
-            msg, payload = self._resp_q.get()
-            if msg == "result":
-                scores: List[float] = payload
-                break
-            if msg == "error":
-                raise RuntimeError(f"PRM worker error: {payload}")
-            # ignore others (e.g., 'ready')
-        return scores[0] if single else scores
-
-    # NOTE: vectorized score_pairs removed per request; using per-prompt scoring via score()
-
-
-def _parse_cuda_visible_from_device(device: str | int | None) -> Optional[str]:
-    if device is None:
-        return None
-    if isinstance(device, int):
-        return str(device)
-    s = str(device).strip()
-    if s.isdigit():
-        return s
-    if s.lower().startswith("cuda:"):
-        return s.split(":", 1)[1]
-    return None
-
-
-def _prm_worker_main(
-    req_q: mp.Queue,
-    resp_q: mp.Queue,
-    model_name: str,
-    device: str | int | None,
-    aggregation_method: str,
-) -> None:
-    try:
-        # Force vLLM v0 engine and optionally pin the GPU via env
-        os.environ["VLLM_USE_V1"] = "0"
-        os.environ["VLLM_TRY_V1"] = "0"
-        os.environ["VLLM_ALLOW_LONG_MAX_MODEL_LEN"] = "1"
-        visible = _parse_cuda_visible_from_device(device)
-        if visible is not None:
-            os.environ["CUDA_VISIBLE_DEVICES"] = visible
-
-        # Import reward_hub and construct PRM
-        from reward_hub.base import AggregationMethod  # type: ignore
-        from reward_hub.vllm.reward import VllmProcessRewardModel  # type: ignore
-
-        try:
-            agg = AggregationMethod(aggregation_method)
-        except Exception:
-            agg = AggregationMethod.PROD
-
-        prm = VllmProcessRewardModel(model_name=model_name, device=device)
-
-        while True:
-            msg = req_q.get()
-            if not msg:
-                continue
-            if msg[0] == "close":
-                break
-            if msg[0] == "ping":
-                resp_q.put(("ready", None))
-                continue
-            if msg[0] == "score":
-                _, prompt, responses, _agg = msg
-                # Build messages list-of-list-of-dicts as reward_hub expects
-                messages = [
-                    [{"role": "user", "content": prompt}, {"role": "assistant", "content": r}] for r in responses
-                ]
-                scores = prm.score(messages=messages, aggregation_method=agg, return_full_prm_result=False)
-                resp_q.put(("result", scores))
-                continue
-    except Exception as e:
-        resp_q.put(("error", f"{type(e).__name__}: {e}"))
-
-
-class ParticleFilteringVLLM:
-    """Particle Filtering over a colocated vLLM policy engine, with per-step PRM scoring.
-
-    - Resamples every step using softmax over current step log-weights (no ESS threshold).
-    - Returns all particles' completions (no final selection) as token id lists per prompt.
-    """
-
-    def __init__(
-        self,
-        *,
-        llm: Any,  # vLLM policy engine (from Unsloth/TRL colocation)
-        tokenizer: Any,  # policy tokenizer used to tokenize final completions
+        llm: Any,
+        tokenizer: Any,
         num_particles: int,
-        eos_token_id: int,
         pad_token_id: int,
         temperature: float,
         top_p: float,
@@ -294,18 +66,16 @@ class ParticleFilteringVLLM:
         min_p: float,
         repetition_penalty: float,
         sg: StepGeneration,
-        prm: AbstractProcessRewardModel,
+        smc_topk: int,
+        window_size: int,
+        confidence_eta: float,
+        max_new_tokens: int,
+        scoring: str = "entropy",
+        return_all: bool = False,
     ) -> None:
-        # Ensure vLLM is available in the main (policy) process without importing at module load time
-        try:
-            import importlib
-            importlib.import_module('vllm')
-        except Exception as e:
-            raise ImportError("vLLM is required for ParticleFilteringVLLM") from e
         self.llm = llm
         self.tok = tokenizer
         self.N = int(num_particles)
-        self.eos = int(eos_token_id)
         self.pad = int(pad_token_id)
         self.temp = float(temperature)
         self.top_p = float(top_p)
@@ -313,14 +83,28 @@ class ParticleFilteringVLLM:
         self.min_p = float(min_p)
         self.rep = float(repetition_penalty)
         self.sg = sg
-        self.prm = prm
+        self.smc_topk = int(smc_topk)
+        self.window_size = int(window_size)
+        self.confidence_eta = float(confidence_eta)
+        self.max_new_tokens = int(max_new_tokens)
+        self.scoring = scoring
+        self.return_all = bool(return_all)
+        # Ensure vLLM engine allows at least smc_topk logprobs (no heavy error handling)
+        engine = getattr(self.llm, "llm_engine", None)
+        mc = getattr(getattr(engine, "vllm_config", None), "model_config", None) or getattr(engine, "model_config", None)
+        if mc is not None and self.smc_topk > 0:
+            curr = getattr(mc, "max_logprobs", 0) #TODO: for cumulative_logprob we don't need this
+            if curr != -1 and curr < self.smc_topk:
+                mc.max_logprobs = int(self.smc_topk)
 
-    def _sampling_params(self, *, max_tokens: int, stop: Optional[List[str]] = None) -> Any:
-        # Lazy import to avoid importing vLLM at module import time
+        # Prebuild sampling params
+        stop_list = [self.sg.step_token] if self.sg.step_token is not None else None
+        self._sp = self._sampling_params(stop=stop_list)
+
+    def _sampling_params(self, *, stop: Optional[List[str]]) -> Any:
         from vllm import SamplingParams
         kwargs = dict(
             n=1,
-            max_tokens=max_tokens,
             temperature=self.temp,
             top_p=self.top_p,
             top_k=self.top_k,
@@ -328,133 +112,164 @@ class ParticleFilteringVLLM:
             repetition_penalty=self.rep,
             stop=stop,
             detokenize=True,
+            logprobs=self.smc_topk if self.smc_topk > 0 else None,
+            max_tokens = self.max_new_tokens
         )
         return SamplingParams(**kwargs)
 
-    def _extract_user_content(self, original_prompt: Any, fallback: str) -> str:
-        # Try structured chat format first
-        if isinstance(original_prompt, list):
-            for msg in original_prompt:
-                if isinstance(msg, dict) and msg.get("role") == "user":
-                    content = msg.get("content")
-                    return content if isinstance(content, str) else fallback
-        # Try to extract from base prompt structure
-        if isinstance(original_prompt, str) and "Problem:" in original_prompt:
-            try:
-                segment = original_prompt.split("Problem:", 1)[1]
-                segment = segment.split("Solution:", 1)[0]
-                return segment.strip()
-            except Exception:
-                pass
-        return fallback
+    def _entropy_conf_from_logprobs(self, logprob_entry) -> float:
+        """Compute exp(-H) over top-k candidates for one generated token."""
+        vals: List[float] = []
+        if logprob_entry is None:
+            return 0.0
+        if isinstance(logprob_entry, dict):
+            vals = [float(getattr(v, "logprob", v)) for v in logprob_entry.values() if getattr(v, "logprob", v) is not None]  # type: ignore[arg-type]
+            vals.sort(reverse=True)
+        else:
+            vals = [float(getattr(x, "logprob")) for x in logprob_entry if getattr(x, "logprob", None) is not None]
+            vals.sort(reverse=True)
+        if len(vals) == 0:
+            return 0.0
+        if self.smc_topk > 0:
+            vals = vals[: self.smc_topk]
+        # softmax over logprobs (equivalent to normalize exp(lp))
+        m = max(vals)
+        exps = [math.exp(v - m) for v in vals]
+        s = sum(exps)
+        if s <= 0.0:
+            return 0.0
+        probs = [e / s for e in exps]
+        # entropy H = -sum p log p
+        H = 0.0
+        for p in probs:
+            if p > 0:
+                H -= p * math.log(p + 1e-20)
+        return math.exp(-H)
 
     def generate(
         self,
-        prompts_text: List[str],  # length = G * N (each unique prompt repeated N times)
-        original_prompts: List[Any],  # same length as prompts_text
-        images: Optional[List[Any]] = None,
+        prompts_text: List[str],
+        original_prompts: List[Any],
     ) -> List[List[int]]:
-        if images is not None:
-            warnings.warn("Images provided to ParticleFilteringVLLM.generate; multimodal PF is not implemented. Ignoring images.")
-
         total = len(prompts_text)
         if total % self.N != 0:
-            raise ValueError(
-                f"PF expects prompts_text to contain G*N items (N={self.N} per unique prompt). Got total={total}."
-            )
-        G = total // self.N  # number of unique prompts (groups)
+            raise ValueError(f"SMC expects G*N items (N={self.N}). Got total={total}.")
+        G = total // self.N
+        headers = [prompts_text[g * self.N] for g in range(G)]
 
-        # Collapse repeated prompts: keep one prompt per group (stride N)
-        unique_prompts_text: List[str] = [prompts_text[g * self.N] for g in range(G)]
-        unique_original_prompts: List[Any] = [original_prompts[g * self.N] for g in range(G)]
+        # Particles and finished pools per group
+        particles: List[List[SMCParticle]] = []
+        for g in range(G):
+            group = []
+            for _ in range(self.N):
+                group.append(
+                    SMCParticle(
+                        is_stopped=False,
+                        win_vals=[],
+                        win_sum=0.0,
+                        total_new=0,
+                        ctx_chunks=[headers[g]],
+                    )
+                )
+            particles.append(group)
 
-        # Initialize particles per group (unique prompt)
-        particles: List[List[Particle]] = [
-            [Particle(steps=[], is_stopped=False, partial_log_weights=[]) for _ in range(self.N)] for _ in range(G)
-        ]
-
-        # Precompute user-only prompts for PRM (per group)
-        user_prompts: List[str] = [
-            self._extract_user_content(unique_original_prompts[g], fallback=unique_prompts_text[g]) for g in range(G)
-        ]
-
-        for step_idx in range(self.sg.max_steps):
-            # Collect alive particle contexts
+        # Step loop
+        for _step in range(self.sg.max_steps):
+            # Build contexts for alive particles (string prompts)
             batch_inputs: List[str] = []
-            index_map: List[tuple[int, int]] = []  # (group_idx, particle_idx)
+            idx_map: List[tuple[int, int]] = []
             for g in range(G):
                 for j in range(self.N):
                     p = particles[g][j]
                     if p.is_stopped:
                         continue
-                    context = unique_prompts_text[g] + self.sg._post_process(p.steps, stopped=False)
-                    batch_inputs.append(context)
-                    index_map.append((g, j))
+                    # Build prompt from chunks; append step token only for this call
+                    prompt_text = "".join(p.ctx_chunks)
+                    if isinstance(self.sg.step_token, str) and self.sg.step_token and not prompt_text.endswith(self.sg.step_token):
+                        prompt_text = prompt_text + self.sg.step_token
+                    batch_inputs.append(prompt_text)
+                    idx_map.append((g, j))
 
             if not batch_inputs:
                 break
 
-            # Generate one step per alive particle
-            if self.sg.step_token is not None:
-                sp = self._sampling_params(max_tokens=128, stop=[self.sg.step_token])
-            else:
-                sp = self._sampling_params(max_tokens=int(self.sg.tokens_per_step or 16), stop=None)
+            outs = self.llm.generate(batch_inputs, sampling_params=self._sp, use_tqdm=False)
 
-            outs = self.llm.generate(batch_inputs, sampling_params=sp, use_tqdm=False)
-
-            # Update particles with generated step text
+            # Update particles with outputs
             for k, out in enumerate(outs):
-                text = out.outputs[0].text if out.outputs else ""
-                g, j = index_map[k]
+                g, j = idx_map[k]
                 p = particles[g][j]
-                p.steps.append(text)
-                # stop on explicit stop_token
-                if isinstance(self.sg.stop_token, str) and (self.sg.stop_token in text):
+                if not out.outputs:
+                    p.is_stopped = True
+                    continue
+                o = out.outputs[0]
+                step_ids = getattr(o, "token_ids", None) or [] #TODO: 비효율적?
+                p.total_new += len(step_ids)
+                # Update context text
+                step_text = getattr(o, "text", "")
+                if step_text:
+                    p.ctx_chunks.append(step_text)
+
+                # Update confidence per token using top-k logprobs for each generated position
+                if self.smc_topk != 0:  # if 0, skip logprob processing
+                    lp_list = getattr(o, "logprobs", None) or []
+                    for lp_entry in lp_list:
+                        conf = self._entropy_conf_from_logprobs(lp_entry) if self.scoring == "entropy" else 0.0
+                        # window maintenance
+                        p.win_vals.append(conf)
+                        p.win_sum += conf
+                        if len(p.win_vals) > self.window_size:
+                            p.win_sum -= p.win_vals.pop(0)
+
+                # Stop conditions: EOS via vLLM (stop_reason is None), or stop_token substring, or max_new_tokens
+                finished = (getattr(o, "stop_reason", None) is None)
+                if isinstance(self.sg.stop_token, str) and self.sg.stop_token:
+                    if self.sg.stop_token in step_text:
+                        finished = True
+                if self.max_new_tokens and p.total_new >= self.max_new_tokens: #TODO: vllm 자체가 max_token 만족하도록 해야함.
+                    finished = True
+                if finished:
                     p.is_stopped = True
 
-            # Mark particles stopped if max_steps reached after this iteration
+            # Resample per group among alive only, replenish to N #TODO: replenish 하는건 좀..
             for g in range(G):
-                for j in range(self.N):
-                    if len(particles[g][j].steps) >= self.sg.max_steps:
-                        particles[g][j].is_stopped = True
-
-            # Per-group PRM scoring (batched within each prompt)
-            for g in range(G):
-                partials = [self.sg._post_process(particles[g][j].steps, stopped=True) for j in range(self.N)]
-                scores = self.prm.score(user_prompts[g], partials)
-                if not isinstance(scores, list):
-                    scores = [scores for _ in range(self.N)]
-                for j in range(self.N):
-                    particles[g][j].partial_log_weights.append(_inv_sigmoid(float(scores[j])))
-
-            # Resample every step (per prompt)
-            for g in range(G):
-                logw = [p.log_weight for p in particles[g]]
-                probs = _softmax(logw)
-                # Multinomial resample N indices
-                # Use Python's random choices to avoid torch dependency where possible
-                import random
-
-                idxs = random.choices(list(range(self.N)), weights=probs, k=self.N)
-                new_particles = []
-                for idx in idxs:
-                    src = particles[g][idx]
-                    new_particles.append(
-                        Particle(steps=list(src.steps), is_stopped=src.is_stopped, partial_log_weights=list(src.partial_log_weights))
+                alive_indices = [j for j in range(self.N) if not particles[g][j].is_stopped]
+                if len(alive_indices) == 0:
+                    continue
+                # weights from windowed confidence average ^ eta
+                ws: List[float] = []
+                for j in alive_indices:
+                    denom = max(1, len(particles[g][j].win_vals))
+                    avg = max(particles[g][j].win_sum / denom, 0.0)
+                    ws.append(avg ** self.confidence_eta)
+                s = sum(ws)
+                if s <= 0:
+                    probs = [1.0 / len(alive_indices) for _ in alive_indices]
+                else:
+                    probs = [w / s for w in ws]
+                # sample N parents among alive
+                parents = random.choices(alive_indices, weights=probs, k=self.N)
+                new_group: List[SMCParticle] = []
+                for j_parent in parents:
+                    src = particles[g][j_parent]
+                    # Shallow copy is fine; but we need independent win_vals list
+                    new_group.append(
+                        SMCParticle(
+                            is_stopped=src.is_stopped,
+                            win_vals=list(src.win_vals),
+                            win_sum=float(src.win_sum),
+                            total_new=int(src.total_new),
+                            ctx_chunks=list(src.ctx_chunks),
+                        )
                     )
-                particles[g] = new_particles
-
-            # If all particles across all prompts are stopped, exit early
-            if all(p.is_stopped for group in particles for p in group):
+                particles[g] = new_group
+            # Exit if all groups done
+            if all(p.is_stopped for grp in particles for p in grp):
                 break
 
-        # Build final completions and tokenize with policy tokenizer
-        results: List[List[int]] = []
-        # Return in the same (group-major, then particle) order as input blocks of N
+        # Build results as completion token IDs encoded by processing_class
+        completions_text: List[str] = []
         for g in range(G):
             for j in range(self.N):
-                completion_text = self.sg._post_process(particles[g][j].steps, stopped=True)
-                enc = self.tok(text=completion_text, return_tensors="pt", add_special_tokens=False)
-                ids = enc["input_ids"][0].tolist()
-                results.append(ids)
-        return results
+                completions_text.append("".join(particles[g][j].ctx_chunks[1:]))
+        return encode_batch(self.tok, completions_text)

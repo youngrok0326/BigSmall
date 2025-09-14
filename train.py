@@ -15,7 +15,6 @@ def main(cfg: DictConfig) -> None:
     set_tokenizer_name(cfg.model.model_name)
     # Patch the trl trainers to use FastLanguageModel
     from unsloth import FastLanguageModel
-    from transformers import AutoTokenizer
     
     # Load the model
     pretrained_args = {
@@ -38,7 +37,6 @@ def main(cfg: DictConfig) -> None:
 
     # Load the datasets
     from utils.data import get_questions
-    # Use instruct/chat style with system prompt chosen by model family (Qwen vs others) for parity with its_hub
     dataset_training = get_questions(cfg.rl.dataset, split="train", style="instruct")
     # dataset_testing  = get_math8k_questions(split = "test")
 
@@ -61,17 +59,7 @@ def main(cfg: DictConfig) -> None:
         "loss_type": cfg.rl.loss_type,
         "mask_truncated_completions": cfg.rl.mask_truncated_completions
     }
-    if cfg.smc.use_smc:
-        smcparams = {
-            "smc_warmup_tokens": cfg.smc.smc_warmup_tokens,
-            "smc_beta": cfg.smc.smc_beta,
-            "smc_confidence_eta": cfg.smc.smc_confidence_eta,
-            "smc_resample_threshold": cfg.smc.smc_resample_threshold,
-            "smc_confidence_window_size": cfg.smc.smc_confidence_window_size,
-            "smc_topk": cfg.smc.smc_topk
-        }
-    else:
-        smcparams = {} 
+    # SMC hyperparameters are now carried inside generation_kwargs when enabled.
     if cfg.wandb.enable:
         import wandb
         wandb_run = wandb.init(
@@ -85,22 +73,11 @@ def main(cfg: DictConfig) -> None:
     from inspect import signature
     valid_params = signature(Config.__init__).parameters.keys()
     rlparams = {k: v for k, v in rlparams.items() if k in valid_params}
-    # Build generation kwargs for PF + PRM
-    gen_kwargs = {
-        "prm": {
-            "model_name": cfg.get("prm", {}).get("model_name", "Qwen/Qwen2.5-Math-PRM-7B"),
-            "tensor_parallel_size": cfg.get("prm", {}).get("tensor_parallel_size", 1),
-            "gpu_memory_utilization": cfg.get("prm", {}).get("gpu_memory_utilization", 0.25),
-            "device": cfg.get("prm", {}).get("device", "cuda:0"),
-            "aggregation": cfg.get("prm", {}).get("aggregation", "prod"),
-        },
-        "pf": {
-            "step_token": cfg.get("smc", {}).get("step_token", "\n\n"),
-            "stop_token": cfg.get("smc", {}).get("stop_token", "\\boxed"),
-            "max_steps": cfg.get("smc", {}).get("max_steps", 32),
-            "tokens_per_step": cfg.get("smc", {}).get("tokens_per_step", None),
-        },
-    }
+    # Build generation kwargs for SMC (confidence-based) only if enabled
+    gen_kwargs = {}
+    if cfg.smc.use_smc:
+        smc = cfg.get("smc", {})
+        gen_kwargs = {"smc": {**{k: smc.get(k) for k in smc}}}
 
     training_args = Config(
         learning_rate = cfg.optim.learning_rate,
@@ -119,14 +96,12 @@ def main(cfg: DictConfig) -> None:
         max_grad_norm = cfg.optim.max_grad_norm,
         report_to = "wandb" if cfg.wandb.enable else None,
         output_dir = f"checkpoints/{cfg.wandb.run_name}",
-        # Pass PRM config under generation_kwargs.prm so trainer can access it
         generation_kwargs=gen_kwargs,
         **rlparams,
-        **smcparams
     )
-    reward_funcs = [correctness_reward_func]
-    if cfg.rl.dataset == "gsm8k":
-        reward_funcs = reward_funcs + [format_reward_func, xmlcount_reward_func]
+    reward_funcs = [correctness_reward_func] + (
+        [format_reward_func, xmlcount_reward_func] if cfg.rl.dataset == "gsm8k" else []
+    )
     trainer = Trainer(
         model = model,
         processing_class = tokenizer,

@@ -1,5 +1,5 @@
 model:
-  model_name: Qwen/Qwen2.5-0.5B #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
+  model_name: Qwen/Qwen2.5-1.5B-instruct #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
   gpu_memory_utilization: 0.5
   max_seq_length: 1024
   lora_rank: 64
@@ -53,22 +53,12 @@ optim:
 smc:
   use_smc: true
   step_token: "\n\n"
-  stop_token: "\\boxed"
+  stop_token: r"\boxed"
   max_steps: 32
   # tokens_per_step: 16  # leave commented to use step_token mode
-  smc_warmup_tokens: 50 
   smc_beta: 1.0 #TODO: later use for kl term
   smc_confidence_eta: 1.0 #TODO: temperature로 교체
-  smc_resample_threshold: 1.3
   smc_confidence_window_size: 50
-  smc_topk: -1 # top_logprobs in deepconf.
-
-prm:
-  model_name: Qwen/Qwen2.5-Math-PRM-7B
-  tensor_parallel_size: 1
-  gpu_memory_utilization: 0.8
-  device: cuda:2
-  aggregation: prod
-
-
-# (threshold, window) = (1., 25), (1.3, 50), (, 75), ( ,100)
+  smc_topk: 20
+  scoring: "entropy"
+  return all: false

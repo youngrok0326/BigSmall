@@ -579,47 +579,6 @@ class GRPOConfig(TrainingArguments):
             "all prompts are logged."
         },
     )
-    
-    # --- START: smc configuration ---
-    use_smc: bool = field(
-        default=True,
-        metadata={"help": "Whether to use Sequential Monte Carlo for generating completions."},
-    )
-    smc_warmup_tokens: int = field(
-        default=50,
-        metadata={
-            "help": "Number of initial tokens to generate before the first TSMC resampling step is allowed."
-        },
-    )
-    smc_beta: float = field(
-        default=1.0,
-        metadata={"help": "The beta parameter for the SMC algorithm."},
-    )
-    smc_confidence_eta : float = field(
-        default=1.0,
-        metadata={"help": "What power will the value function be raised to in order to approximate the twist function"
-        },
-    )
-    smc_resample_threshold: float = field(
-        default=0.5,
-        metadata={
-            "help": "The threshold for the effective sample size (ESS) below which resampling is triggered. Expressed "
-            "as a fraction of the total number of particles."
-        },
-    )
-    smc_confidence_window_size: int = field(
-        default=50,
-        metadata={
-            "help": "The window size for computing the moving average of the value function confidence scores."
-        },
-    )
-    smc_topk: int = field(
-        default=-1,
-        metadata={
-            "help": "Number of top-k logits to consider for the SMC."
-        },
-    )
-    # --- END: tsmc configuration ---
 
     def __post_init__(self):
         self.bf16 = not (self.fp16) if self.bf16 is None else self.bf16

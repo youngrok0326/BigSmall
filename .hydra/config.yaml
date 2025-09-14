@@ -1,5 +1,5 @@
 model:
-  model_name: Qwen/Qwen2.5-0.5B
+  model_name: Qwen/Qwen2.5-1.5B-instruct
   gpu_memory_utilization: 0.5
   max_seq_length: 1024
   lora_rank: 64
@@ -55,17 +55,11 @@ smc:
 
 
     '
-  stop_token: \boxed
+  stop_token: r"\boxed"
   max_steps: 32
-  smc_warmup_tokens: 50
   smc_beta: 1.0
   smc_confidence_eta: 1.0
-  smc_resample_threshold: 1.3
   smc_confidence_window_size: 50
-  smc_topk: -1
-prm:
-  model_name: Qwen/Qwen2.5-Math-PRM-7B
-  tensor_parallel_size: 1
-  gpu_memory_utilization: 0.8
-  device: cuda:2
-  aggregation: prod
+  smc_topk: 20
+  scoring: entropy
+  return all: false

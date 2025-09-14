@@ -26,40 +26,10 @@ Answer
 """
 
 # SYSTEM_PROMPT_INSTRUCT = \
-# """
-# You will be given a math question.
-# Reason about the question and correct your own mistakes if you make any.
+# "Please reason step by step, and put your final answer within \\boxed{}."
 
-# Respond in the following format:
-# <think>
-# Reason here. Decide to answer when you are confident as your response length is limited.
-# </think>
-# <answer>
-# Answer here.
-# </answer>
-# """
-
-SYSTEM_PROMPT_INSTRUCT = \
-"Please reason step by step, and put your final answer within \\boxed{}."
-
-# SAL-style prompt used in its_hub for non-Qwen models
-SAL_STEP_BY_STEP_SYSTEM_PROMPT = (
-    "Solve the following math problem efficiently and clearly:\n\n"
-    "- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n"
-    "- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n"
-    "## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n"
-    "## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n"
-    "...\n\n"
-    "Regardless of the approach, always conclude with:\n\n"
-    "Therefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\n"
-    "Where [answer] is just the final number or expression that solves the problem."
-)
-
-def _choose_system_prompt_from_model() -> str:
-    name = (globals().get("tokenizer_name", "") or "").lower()
-    if "qwen" in name:
-        return SYSTEM_PROMPT_INSTRUCT
-    return SAL_STEP_BY_STEP_SYSTEM_PROMPT
+# SAL-style prompt used
+SYSTEM_PROMPT_INSTRUCT = "Solve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem."
 
 def extract_xml_answer(text: str) -> str:
     # Extracts the answer block from the XML format
@@ -73,6 +43,54 @@ def extract_last_integer(text: str) -> str:
     if numbers:
         return numbers[-1]
     return "-1"
+
+# #TODO: new reward
+# def reward_func(completions, ground_truth, **kwargs):
+#     # Regular expression to capture content inside \boxed{}
+#     matches = [re.search(r"\\boxed\{(.*?)\}", completion) for completion in completions]
+#     contents = [match.group(1) if match else "" for match in matches]
+#     # Reward 1 if the content is the same as the ground truth, 0 otherwise
+#     return [1.0 if c == gt else 0.0 for c, gt in zip(contents, ground_truth)]
+
+# def format_reward(response: str) -> float:
+#     pattern = re.compile(r"<think>.*</think>.*\\boxed\{.*\}.*", re.DOTALL)
+#     format_match = re.fullmatch(pattern, response)
+#     return 1.0 if format_match else 0.0
+
+# from mathruler.grader import extract_boxed_content, grade_answer
+# def accuracy_reward(response: str, ground_truth: str) -> float:
+#     answer = extract_boxed_content(response)
+#     return 1.0 if grade_answer(answer, ground_truth) else 0.0
+
+
+# def extract_boxed_text(text):
+#     """Extracts text inside \boxed{...}."""
+#     pattern = r"\\boxed\{(.*?)\}"
+#     matches = re.findall(pattern, text)
+#     if not matches:
+#         return ""
+#     for match in reversed(matches):
+#         if match.strip():
+#             return match.strip()
+#     return ""
+
+# def accuracy_reward_func(completions, answer_val, **kwargs):
+#     rewards = []
+#     for comp, val in zip(completions, answer_val):
+#         extracted = extract_boxed_text(comp)
+#         rewards.append(1.0 if str(extracted) == str(val) else 0.0)
+#     return rewards
+
+# def format_reward_func(completions, **kwargs):
+#     rewards = []
+#     for comp in completions:
+#         rewards.append(1.0 if "\\boxed" in comp else 0.0)
+#     return rewards
+
+# reward_funcs = [levenshtein_reward_func, accuracy_reward_func, format_reward_func]
+
+# #TODO: new reward
+
 
 def answer_correct(text : str, answer: str) -> bool:
     # Uses math_verify to check if the answer is correct
@@ -103,17 +121,15 @@ def get_math8k_questions(split = "train", style = "base") -> Dataset:
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     data = load_dataset("parquet", data_files=f'datasets/math8k/{split}.parquet')['train']
     if style == "base":
-        # Prefer instruct style for parity with its_hub; keep base as fallback
         data = data.map(lambda x: {
             'prompt': SYSTEM_PROMPT_BASE + "Problem: " + x['question'] + "\nSolution: ",
             'answer': x['gt_answer']
         })
     elif style == "instruct":
-        sys_prompt = _choose_system_prompt_from_model()
         data = data.map(lambda x: {
             'prompt': tokenizer.apply_chat_template(
                 [
-                    {'role': 'system', 'content': sys_prompt},
+                    {'role': 'system', 'content': SYSTEM_PROMPT_INSTRUCT},
                     {'role': 'user', 'content': x['question']}
                 ],
                 tokenize = False, 
@@ -142,11 +158,10 @@ def get_gsm8k_questions(split = "train", style = "base") -> Dataset:
             'answer': extract_gsm8k_answer(x['answer'])
         })
     elif style == "instruct":
-        sys_prompt = _choose_system_prompt_from_model()
         data = data.map(lambda x: {
             'prompt': tokenizer.apply_chat_template(
                 [
-                    {'role': 'system', 'content': sys_prompt},
+                    {'role': 'system', 'content': SYSTEM_PROMPT_INSTRUCT},
                     {'role': 'user', 'content': x['question']}
                 ],
                 tokenize = False, 

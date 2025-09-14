@@ -852,15 +852,20 @@ class GRPOTrainer(Trainer):
                 generation_kwargs.update(args.generation_kwargs)
             self.generation_config = GenerationConfig(**generation_kwargs)
             
+            # Pull SMC params from generation_kwargs if provided
+            _smc_cfg = {}
+            if getattr(self.args, "generation_kwargs", None):
+                _smc_cfg = (self.args.generation_kwargs or {}).get("smc", {})
+
             smc_params = {
-                "use_smc": self.args.use_smc,
+                "use_smc": bool(_smc_cfg),
                 "num_generations": self.args.num_generations,
-                "smc_beta": self.args.smc_beta,
-                "smc_warmup_tokens": self.args.smc_warmup_tokens,
-                "smc_confidence_eta": self.args.smc_confidence_eta,
-                "smc_resample_threshold": self.args.smc_resample_threshold,
-                "smc_confidence_window_size": self.args.smc_confidence_window_size,
-                "smc_topk": self.args.smc_topk,
+                "smc_beta": _smc_cfg.get("smc_beta", 1.0),
+                "smc_warmup_tokens": getattr(self.args, "smc_warmup_tokens", 0),
+                "smc_confidence_eta": _smc_cfg.get("smc_confidence_eta", 1.0),
+                "smc_resample_threshold": getattr(self.args, "smc_resample_threshold", 0.5),
+                "smc_confidence_window_size": _smc_cfg.get("smc_confidence_window_size", 50),
+                "smc_topk": _smc_cfg.get("smc_topk", -1),
             }
             for key, value in smc_params.items():
                 setattr(self.generation_config, key, value)
@@ -1432,27 +1437,31 @@ class GRPOTrainer(Trainer):
                     re.sub(rf"({re.escape(self.image_token)})+", self.image_token, text) for text in prompts_text
                 ]
                 
-        # Particle Filtering (its_hub parity) over colocated vLLM when SMC is enabled
-        if self.args.use_smc and (self.use_vllm or hasattr(self, "llm")):
+        # SMC over colocated vLLM when enabled
+        if (self.use_vllm or hasattr(self, "llm")):
             # Ensure latest weights in policy vLLM
             if self.state.global_step != self._last_loaded_step:
                 self._move_model_to_vllm()
                 self._last_loaded_step = self.state.global_step
 
             # Build PF stack once
-            if not hasattr(self, "_pf_vllm"):
-                # Read PF/PRM config from args.generation_kwargs
-                prm_cfg, pf_cfg = {}, {}
+            if not hasattr(self, "_smc_vllm"):
+                # Read SMC config from args.generation_kwargs
+                smc_cfg = {}
                 if getattr(self.args, "generation_kwargs", None):
-                    prm_cfg = (self.args.generation_kwargs or {}).get("prm", {})
-                    pf_cfg = (self.args.generation_kwargs or {}).get("pf", {})
+                    smc_cfg = (self.args.generation_kwargs or {}).get("smc", {})
 
-                step_token = pf_cfg.get("step_token", None)
-                stop_token = pf_cfg.get("stop_token", None)
-                max_steps = int(pf_cfg.get("max_steps", 32))
-                tokens_per_step = pf_cfg.get("tokens_per_step", None)
+                step_token = smc_cfg.get("step_token", None)
+                stop_token = smc_cfg.get("stop_token", None)
+                max_steps = int(smc_cfg.get("max_steps", 32))
+                tokens_per_step = smc_cfg.get("tokens_per_step", None)
+                scoring = smc_cfg.get("scoring", "entropy")
+                return_all = bool(smc_cfg.get("return_all", False))
+                smc_topk = int(smc_cfg.get("smc_topk", -1))
+                conf_window = int(smc_cfg.get("smc_confidence_window_size", 50))
+                conf_eta = float(smc_cfg.get("smc_confidence_eta", 1.0))
 
-                from trainer.vllm_smc import StepGeneration, LocalVLLMProcessRewardModel, ParticleFilteringVLLM
+                from trainer.vllm_smc import StepGeneration, SMCVLLM
 
                 sg = StepGeneration(
                     max_steps=max_steps,
@@ -1460,20 +1469,11 @@ class GRPOTrainer(Trainer):
                     tokens_per_step=tokens_per_step,
                     stop_token=stop_token,
                 )
-                
-                prm = LocalVLLMProcessRewardModel(
-                    model_name=prm_cfg.get("model_name", "Qwen/Qwen2.5-Math-PRM-7B"),
-                    tensor_parallel_size=int(prm_cfg.get("tensor_parallel_size", 1)),
-                    gpu_memory_utilization=float(prm_cfg.get("gpu_memory_utilization", 0.25)),
-                    device=prm_cfg.get("device", "cuda:0"),
-                    aggregation_method=prm_cfg.get("aggregation", "prod"),
-                )
 
-                self._pf_vllm = ParticleFilteringVLLM(
+                self._smc_vllm = SMCVLLM(
                     llm=self.llm,
                     tokenizer=self.processing_class,
                     num_particles=self.num_generations,
-                    eos_token_id=self.eos_token_id,
                     pad_token_id=self.pad_token_id,
                     temperature=self.temperature,
                     top_p=self.top_p,
@@ -1481,11 +1481,16 @@ class GRPOTrainer(Trainer):
                     min_p=0.0 if self.min_p is None else self.min_p,
                     repetition_penalty=self.repetition_penalty,
                     sg=sg,
-                    prm=prm,
+                    smc_topk=smc_topk,
+                    window_size=conf_window,
+                    max_new_tokens=int(self.max_completion_length),
+                    scoring=scoring,
+                    confidence_eta=conf_eta,
+                    return_all=return_all and (not self.model.training),
                 )
-            
+
             # Use PF to produce B*N completions
-            completion_ids_list = self._pf_vllm.generate(prompts_text, original_prompts, images=None)
+            completion_ids_list = self._smc_vllm.generate(prompts_text, original_prompts)
             completion_ids = [torch.tensor(ids, device=prompt_ids.device) for ids in completion_ids_list]
             completion_ids = pad(completion_ids, padding_value=self.pad_token_id)
             prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
