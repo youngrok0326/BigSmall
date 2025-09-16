@@ -1,9 +1,10 @@
 from collections import deque
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 import inspect
 import math
 import os
-from typing import Any, Deque, Dict, Iterable, List, Mapping, Optional, Tuple, Union
+from typing import Any, Deque, Dict, Generator, Iterable, List, Mapping, Optional, Tuple, Union
 
 from omegaconf import DictConfig, OmegaConf
 import torch
@@ -117,6 +118,60 @@ def _to_plain_dict(data: Optional[Mapping[str, Any] | Any]) -> Dict[str, Any]:
     return dict(data)
 
 
+@contextmanager
+def _force_cuda_visible(override: Optional[str]) -> Generator[None, None, None]:
+    if override is None:
+        yield
+        return
+
+    previous = os.environ.get("CUDA_VISIBLE_DEVICES")
+    try:
+        os.environ["CUDA_VISIBLE_DEVICES"] = override
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop("CUDA_VISIBLE_DEVICES", None)
+        else:
+            os.environ["CUDA_VISIBLE_DEVICES"] = previous
+
+
+def _resolve_prm_device(cfg: Dict[str, Any]) -> tuple[str, Optional[str]]:
+    def _as_index(value: Any) -> str:
+        idx = int(value)
+        if idx < 0:
+            raise ValueError("prm.cuda must be non-negative")
+        return str(idx)
+
+    override: Optional[str] = None
+    raw_device = cfg.get("device")
+    cuda_idx = cfg.get("cuda")
+
+    if cuda_idx is not None:
+        override = _as_index(cuda_idx)
+        return "cuda:0", override
+
+    if isinstance(raw_device, int):
+        override = _as_index(raw_device)
+        return "cuda:0", override
+
+    if isinstance(raw_device, str):
+        dev = raw_device.strip()
+        if dev.lower().startswith("cuda:"):
+            suffix = dev.split(":", 1)[1].strip()
+            if suffix == "":
+                return "cuda", None
+            if suffix.isdigit():
+                override = _as_index(suffix)
+                return "cuda:0", override
+            raise ValueError(f"Invalid prm.device value: {raw_device}")
+        if dev.isdigit():
+            override = _as_index(dev)
+            return "cuda:0", override
+        return dev, None
+
+    return "cuda", None
+
+
 class VLLMProcessRewardWrapper:
     def __init__(
         self,
@@ -198,49 +253,17 @@ def build_prm_model(prm_cfg: Optional[Mapping[str, Any] | Any]) -> Optional[Any]
     if not model_name:
         raise ValueError("PRM configuration requires 'model_name' when use_prm is True.")
 
-    raw_device = cfg.get("device")
-    cuda_idx = cfg.get("cuda")
-    visible = os.environ.get("CUDA_VISIBLE_DEVICES")
-    visible_list = [d.strip() for d in visible.split(",") if d.strip()] if visible else None
-
-    def _resolve_index(value: Any) -> int:
-        try:
-            idx = int(value)
-        except (TypeError, ValueError) as exc:
-            raise ValueError("prm.cuda must be an integer index") from exc
-
-        if idx < 0:
-            raise ValueError("prm.cuda must be non-negative")
-
-        if visible_list:
-            if idx < len(visible_list):
-                return idx
-            str_idx = str(idx)
-            if str_idx in visible_list:
-                return visible_list.index(str_idx)
-
-        return idx
-
-    if cuda_idx is not None:
-        device = f"cuda:{_resolve_index(cuda_idx)}"
-    elif isinstance(raw_device, str) and raw_device.startswith("cuda:"):
-        suffix = raw_device.split(":", 1)[1]
-        if suffix == "":
-            device = "cuda"
-        else:
-            device = f"cuda:{_resolve_index(suffix)}"
-    else:
-        device = raw_device or "cuda"
-
+    device, override = _resolve_prm_device(cfg)
     aggregation = str(cfg.get("aggregation", cfg.get("aggregation_method", "model")))
     gpu_mem_util = float(cfg.get("gpu_memory_utilization", 0.8))
 
-    return VLLMProcessRewardWrapper(
-        model_name=model_name,
-        device=device,
-        aggregation=aggregation,
-        gpu_memory_utilization=gpu_mem_util,
-    )
+    with _force_cuda_visible(override):
+        return VLLMProcessRewardWrapper(
+            model_name=model_name,
+            device=device,
+            aggregation=aggregation,
+            gpu_memory_utilization=gpu_mem_util,
+        )
 
 
 class SMCVLLM:
