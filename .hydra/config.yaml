@@ -70,5 +70,5 @@ prm:
   use_prm: true
   model_name: Qwen/Qwen2.5-Math-PRM-7B
   aggregation: model
-  gpu_memory_utilization: 0.8
+  gpu_memory_utilization: 0.3
   cuda: 5
