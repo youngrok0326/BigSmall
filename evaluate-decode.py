@@ -10,6 +10,7 @@ Usage:
 
 import os
 import json
+from datetime import datetime
 from dataclasses import asdict
 
 # Progress bar
@@ -71,11 +72,11 @@ def _build_gen_config_from_section(tokenizer, section_cfg: DictConfig, max_new_t
     )
 
 
-def _batch_tokenize(tokenizer, texts, max_length, padding_side: str = "left", add_special_tokens: bool = False):
-    """Minimal, correct prompt tokenization: left padding, no added specials."""
+def _batch_tokenize(tokenizer, texts, max_length, padding_side: str | None = None, add_special_tokens: bool = False):
+    """Tokenize prompts with optional padding-side override and no extra specials."""
     prev_side = getattr(tokenizer, "padding_side", None)
     try:
-        if prev_side is not None:
+        if padding_side is not None and prev_side is not None:
             tokenizer.padding_side = padding_side
         return tokenizer(
             texts,
@@ -86,24 +87,30 @@ def _batch_tokenize(tokenizer, texts, max_length, padding_side: str = "left", ad
             add_special_tokens=add_special_tokens,
         )
     finally:
-        if prev_side is not None:
+        if padding_side is not None and prev_side is not None:
             tokenizer.padding_side = prev_side
 
 
 def _decode_generated(tokenizer, sequences: torch.Tensor, prompt_lens: torch.Tensor):
-    # sequences: [B, T], prompt_lens: [B]
-    texts = []
+    """Optimized decoding using a single batch_decode call."""
+    tokens_to_decode = []
     pad_token_id = tokenizer.pad_token_id
+
     for i in range(sequences.size(0)):
         start = int(prompt_lens[i].item())
         gen_tokens = sequences[i, start:]
-        # trim trailing pads for cleaner decoding
+
         if pad_token_id is not None:
-            valid_len = (gen_tokens != pad_token_id).sum().item()
+            valid_tokens_mask = gen_tokens != pad_token_id
+            valid_len = valid_tokens_mask.sum().item()
             if valid_len > 0:
                 gen_tokens = gen_tokens[:valid_len]
-        texts.append(tokenizer.decode(gen_tokens, skip_special_tokens=True))
-    return texts
+            else:
+                gen_tokens = torch.tensor([], device=gen_tokens.device, dtype=torch.long)
+
+        tokens_to_decode.append(gen_tokens)
+
+    return tokenizer.batch_decode(tokens_to_decode, skip_special_tokens=True)
 
 
 def _clean_prompt_texts(tokenizer, input_ids: torch.Tensor, attention_mask: torch.Tensor):
@@ -293,11 +300,218 @@ def _evaluate_once_default(model, tokenizer, prompts, answers, cfg: DictConfig, 
     )
 
 
+def _is_vllm_backend(obj) -> bool:
+    if obj is None:
+        return False
+    if hasattr(obj, "llm_engine") and hasattr(obj, "generate"):
+        return True
+    module_name = getattr(obj.__class__, "__module__", "")
+    return module_name.startswith("vllm.") and hasattr(obj, "generate")
+
+
+def _locate_vllm_backend(model) -> tuple[bool, object | None]:
+    candidate_attrs = (
+        "vllm_engine",
+        "llm",
+        "_llm",
+        "llm_engine",
+        "_llm_engine",
+        "fast_llm",
+        "fast_inference_llm",
+        "vllm",
+    )
+
+    for attr in candidate_attrs:
+        cand = getattr(model, attr, None)
+        if _is_vllm_backend(cand):
+            return True, cand
+
+    fast_generate = getattr(model, "fast_generate", None)
+    engine = getattr(fast_generate, "__self__", None) if fast_generate is not None else None
+    if _is_vllm_backend(engine):
+        return True, engine
+
+    try:
+        from unsloth import FastLanguageModel as _FLM  # type: ignore
+        for attr in ("_fast_llm", "_llm", "llm"):
+            cand = getattr(_FLM, attr, None)
+            if _is_vllm_backend(cand):
+                return True, cand
+    except Exception:
+        pass
+
+    return False, None
+
+
 def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, logging_enabled: bool, progress_desc: str | None = None):
+    _ensure_pad_token(tokenizer)
+    use_vllm_cfg = bool(cfg.model.get("fast_inference", True))
+    use_vllm_detected, llm = _locate_vllm_backend(model)
+    use_vllm = use_vllm_cfg and use_vllm_detected
+
+    if use_vllm_cfg and not use_vllm_detected:
+        print("[evaluate-decode] fast_inference enabled but no vLLM backend detected; falling back to HF custom generation.")
+
+    if use_vllm:
+        from trainer.vllm_smc import StepGeneration, SMCVLLM, build_prm_model
+
+        total_queries = len(prompts)
+        ans_correct = 0
+        for_correct = 0
+        both_correct = 0
+        total_gen_len = 0
+        examples: list[dict[str, object]] = []
+        sum_ans_frac = 0.0
+        sum_for_frac = 0.0
+        sum_both_frac = 0.0
+
+        G = int(cfg.eval.get("batch_size_groups", 1))
+        N = int(cfg.eval.get("num_generations", 1))
+
+        confidence_cfg = cfg.custom_decode.get("confidence", {}) if cfg.custom_decode is not None else {}
+
+        step_token = cfg.custom_decode.get("step_token")
+        tokens_per_step = cfg.custom_decode.get("tokens_per_step")
+        if step_token is None and tokens_per_step is None:
+            step_token = "\n\n"
+        if tokens_per_step is not None:
+            tokens_per_step = int(tokens_per_step)
+        step_token = str(step_token) if step_token is not None else None
+        stop_token = cfg.custom_decode.get("stop_token", "\\boxed")
+        stop_token = str(stop_token) if stop_token is not None else None
+        max_steps = int(cfg.custom_decode.get("max_steps", 32))
+        include_stop = bool(cfg.custom_decode.get("include_stop_str_in_output", True))
+        scoring = str(confidence_cfg.get("scoring", cfg.custom_decode.get("scoring", "entropy")))
+        conf_group = str(confidence_cfg.get("group", "mean"))
+        conf_aggregation = str(confidence_cfg.get("aggregation", "current"))
+        return_all = bool(cfg.custom_decode.get("return_all", False))
+        smc_topk = int(cfg.custom_decode.get("smc_topk", -1))
+        conf_window = int(cfg.custom_decode.get("smc_confidence_window_size", 50))
+        conf_eta = float(cfg.custom_decode.get("smc_confidence_eta", 1.0))
+        temperature = float(cfg.custom_decode.get("temperature", 1.0))
+        top_p = float(cfg.custom_decode.get("top_p", 1.0))
+        top_k = int(cfg.custom_decode.get("top_k", 0))
+        top_k = top_k if top_k > 0 else -1
+        min_p = float(cfg.custom_decode.get("min_p", 0.0))
+        repetition_penalty = float(cfg.custom_decode.get("repetition_penalty", 1.0))
+        max_new_tokens = int(cfg.eval.max_new_tokens)
+
+        pad_token_id = tokenizer.pad_token_id
+        if pad_token_id is None:
+            pad_token_id = tokenizer.eos_token_id if tokenizer.eos_token_id is not None else 0
+
+        # Mirror the trainer wiring (see trainer/smcgrpo_trainer.py) so decode configs stay aligned.
+        step_gen = StepGeneration(
+            max_steps=max_steps,
+            step_token=step_token,
+            tokens_per_step=tokens_per_step,
+            stop_token=stop_token,
+            include_stop_str_in_output=include_stop,
+        )
+
+        prm_model = None
+        prm_cfg = cfg.get("prm")
+        if prm_cfg and prm_cfg.get("use_prm"):
+            prm_model = build_prm_model(OmegaConf.to_container(prm_cfg, resolve=True))
+
+        smc_runner = SMCVLLM(
+            llm=llm,
+            tokenizer=tokenizer,
+            num_particles=N,
+            pad_token_id=pad_token_id,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            min_p=min_p,
+            repetition_penalty=repetition_penalty,
+            sg=step_gen,
+            smc_topk=smc_topk,
+            window_size=conf_window,
+            confidence_eta=conf_eta,
+            max_new_tokens=max_new_tokens,
+            scoring=scoring,
+            confidence_group=conf_group,
+            confidence_aggregation=conf_aggregation,
+            return_all=return_all,
+            prm=prm_model,
+        )
+
+        with tqdm(total=total_queries, desc=progress_desc or "custom", unit="prompt", dynamic_ncols=True) as pbar:
+            for i in range(0, total_queries, G):
+                j = min(i + G, total_queries)
+                batch_prompts = prompts[i:j]
+                repeated_prompts: list[str] = []
+                for prompt in batch_prompts:
+                    repeated_prompts.extend([prompt] * N)
+
+                outputs = smc_runner.generate(repeated_prompts, batch_prompts)
+                if isinstance(outputs, tuple):
+                    completion_ids_list = outputs[0]
+                else:
+                    completion_ids_list = outputs
+
+                texts_all = tokenizer.batch_decode(completion_ids_list, skip_special_tokens=True)
+                gen_lens_all = [len(ids) for ids in completion_ids_list]
+
+                for g, k in enumerate(range(i, j)):
+                    gt = answers[k]
+                    start = g * N
+                    end = start + N
+                    texts_g = texts_all[start:end]
+                    gen_lens_g = gen_lens_all[start:end]
+
+                    a_list = [answer_correct(t, gt) for t in texts_g]
+                    f_list = [format_correct(t) for t in texts_g]
+
+                    a_any = any(a_list)
+                    f_any = any(f_list)
+                    both_any = any(a and f for a, f in zip(a_list, f_list))
+
+                    ans_correct += 1 if a_any else 0
+                    for_correct += 1 if f_any else 0
+                    both_correct += 1 if both_any else 0
+
+                    denom = float(len(a_list)) if len(a_list) > 0 else float(N)
+                    sum_ans_frac += (sum(1 for a in a_list if a) / denom)
+                    sum_for_frac += (sum(1 for f in f_list if f) / denom)
+                    sum_both_frac += (sum(1 for a, f in zip(a_list, f_list) if a and f) / denom)
+
+                    chosen_idx = next((idx for idx, (a, f) in enumerate(zip(a_list, f_list)) if a and f), None)
+                    if chosen_idx is None:
+                        chosen_idx = next((idx for idx, a in enumerate(a_list) if a), 0)
+                    chosen_idx = 0 if chosen_idx is None else chosen_idx
+                    chosen_text = texts_g[chosen_idx] if texts_g else ""
+                    chosen_len = gen_lens_g[chosen_idx] if gen_lens_g else 0
+                    total_gen_len += chosen_len
+
+                    if len(examples) < cfg.eval.sample_cnt:
+                        examples.append({
+                            "prompt": prompts[k],
+                            "answer": gt,
+                            "completion": chosen_text,
+                            "correct": a_any,
+                            "format_correct": f_any,
+                        })
+                pbar.update(j - i)
+
+        avg_len = total_gen_len / total_queries if total_queries > 0 else 0.0
+        avg_ans_frac = sum_ans_frac / total_queries if total_queries > 0 else 0.0
+        avg_for_frac = sum_for_frac / total_queries if total_queries > 0 else 0.0
+        avg_both_frac = sum_both_frac / total_queries if total_queries > 0 else 0.0
+        return (
+            ans_correct / total_queries,
+            for_correct / total_queries,
+            both_correct / total_queries,
+            avg_len,
+            avg_ans_frac,
+            avg_for_frac,
+            avg_both_frac,
+            examples,
+        )
+
     device = next(model.parameters()).device
 
     # Build custom generation config with SMC knobs
-    _ensure_pad_token(tokenizer)
     gen_cfg = GenerationConfig(
         do_sample=cfg.custom_decode.get("do_sample", True),
         temperature=cfg.custom_decode.get("temperature", 1.0),
@@ -312,13 +526,15 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
     gen_cfg.use_smc = bool(cfg.custom_decode.get("use_smc", True))
     # Unified eval.num_generations controls trajectories per prompt
     gen_cfg.num_generations = int(cfg.eval.get("num_generations", 1))
-    gen_cfg.smc_beta = float(cfg.custom_decode.get("smc_beta", 1.0))
-    gen_cfg.smc_warmup_tokens = int(cfg.custom_decode.get("smc_warmup_tokens", 10))
     # Additional SMC controls (kept for parity with training config)
     gen_cfg.smc_confidence_eta = float(cfg.custom_decode.get("smc_confidence_eta", 1.0))
-    gen_cfg.smc_resample_threshold = float(cfg.custom_decode.get("smc_resample_threshold", 0.2))
     gen_cfg.smc_confidence_window_size = int(cfg.custom_decode.get("smc_confidence_window_size", 50))
     gen_cfg.smc_topk = int(cfg.custom_decode.get("smc_topk", -1))
+    confidence_cfg = cfg.custom_decode.get("confidence", {}) if cfg.custom_decode is not None else {}
+    gen_cfg.scoring = str(confidence_cfg.get("scoring", cfg.custom_decode.get("scoring", "entropy")))
+    gen_cfg.step_token = str(cfg.custom_decode.get("step_token", "\n\n"))
+    gen_cfg.stop_token = str(cfg.custom_decode.get("stop_token", "\\boxed"))
+    gen_cfg.return_all = bool(cfg.custom_decode.get("return_all", False))
 
     # logging for custom generator
     logging_config = {
@@ -357,7 +573,7 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
             input_rep = input_ids.repeat_interleave(N, dim=0)
             attn_rep = attn.repeat_interleave(N, dim=0)
 
-            with torch.no_grad():
+            with torch.no_grad(), torch.autocast(device_type="cuda", dtype=torch.bfloat16):
                 # Route through HF custom_generate hook so the decoding pipeline
                 # (logits processors, stopping criteria, etc.) is prepared correctly.
                 sequences = model.generate(
@@ -432,8 +648,7 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
                         "correct": a_any,
                         "format_correct": f_any,
                     })
-                # Update progress per unique prompt processed
-                pbar.update(1)
+            pbar.update(j - i)
 
     avg_len = total_gen_len / total_queries if total_queries > 0 else 0.0
     avg_ans_frac = sum_ans_frac / total_queries if total_queries > 0 else 0.0
@@ -453,7 +668,7 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
 
 def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wandb_run):
     # Style selection matches training/eval convention
-    style = "instruct" if cfg.model.model_name.endswith("Instruct") else "base"
+    style = "instruct" # if cfg.model.model_name.endswith("Instruct") else "base"
     ds = get_questions(dataset_name, split=cfg.split, style=style)
     prompts = [ex["prompt"] for ex in ds]
     answers = ds["answer"]
@@ -488,29 +703,7 @@ def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wand
             custom_ans_frac.append(cr_a); custom_for_frac.append(cr_f); custom_both_frac.append(cr_b)
             custom_examples = ce if not custom_examples else custom_examples
 
-        if wandb_run is not None:
-            log_payload = {"repeat": t}
-            if run_default:
-                log_payload.update({
-                    f"default/{dataset_name}/ans_acc": da,
-                    f"default/{dataset_name}/for_acc": df,
-                    f"default/{dataset_name}/both_acc": db,
-                    f"default/{dataset_name}/avg_len": dl,
-                    f"default/{dataset_name}/ans_frac": dr_a,
-                    f"default/{dataset_name}/for_frac": dr_f,
-                    f"default/{dataset_name}/both_frac": dr_b,
-                })
-            if run_custom:
-                log_payload.update({
-                    f"custom/{dataset_name}/ans_acc": ca,
-                    f"custom/{dataset_name}/for_acc": cf,
-                    f"custom/{dataset_name}/both_acc": cb,
-                    f"custom/{dataset_name}/avg_len": cl,
-                    f"custom/{dataset_name}/ans_frac": cr_a,
-                    f"custom/{dataset_name}/for_frac": cr_f,
-                    f"custom/{dataset_name}/both_frac": cr_b,
-                })
-            wandb_run.log(log_payload)
+        # Do not log per-repeat metrics to W&B; only final means are logged later.
 
     if run_default:
         results["default"] = {
@@ -542,6 +735,15 @@ def main(cfg: DictConfig) -> None:
     # For dataset tokenizer-dependent filtering
     set_tokenizer_name(cfg.model.model_name)
 
+    # Prepare dated log directory and placeholder log file for this run.
+    today = datetime.now().strftime("%Y-%m-%d")
+    log_dir = os.path.join("outputs", today)
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, "evaluate-decode.log")
+    if not os.path.exists(log_path):
+        with open(log_path, "w"):
+            pass
+
     # Load model and tokenizer via Unsloth, but disable fast_inference for HF generate
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=cfg.model.model_name,
@@ -550,12 +752,6 @@ def main(cfg: DictConfig) -> None:
         fast_inference=cfg.model.fast_inference,
         gpu_memory_utilization=cfg.model.gpu_memory_utilization,
     )
-
-    # Keep it simple and correct: prompts use left padding; no added specials.
-    try:
-        tokenizer.padding_side = "left"
-    except Exception:
-        pass
 
     # W&B init
     wandb_run = None
@@ -581,20 +777,25 @@ def main(cfg: DictConfig) -> None:
     print(f"Saved results to {out_path}")
 
     if wandb_run is not None:
-        # Log final per-dataset mean accuracies
+        # Log only final per-dataset mean metrics, unified across default/custom
         summary = {}
         for d, res in results.items():
-            for mode in res.keys():
-                summary[f"{mode}/{d}/ans_acc_mean"] = float(sum(res[mode]["ans_acc"]) / max(1, len(res[mode]["ans_acc"])))
-                summary[f"{mode}/{d}/for_acc_mean"] = float(sum(res[mode]["for_acc"]) / max(1, len(res[mode]["for_acc"])))
-                summary[f"{mode}/{d}/both_acc_mean"] = float(sum(res[mode]["both_acc"]) / max(1, len(res[mode]["both_acc"])))
-                summary[f"{mode}/{d}/length_mean"] = float(sum(res[mode]["lengths"]) / max(1, len(res[mode]["lengths"])))
-                if "ans_frac" in res[mode]:
-                    summary[f"{mode}/{d}/ans_frac_mean"] = float(sum(res[mode]["ans_frac"]) / max(1, len(res[mode]["ans_frac"])))
-                if "for_frac" in res[mode]:
-                    summary[f"{mode}/{d}/for_frac_mean"] = float(sum(res[mode]["for_frac"]) / max(1, len(res[mode]["for_frac"])))
-                if "both_frac" in res[mode]:
-                    summary[f"{mode}/{d}/both_frac_mean"] = float(sum(res[mode]["both_frac"]) / max(1, len(res[mode]["both_frac"])))
+            # Concatenate across available modes (default/custom) for a unified mean
+            ans_vals, for_vals, both_vals, len_vals = [], [], [], []
+            for mode_data in res.values():
+                ans_vals.extend(mode_data.get("ans_acc", []))
+                for_vals.extend(mode_data.get("for_acc", []))
+                both_vals.extend(mode_data.get("both_acc", []))
+                len_vals.extend(mode_data.get("lengths", []))
+
+            def _mean(lst):
+                return float(sum(lst) / len(lst)) if len(lst) > 0 else 0.0
+
+            summary[f"{d}/ans_acc_mean"] = _mean(ans_vals)
+            summary[f"{d}/for_acc_mean"] = _mean(for_vals)
+            summary[f"{d}/both_acc_mean"] = _mean(both_vals)
+            summary[f"{d}/length_mean"] = _mean(len_vals)
+
         wandb_run.log(summary)
         wandb_run.finish()
 

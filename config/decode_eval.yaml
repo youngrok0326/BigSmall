@@ -1,14 +1,14 @@
 model:
-  model_name: "Qwen/Qwen2.5-0.5B"
+  model_name: "Qwen/Qwen2.5-0.5B-Instruct"
   gpu_memory_utilization: 0.5
   max_seq_length: 1024
   load_in_4bit: true
-  fast_inference: false
+  fast_inference: true
 
 wandb:
   enable: true
   project_name: "SMC_DECODE_EVAL_DEBUG"
-  run_name: "Qwen2.5-0.5B"
+  run_name: "debug"
 
 datasets:
   # - "amc23"
@@ -21,9 +21,9 @@ eval:
   repeat_cnt: 1
   sample_cnt: 5
   # Number of prompt groups per batch (each group produces multiple trajectories)
-  batch_size_groups: 64
+  batch_size_groups: 128
   # Unified number of trajectories per prompt for both default/custom decoding
-  num_generations: 16
+  num_generations: 8
   max_new_tokens: 512
   # Which decoding modes to run
   run_default: false
@@ -39,18 +39,23 @@ default_decode:
 
 custom_decode:
   use_smc: true
-  # Sampling controls used inside SMC token selection
-  do_sample: true
-  temperature: 0.9
-  top_p: 1.0
-  top_k: 0
-  # SMC-specific controls
-  smc_beta: 1.0
-  smc_warmup_tokens: 100
-  smc_confidence_eta: 1.0
-  smc_resample_threshold: 0.5 # ess threshold
-  smc_confidence_window_size: 1024
+  step_token: "\n\n"
+  stop_token: "\\boxed"
+  max_steps: 32
+  # tokens_per_step: 16  # leave commented to use step_token mode
+  smc_beta: 1.0 #TODO: later use for kl term
+  smc_confidence_eta: 1.0 #TODO: temperature로 교체
+  smc_confidence_window_size: 512
   smc_topk: 20
+  confidence:
+    scoring: "entropy" #logprob, prob
+    aggregation: "mean" #geo
+prm: 
+  use_prm: true
+  model_name: Qwen/Qwen2.5-Math-PRM-7B
+  aggregation: "model" #mean, last, min
+  gpu_memory_utilization: 0.8
+  cuda: 5
 
 
 # Default decoding only:

@@ -1,7 +1,7 @@
 model:
-  model_name: Qwen/Qwen2.5-1.5B-instruct
+  model_name: Qwen/Qwen2.5-0.5B-instruct
   gpu_memory_utilization: 0.5
-  max_seq_length: 1024
+  max_seq_length: 1536
   lora_rank: 64
   load_in_4bit: true
   fast_inference: true
@@ -22,9 +22,9 @@ rl:
   algorithm: SMCGRPO
   dataset: math
   max_prompt_length: 512
-  max_completion_length: 512
-  num_generations: 16
-  max_steps: 8000
+  max_completion_length: 1024
+  num_generations: 8
+  max_steps: 2
   save_strategy: time
   save_steps: 100
   save_interval: 1800
@@ -46,7 +46,7 @@ optim:
   warmup_ratio: 0.01
   temperature: 0.9
   max_grad_norm: 0.1
-  per_device_train_batch_size: 16
+  per_device_train_batch_size: 128
   gradient_accumulation_steps: 1
   logging_steps: 1
 smc:
@@ -55,11 +55,20 @@ smc:
 
 
     '
-  stop_token: r"\boxed"
+  stop_token: \boxed
   max_steps: 32
   smc_beta: 1.0
   smc_confidence_eta: 1.0
-  smc_confidence_window_size: 50
+  smc_confidence_window_size: 1024
   smc_topk: 20
-  scoring: entropy
-  return all: false
+  return_all: false
+  confidence:
+    scoring: entropy
+    group: mean
+    aggregation: current
+prm:
+  use_prm: true
+  model_name: Qwen/Qwen2.5-Math-PRM-7B
+  aggregation: model
+  gpu_memory_utilization: 0.3
+  cuda: 1

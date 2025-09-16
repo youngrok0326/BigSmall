@@ -78,6 +78,7 @@ if is_liger_kernel_available():
 if is_vllm_available():
     from vllm import LLM, SamplingParams
     from vllm.sampling_params import GuidedDecodingParams
+    from trainer.vllm_smc import StepGeneration, SMCVLLM, build_prm_model
 
 if is_wandb_available():
     import wandb
@@ -1365,7 +1366,102 @@ class GRPOTrainer(Trainer):
     def _generate_completions_smc(self, unwrapped_model: nn.Module, prompt_ids: torch.Tensor, prompt_mask: torch.Tensor) -> dict:
         """Wrapper to call the external TSMC generator function."""
         return self.smc_generator.generate(unwrapped_model, prompt_ids, prompt_mask)
-    
+
+    def _ensure_smc_vllm(self) -> "SMCVLLM":
+        smc_cfg: dict[str, Any] = {}
+        if getattr(self.args, "generation_kwargs", None):
+            smc_cfg = (self.args.generation_kwargs or {}).get("smc", {})
+            prm_cfg = (self.args.generation_kwargs or {}).get("prm", {})
+        else:
+            prm_cfg = {}
+
+        step_token = smc_cfg.get("step_token")
+        stop_token = smc_cfg.get("stop_token")
+        max_steps = int(smc_cfg.get("max_steps", 32))
+        tokens_per_step = smc_cfg.get("tokens_per_step")
+        if tokens_per_step is not None:
+            tokens_per_step = int(tokens_per_step)
+        confidence_cfg = smc_cfg.get("confidence", {})
+        conf_scoring = str(confidence_cfg.get("scoring", smc_cfg.get("scoring", "entropy")))
+        conf_group = str(confidence_cfg.get("group", "mean"))
+        conf_aggregation = str(confidence_cfg.get("aggregation", "current"))
+        return_all = bool(smc_cfg.get("return_all", False)) and (not self.model.training)
+        smc_topk = int(smc_cfg.get("smc_topk", -1))
+        conf_window = int(smc_cfg.get("smc_confidence_window_size", 512))
+        conf_eta = float(smc_cfg.get("smc_confidence_eta", 1.0))
+        include_stop = smc_cfg.get("include_stop_str_in_output", True)
+
+        prm_signature = None
+        prm_model = None
+        if prm_cfg and bool(prm_cfg.get("use_prm")):
+            prm_signature = tuple(sorted((str(k), repr(v)) for k, v in prm_cfg.items()))
+            if getattr(self, "_smc_prm_signature", None) != prm_signature:
+                self._smc_prm = build_prm_model(prm_cfg)
+                self._smc_prm_signature = prm_signature
+            prm_model = getattr(self, "_smc_prm", None)
+        else:
+            self._smc_prm = None
+            self._smc_prm_signature = None
+
+        signature = (
+            step_token,
+            stop_token,
+            max_steps,
+            tokens_per_step,
+            conf_scoring,
+            conf_group,
+            conf_aggregation,
+            return_all,
+            smc_topk,
+            conf_window,
+            conf_eta,
+            include_stop,
+            self.num_generations,
+            self.pad_token_id,
+            self.temperature,
+            self.top_p,
+            -1 if self.top_k is None else self.top_k,
+            0.0 if self.min_p is None else self.min_p,
+            self.repetition_penalty,
+            int(self.max_completion_length),
+            id(self.llm),
+            prm_signature,
+        )
+
+        if getattr(self, "_smc_vllm_signature", None) != signature:
+            sg = StepGeneration(
+                max_steps=max_steps,
+                step_token=step_token,
+                tokens_per_step=tokens_per_step,
+                stop_token=stop_token,
+                include_stop_str_in_output=include_stop,
+            )
+
+            self._smc_vllm = SMCVLLM(
+                llm=self.llm,
+                tokenizer=self.processing_class,
+                num_particles=self.num_generations,
+                pad_token_id=self.pad_token_id,
+                temperature=self.temperature,
+                top_p=self.top_p,
+                top_k=-1 if self.top_k is None else self.top_k,
+                min_p=0.0 if self.min_p is None else self.min_p,
+                repetition_penalty=self.repetition_penalty,
+                sg=sg,
+                smc_topk=smc_topk,
+                window_size=conf_window,
+                max_new_tokens=int(self.max_completion_length),
+                scoring=conf_scoring,
+                confidence_group=conf_group,
+                confidence_aggregation=conf_aggregation,
+                confidence_eta=conf_eta,
+                return_all=return_all,
+                prm=prm_model,
+            )
+            self._smc_vllm_signature = signature
+
+        return self._smc_vllm
+
     def _generate_and_score_completions(
         self, inputs: list[dict[str, Union[torch.Tensor, Any]]]
     ) -> dict[str, Union[torch.Tensor, Any]]:
@@ -1444,53 +1540,10 @@ class GRPOTrainer(Trainer):
                 self._move_model_to_vllm()
                 self._last_loaded_step = self.state.global_step
 
-            # Build PF stack once
-            if not hasattr(self, "_smc_vllm"):
-                # Read SMC config from args.generation_kwargs
-                smc_cfg = {}
-                if getattr(self.args, "generation_kwargs", None):
-                    smc_cfg = (self.args.generation_kwargs or {}).get("smc", {})
-
-                step_token = smc_cfg.get("step_token", None)
-                stop_token = smc_cfg.get("stop_token", None)
-                max_steps = int(smc_cfg.get("max_steps", 32))
-                tokens_per_step = smc_cfg.get("tokens_per_step", None)
-                scoring = smc_cfg.get("scoring", "entropy")
-                return_all = bool(smc_cfg.get("return_all", False))
-                smc_topk = int(smc_cfg.get("smc_topk", -1))
-                conf_window = int(smc_cfg.get("smc_confidence_window_size", 50))
-                conf_eta = float(smc_cfg.get("smc_confidence_eta", 1.0))
-
-                from trainer.vllm_smc import StepGeneration, SMCVLLM
-
-                sg = StepGeneration(
-                    max_steps=max_steps,
-                    step_token=step_token,
-                    tokens_per_step=tokens_per_step,
-                    stop_token=stop_token,
-                )
-
-                self._smc_vllm = SMCVLLM(
-                    llm=self.llm,
-                    tokenizer=self.processing_class,
-                    num_particles=self.num_generations,
-                    pad_token_id=self.pad_token_id,
-                    temperature=self.temperature,
-                    top_p=self.top_p,
-                    top_k=-1 if self.top_k is None else self.top_k,
-                    min_p=0.0 if self.min_p is None else self.min_p,
-                    repetition_penalty=self.repetition_penalty,
-                    sg=sg,
-                    smc_topk=smc_topk,
-                    window_size=conf_window,
-                    max_new_tokens=int(self.max_completion_length),
-                    scoring=scoring,
-                    confidence_eta=conf_eta,
-                    return_all=return_all and (not self.model.training),
-                )
+            smc_runner = self._ensure_smc_vllm()
 
             # Use PF to produce B*N completions
-            completion_ids_list = self._smc_vllm.generate(prompts_text, original_prompts)
+            completion_ids_list = smc_runner.generate(prompts_text, original_prompts)
             completion_ids = [torch.tensor(ids, device=prompt_ids.device) for ids in completion_ids_list]
             completion_ids = pad(completion_ids, padding_value=self.pad_token_id)
             prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)

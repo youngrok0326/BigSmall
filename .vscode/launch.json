@@ -12,7 +12,7 @@
         "wandb.enable=false"
       ],
       "env": {
-        "CUDA_VISIBLE_DEVICES": "1",
+        "CUDA_VISIBLE_DEVICES": "4,5",
         "WANDB_DISABLED": "true",
         "CUDA_LAUNCH_BLOCKING": "1"
       },
@@ -30,7 +30,7 @@
         "wandb.enable=false"
       ],
       "env": {
-        "CUDA_VISIBLE_DEVICES": "1",
+        "CUDA_VISIBLE_DEVICES": "4",
         "WANDB_DISABLED": "true",
         "CUDA_LAUNCH_BLOCKING": "1"
       },

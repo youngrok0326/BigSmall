@@ -4,7 +4,7 @@ To train a reasoning model using the Unsloth framework.
 """
 
 import hydra
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 
 @hydra.main(version_base=None, config_path="config", config_name="train")
@@ -76,8 +76,11 @@ def main(cfg: DictConfig) -> None:
     # Build generation kwargs for SMC (confidence-based) only if enabled
     gen_kwargs = {}
     if cfg.smc.use_smc:
-        smc = cfg.get("smc", {})
-        gen_kwargs = {"smc": {**{k: smc.get(k) for k in smc}}}
+        smc_cfg = OmegaConf.to_container(cfg.smc, resolve=True)
+        gen_kwargs["smc"] = smc_cfg
+    prm_cfg = cfg.get("prm")
+    if prm_cfg and prm_cfg.get("use_prm"):
+        gen_kwargs["prm"] = OmegaConf.to_container(prm_cfg, resolve=True)
 
     training_args = Config(
         learning_rate = cfg.optim.learning_rate,
@@ -112,6 +115,18 @@ def main(cfg: DictConfig) -> None:
 
     import time
     from transformers import TrainerCallback, TrainerControl
+
+    class FinalCheckpointCallback(TrainerCallback):
+        """Force a checkpoint save when training finishes."""
+
+        def __init__(self, trainer):
+            self.trainer = trainer
+
+        def on_train_end(self, args, state, control, **kwargs):
+            if self.trainer.args.should_save:
+                self.trainer._save_checkpoint(self.trainer.model, trial=None)
+            return control
+
     class TimedCheckpointCallback(TrainerCallback):
         """
         Ask the Trainer to do a normal checkpoint whenever
@@ -140,6 +155,7 @@ def main(cfg: DictConfig) -> None:
     # Start training
     if cfg.rl.save_strategy == "time":
         trainer.add_callback(TimedCheckpointCallback(cfg.rl.save_interval, cfg.rl.max_time))
+        trainer.add_callback(FinalCheckpointCallback(trainer))
     trainer.train(resume_from_checkpoint=cfg.rl.resume_from_checkpoint)
 
 if __name__ == "__main__":
