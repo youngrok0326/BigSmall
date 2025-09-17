@@ -1,6 +1,6 @@
 model:
   model_name: Qwen/Qwen2.5-0.5B-instruct #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
-  gpu_memory_utilization: 0.5
+  gpu_memory_utilization: 0.9
   max_seq_length: 1536
   lora_rank: 64
   load_in_4bit: true
@@ -39,7 +39,6 @@ rl:
 optim:
   learning_rate: 5e-6
   lr_scheduler_type: "constant"
-  # use_vllm: false # TODO: optimize on vllm
   optim: "adamw_8bit" #TODO: muon optimizer
   adam_beta1: 0.9
   adam_beta2: 0.99
@@ -47,7 +46,7 @@ optim:
   warmup_ratio: 0.01
   temperature: 0.9
   max_grad_norm: 0.1
-  per_device_train_batch_size: 128 # We now expect `per_device_train_batch_size` to be a multiple of `num_generations`
+  per_device_train_batch_size: 512 # We now expect `per_device_train_batch_size` to be a multiple of `num_generations`
   gradient_accumulation_steps: 1
   logging_steps: 1
 smc:
@@ -56,18 +55,18 @@ smc:
   stop_token: "\\boxed"
   max_steps: 32
   # tokens_per_step: 16  # leave commented to use step_token mode
-  smc_beta: 1.0 #TODO: later use for kl term
   smc_confidence_eta: 1.0 #TODO: temperature로 교체
   smc_confidence_window_size: 1024
   smc_topk: 20
+  return_eos: false
   return_all: false
   confidence:
     scoring: "entropy" #logprob, prob
     group: "mean" #geo
-    aggregation: "current" # prod, min, mean, current
+    aggregation: "last" # prod, min, mean, last
 prm: 
   use_prm: true
-  model_name: Qwen/Qwen2.5-Math-PRM-7B
-  aggregation: "model" #mean, last, min
-  gpu_memory_utilization: 0.3
+  model_name: Qwen/Qwen2.5-Math-PRM-7B # Skywork-o1-Open-PRM-Qwen-2.5-1.5B
+  aggregation: "model" # last, min, prod, model
+  gpu_memory_utilization: 1.0
   cuda: 5

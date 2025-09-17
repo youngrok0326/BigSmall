@@ -1384,12 +1384,22 @@ class GRPOTrainer(Trainer):
         confidence_cfg = smc_cfg.get("confidence", {})
         conf_scoring = str(confidence_cfg.get("scoring", smc_cfg.get("scoring", "entropy")))
         conf_group = str(confidence_cfg.get("group", "mean"))
-        conf_aggregation = str(confidence_cfg.get("aggregation", "current"))
+        conf_aggregation = str(confidence_cfg.get("aggregation", "last"))
         return_all = bool(smc_cfg.get("return_all", False)) and (not self.model.training)
+        return_eos = bool(smc_cfg.get("return_eos", False))
         smc_topk = int(smc_cfg.get("smc_topk", -1))
         conf_window = int(smc_cfg.get("smc_confidence_window_size", 512))
         conf_eta = float(smc_cfg.get("smc_confidence_eta", 1.0))
         include_stop = smc_cfg.get("include_stop_str_in_output", True)
+        report_to = getattr(self.args, "report_to", None)
+
+        if isinstance(report_to, str):
+            report_to_list = [report_to]
+        elif isinstance(report_to, (list, tuple)):
+            report_to_list = list(report_to)
+        else:
+            report_to_list = []
+        log_wandb = ("wandb" in report_to_list) and self.is_world_process_zero()
 
         prm_signature = None
         prm_model = None
@@ -1412,6 +1422,7 @@ class GRPOTrainer(Trainer):
             conf_group,
             conf_aggregation,
             return_all,
+            return_eos,
             smc_topk,
             conf_window,
             conf_eta,
@@ -1426,6 +1437,7 @@ class GRPOTrainer(Trainer):
             int(self.max_completion_length),
             id(self.llm),
             prm_signature,
+            log_wandb,
         )
 
         if getattr(self, "_smc_vllm_signature", None) != signature:
@@ -1456,6 +1468,8 @@ class GRPOTrainer(Trainer):
                 confidence_aggregation=conf_aggregation,
                 confidence_eta=conf_eta,
                 return_all=return_all,
+                return_eos=return_eos,
+                wandb_logging=log_wandb,
                 prm=prm_model,
             )
             self._smc_vllm_signature = signature

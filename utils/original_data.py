@@ -31,170 +31,37 @@ Answer
 # SAL-style prompt used
 SYSTEM_PROMPT_INSTRUCT = "Solve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem."
 
-_CONCLUSION_PREFIX = re.compile(
-    r"Therefore,\s*the\s*final\s*answer\s*is:\s*(?:\$\s*)?\\boxed\{",
-    flags=re.IGNORECASE,
-)
-_CONCLUSION_SUFFIX = re.compile(
-    r"\s*\$?\s*\.\s*I hope it is correct\.",
-    flags=re.IGNORECASE,
-)
-_STEP_HEADER_PATTERN = re.compile(r"^##\s*Step\s+(\d+)\s*:", flags=re.IGNORECASE | re.MULTILINE)
-
-
-def _extract_balanced_braces(text: str, start_idx: int) -> tuple[str, int | None]:
-    """Return the content between balanced braces starting at ``start_idx``.
-
-    ``start_idx`` is expected to point to the first character *inside* the opening
-    brace. The function returns the extracted content and the index right after the
-    closing brace. If the braces are not balanced, ``(text[start_idx:], None)`` is
-    returned to signal failure.
-    """
-
-    depth = 1
-    cursor = start_idx
-    buffer: list[str] = []
-
-    while cursor < len(text):
-        char = text[cursor]
-        if char == "{":
-            depth += 1
-        elif char == "}":
-            depth -= 1
-            if depth == 0:
-                return "".join(buffer), cursor + 1
-        buffer.append(char)
-        cursor += 1
-
-    return "".join(buffer), None
-
-
-def _locate_conclusion(text: str) -> tuple[str, int, int] | None:
-    """Locate the instruct-style conclusion and extract the boxed answer.
-
-    Returns a tuple of ``(answer, start_idx, end_idx)`` when the conclusion fits the
-    expected "Therefore, the final answer is: $\boxed{...}$. I hope it is correct.".
-    ``end_idx`` points to the first character after the matched conclusion.
-    """
-
-    matches = list(_CONCLUSION_PREFIX.finditer(text))
-    if not matches:
-        return None
-
-    prefix_match = matches[-1]
-    answer_start = prefix_match.end()
-    extracted, closing_idx = _extract_balanced_braces(text, answer_start)
-    if closing_idx is None:
-        return None
-
-    suffix_match = _CONCLUSION_SUFFIX.match(text[closing_idx:])
-    if not suffix_match:
-        return None
-
-    answer = extracted.strip()
-    conclusion_end = closing_idx + suffix_match.end()
-    return answer, prefix_match.start(), conclusion_end
-
+def extract_xml_answer(text: str) -> str:
+    # Extracts the answer block from the XML format
+    answer = text.split("<answer>")[-1]
+    answer = answer.split("</answer>")[0]
+    return answer.strip()
 
 def extract_last_integer(text: str) -> str:
-    """Extract the last integer from the text for numeric fallback grading."""
-
-    numbers = re.findall(r"-?\d+", text)
+    # Extracts the last integer from the text
+    numbers = re.findall(r"\d+", text)
     if numbers:
         return numbers[-1]
-    return ""
+    return "-1"
 
 
-def extract_last_boxed_answer(text: str) -> str:
-    """Return the content of the last ``\boxed{...}`` expression in ``text``."""
-
-    marker = "\\boxed{"
-    idx = text.rfind(marker)
-    if idx == -1:
-        return ""
-
-    content, closing_idx = _extract_balanced_braces(text, idx + len(marker))
-    if closing_idx is None:
-        return ""
-    return content.strip()
-
-
-def extract_instruct_answer(text: str) -> str:
-    """Extract the boxed answer according to the instruct-style conclusion."""
-
-    conclusion = _locate_conclusion(text)
-    if conclusion:
-        return conclusion[0]
-    return ""
-
-
-def answer_correct(text: str, answer: str) -> bool:
-    """Determine whether ``text`` contains a mathematically correct answer."""
-
-    candidates = [
-        extract_instruct_answer(text),
-        extract_last_boxed_answer(text),
-        extract_last_integer(text),
-        text,
-    ]
-
-    unique: list[str] = []
-    seen: set[str] = set()
-    for candidate in candidates:
-        normalized = candidate.strip()
-        if not normalized or normalized in seen:
-            continue
-        seen.add(normalized)
-        unique.append(normalized)
-
-    return any(grade_answer(candidate, answer) for candidate in unique)
-
-
-def _has_step_structure(preamble: str) -> bool:
-    """Check if the reasoning preamble follows the instructed step format."""
-
-    if "##" not in preamble:
-        return False
-
-    matches = list(_STEP_HEADER_PATTERN.finditer(preamble))
-    if not matches:
-        return False
-
-    numbers: list[int] = []
-    for match in matches:
-        number = int(match.group(1))
-        numbers.append(number)
-
-        preceding = preamble[:match.start()]
-        if preceding:
-            if not preceding.rstrip(" ").endswith("\n\n"):
-                return False
-
-    expected = list(range(1, len(numbers) + 1))
-    return numbers == expected
-
+def answer_correct(text : str, answer: str) -> bool:
+    # Uses math_verify to check if the answer is correct
+    res = any(grade_answer(ans, answer) for ans in [text, extract_xml_answer(text), extract_last_integer(text)])
+    return res
 
 def format_score(text: str) -> float:
-    """Return the format reward (max 0.1) for instruct-style generations."""
-
-    conclusion = _locate_conclusion(text)
-    if not conclusion or not conclusion[0].strip():
-        return 0.0
-
-    _, start_idx, end_idx = conclusion
-    if text[end_idx:].strip():
-        return 0.0
-
-    preamble = text[:start_idx].strip()
-    if _has_step_structure(preamble):
-        return 0.1
+    pattern = r"<think>.*</think>[ \n]?<answer>.*</answer>"
+    match = re.search(pattern, text, flags=re.DOTALL)
+    if match:
+        return max(0.0, 0.1 - 0.001 * (len(text)- len(match.group(0))))
     return 0.0
 
-
 def format_correct(text: str) -> bool:
-    """Boolean proxy mirroring ``format_score`` for downstream consumers."""
-
-    return format_score(text) > 0.0
+    # Checks if the text is in the correct format
+    pattern = r"^[ \n]?<think>.*</think>[ \n]?<answer>.*</answer>[ \n]?$"
+    match = re.match(pattern, text, flags=re.DOTALL)
+    return match is not None
 
 def filter_function(example, tokenizer: AutoTokenizer) -> bool:
     # Filter out examples that are too long
@@ -380,29 +247,19 @@ def length_penalty_func(completion_mask, max_completion_length, **kwargs) -> lis
     completion_lengths = completion_mask.sum(dim=1).tolist()
     return [-0.5 if l >= max_completion_length else 0.0 for l in completion_lengths]
 
-def instruct_structure_score(text: str) -> float:
-    """Granular bonus encouraging the instruct-style formatting details."""
-
-    score = 0.0
-    conclusion = _locate_conclusion(text)
-    if not conclusion or not conclusion[0].strip():
-        return score
-
-    score += 0.05  # correct concluding sentence with boxed answer
-    _, start_idx, end_idx = conclusion
-
-    if not text[end_idx:].strip():
-        score += 0.025  # no stray text after the conclusion
-
-    preamble = text[:start_idx].strip()
-    if _has_step_structure(preamble):
-        score += 0.025
-
-    return min(score, 0.1)
-
+def count_xml(text) -> float:
+    count = 0.0
+    if text.count("<think>") == 1:
+        count += 0.025
+    if text.count("</think>") == 1:
+        count += 0.025
+    if text.count("<answer>") == 1:
+        count += 0.025
+    if text.count("</answer>") == 1:
+        count += 0.025
+    return count
 
 def xmlcount_reward_func(completions, answer, **kwargs) -> list[float]:
-    """Legacy name retained: rewards instruct-style structure when incorrect."""
-
+    # XML count reward, 0.025 for each XML tag
     contents = [completion for completion in completions]
-    return [0.0 if answer_correct(r, a) else instruct_structure_score(r) for r, a in zip(contents, answer)]
+    return [0 if answer_correct(r, a) else count_xml(r) for r, a in zip(contents, answer)]

@@ -3,6 +3,14 @@ To train a reasoning model using the Unsloth framework.
 
 """
 
+import os
+
+os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"
+
+import logging
+
+logging.getLogger("vllm").setLevel(logging.WARNING)
+
 import hydra
 from omegaconf import DictConfig, OmegaConf
 

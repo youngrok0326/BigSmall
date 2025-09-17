@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # Selective sweep with dynamic GPU scheduling (SMC + Default)
 #
-# Runs two sets:
-# 1) Custom SMC decoding on the exact (win, ess, tmp, N) combos below.
-# 2) Default decoding for temperatures {0.9, 0.8, 0.7, 0.6, 0.5}.
+# Runs custom SMC decoding across the scoring/group/aggregation/window/top-k sweeps defined below.
+# The default-decoding block remains available but is disabled by default (DEFAULT_TEMPS is empty).
 #
 # Notes
 # - GPU assignment mirrors scripts/sweep_decode_smc.sh (one job per GPU slot).
-# - GEN_GROUPS is fixed to (16 16) as requested.
+# - Remaining configuration values fall back to config/decode_eval.yaml.
 # - For the default runs, run_name varies only by tmp (temperature).
 #
 # Usage
@@ -19,14 +18,16 @@ set -euo pipefail
 # Fixed model list (override by setting MODEL_NAMES env if desired)
 MODEL_NAMES=(${MODEL_NAMES:-"Qwen/Qwen2.5-0.5B"})
 
-# Fixed GEN_GROUPS: (batch_size_groups num_generations)
-G=32
-N=16
-
-# Exact SMC combos: (win ess tmp N warmup) — defined as an array (safe under set -e)
-SMC_COMBOS=(
-"1024 0.5 0.9 16 50"
+# Custom SMC confidence sweeps (values applied on top of config/decode_eval.yaml)
+SCORINGS=("entropy" "logprob" "prob")
+declare -A TOPK_MAP=(
+  [entropy]="20 40"
+  [logprob]="20 40"
+  [prob]="1"
 )
+GROUPS=("mean" "geo")
+AGGREGATIONS=("mean" "prod" "min" "last")
+WINDOW_SIZES=(1 8 32 64 128 256 512)
 
 # Default-decoding temperatures
 DEFAULT_TEMPS=() 
@@ -92,10 +93,10 @@ find_free_gpu() {
 sanitize_model_name() { echo -n "$1" | sed 's#/#-#g'; }
 
 build_run_name_smc() {
-  local model_name="$1"; local tmp="$2"; local ess="$3"; local win="$4"
+  local model_name="$1"; local scoring="$2"; local topk="$3"; local group="$4"; local agg="$5"; local win="$6"
   local safe_model
   safe_model=$(sanitize_model_name "$model_name")
-  echo "smc_${safe_model}_N${N}_tmp${tmp}_ess${ess}_win${win}"
+  echo "smc_${safe_model}_score-${scoring}_topk${topk}_group-${group}_agg-${agg}_win${win}"
 }
 
 # For default runs, vary name only by tmp (temperature)
@@ -106,30 +107,36 @@ jobs_submitted=0
 
 # 1) SMC custom decoding
 for model_name in "${MODEL_NAMES[@]}"; do
-  for line in "${SMC_COMBOS[@]}"; do
-    read -r win ess tmp n_from_combo warmup <<< "$line"
-    # Enforce fixed GEN_GROUPS; ignore n_from_combo if different
-    name="$(build_run_name_smc "$model_name" "$tmp" "$ess" "$win")"
-    cmd=(uv run python3 evaluate-decode.py \
-      eval.run_default=false eval.run_custom=true \
-      model.model_name="${model_name}" \
-      eval.batch_size_groups=${G} \
-      eval.num_generations=${N} \
-      custom_decode.temperature=${tmp} \
-      custom_decode.smc_resample_threshold=${ess} \
-      custom_decode.smc_confidence_window_size=${win} \
-      custom_decode.smc_warmup_tokens=${warmup} \
-      wandb.run_name=${name})
+  for scoring in "${SCORINGS[@]}"; do
+    read -r -a scoring_topks <<< "${TOPK_MAP[$scoring]}"
+    for topk in "${scoring_topks[@]}"; do
+      for group in "${GROUPS[@]}"; do
+        for agg in "${AGGREGATIONS[@]}"; do
+          for win in "${WINDOW_SIZES[@]}"; do
+            name="$(build_run_name_smc "$model_name" "$scoring" "$topk" "$group" "$agg" "$win")"
+            cmd=(uv run python3 evaluate-decode.py \
+              eval.run_default=false eval.run_custom=true \
+              model.model_name="${model_name}" \
+              custom_decode.smc_topk=${topk} \
+              custom_decode.smc_confidence_window_size=${win} \
+              custom_decode.confidence.scoring=${scoring} \
+              custom_decode.confidence.group=${group} \
+              custom_decode.confidence.aggregation=${agg} \
+              wandb.run_name=${name})
 
-    while true; do
-      slot=$(find_free_gpu)
-      if [ "$slot" -ge 0 ]; then
-        echo "Running (SMC): ${cmd[*]}"
-        submit_job "$slot" "${cmd[@]}"
-        jobs_submitted=$((jobs_submitted+1))
-        break
-      fi
-      sleep 2
+            while true; do
+              slot=$(find_free_gpu)
+              if [ "$slot" -ge 0 ]; then
+                echo "Running (SMC): ${cmd[*]}"
+                submit_job "$slot" "${cmd[@]}"
+                jobs_submitted=$((jobs_submitted+1))
+                break
+              fi
+              sleep 2
+            done
+          done
+        done
+      done
     done
   done
 done
@@ -142,8 +149,6 @@ for model_name in "${MODEL_NAMES[@]}"; do
       eval.run_default=true eval.run_custom=false \
       model.fast_inference=true \
       model.model_name="${model_name}" \
-      eval.batch_size_groups=${G} \
-      eval.num_generations=${N} \
       default_decode.temperature=${tmp} \
       wandb.run_name=${name})
 
