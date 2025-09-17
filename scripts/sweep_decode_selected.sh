@@ -16,7 +16,7 @@
 set -euo pipefail
 
 # Fixed model list (override by setting MODEL_NAMES env if desired)
-MODEL_NAMES=(${MODEL_NAMES:-"Qwen/Qwen2.5-0.5B"})
+MODEL_NAMES=(${MODEL_NAMES:-"Qwen/Qwen2.5-1.5B-Instruct"})
 
 # Custom SMC confidence sweeps (values applied on top of config/decode_eval.yaml)
 SCORINGS=("entropy" "logprob" "prob")
@@ -25,9 +25,17 @@ declare -A TOPK_MAP=(
   [logprob]="20 40"
   [prob]="1"
 )
-GROUPS=("mean" "geo")
+CONF_GROUPS=("mean" "geo")
 AGGREGATIONS=("mean" "prod" "min" "last")
 WINDOW_SIZES=(1 8 32 64 128 256 512)
+
+# Evaluate each (batch_size_groups, num_generations) pair in sequence
+BATCH_GEN_PAIRS=(
+  "512 8"
+  "512 16"
+  "512 32"
+  "512 64"
+)
 
 # Default-decoding temperatures
 DEFAULT_TEMPS=() 
@@ -35,7 +43,8 @@ DEFAULT_TEMPS=()
 # ---------------- GPU scheduler (same behavior as sweep_decode_smc.sh) ----------------
 detect_visible_gpus() {
   if [ -n "${CUDA_VISIBLE_DEVICES:-}" ]; then
-    IFS=',' read -r -a GPUS <<< "${CUDA_VISIBLE_DEVICES}"
+    local IFS=','
+    read -r -a GPUS <<< "${CUDA_VISIBLE_DEVICES}"
     return
   fi
   if command -v nvidia-smi >/dev/null 2>&1; then
@@ -93,10 +102,10 @@ find_free_gpu() {
 sanitize_model_name() { echo -n "$1" | sed 's#/#-#g'; }
 
 build_run_name_smc() {
-  local model_name="$1"; local scoring="$2"; local topk="$3"; local group="$4"; local agg="$5"; local win="$6"
+  local model_name="$1"; local scoring="$2"; local topk="$3"; local group="$4"; local agg="$5"; local win="$6"; local groups="$7"; local ngen="$8"
   local safe_model
   safe_model=$(sanitize_model_name "$model_name")
-  echo "smc_${safe_model}_score-${scoring}_topk${topk}_group-${group}_agg-${agg}_win${win}"
+  echo "smc_${safe_model}_score-${scoring}_topk${topk}_group-${group}_agg-${agg}_win${win}_G${groups}_N${ngen}"
 }
 
 # For default runs, vary name only by tmp (temperature)
@@ -106,33 +115,38 @@ build_run_name_default() { echo "default_tmp$1"; }
 jobs_submitted=0
 
 # 1) SMC custom decoding
-for model_name in "${MODEL_NAMES[@]}"; do
-  for scoring in "${SCORINGS[@]}"; do
-    read -r -a scoring_topks <<< "${TOPK_MAP[$scoring]}"
-    for topk in "${scoring_topks[@]}"; do
-      for group in "${GROUPS[@]}"; do
-        for agg in "${AGGREGATIONS[@]}"; do
-          for win in "${WINDOW_SIZES[@]}"; do
-            name="$(build_run_name_smc "$model_name" "$scoring" "$topk" "$group" "$agg" "$win")"
-            cmd=(uv run python3 evaluate-decode.py \
-              eval.run_default=false eval.run_custom=true \
-              model.model_name="${model_name}" \
-              custom_decode.smc_topk=${topk} \
-              custom_decode.smc_confidence_window_size=${win} \
-              custom_decode.confidence.scoring=${scoring} \
-              custom_decode.confidence.group=${group} \
-              custom_decode.confidence.aggregation=${agg} \
-              wandb.run_name=${name})
+for pair in "${BATCH_GEN_PAIRS[@]}"; do
+  read -r batch_groups num_gen <<< "$pair"
+  for model_name in "${MODEL_NAMES[@]}"; do
+    for scoring in "${SCORINGS[@]}"; do
+      read -r -a scoring_topks <<< "${TOPK_MAP[$scoring]}"
+      for topk in "${scoring_topks[@]}"; do
+        for group in "${CONF_GROUPS[@]}"; do
+          for agg in "${AGGREGATIONS[@]}"; do
+            for win in "${WINDOW_SIZES[@]}"; do
+              name="$(build_run_name_smc "$model_name" "$scoring" "$topk" "$group" "$agg" "$win" "$batch_groups" "$num_gen")"
+              cmd=(uv run python3 evaluate-decode.py \
+                eval.run_default=false eval.run_custom=true \
+                model.model_name="${model_name}" \
+                eval.batch_size_groups=${batch_groups} \
+                eval.num_generations=${num_gen} \
+                custom_decode.smc_topk=${topk} \
+                custom_decode.smc_confidence_window_size=${win} \
+                custom_decode.confidence.scoring=${scoring} \
+                custom_decode.confidence.group=${group} \
+                custom_decode.confidence.aggregation=${agg} \
+                wandb.run_name=${name})
 
-            while true; do
-              slot=$(find_free_gpu)
-              if [ "$slot" -ge 0 ]; then
-                echo "Running (SMC): ${cmd[*]}"
-                submit_job "$slot" "${cmd[@]}"
-                jobs_submitted=$((jobs_submitted+1))
-                break
-              fi
-              sleep 2
+              while true; do
+                slot=$(find_free_gpu)
+                if [ "$slot" -ge 0 ]; then
+                  echo "Running (SMC): ${cmd[*]}"
+                  submit_job "$slot" "${cmd[@]}"
+                  jobs_submitted=$((jobs_submitted+1))
+                  break
+                fi
+                sleep 2
+              done
             done
           done
         done
@@ -142,25 +156,31 @@ for model_name in "${MODEL_NAMES[@]}"; do
 done
 
 # 2) Default decoding with fast inference
-for model_name in "${MODEL_NAMES[@]}"; do
-  for tmp in "${DEFAULT_TEMPS[@]}"; do
-    name="$(build_run_name_default "$tmp")"
-    cmd=(uv run python3 evaluate-decode.py \
-      eval.run_default=true eval.run_custom=false \
-      model.fast_inference=true \
-      model.model_name="${model_name}" \
-      default_decode.temperature=${tmp} \
-      wandb.run_name=${name})
+# Loops share the same scheduling order to keep default runs aligned if enabled
+for pair in "${BATCH_GEN_PAIRS[@]}"; do
+  read -r batch_groups num_gen <<< "$pair"
+  for model_name in "${MODEL_NAMES[@]}"; do
+    for tmp in "${DEFAULT_TEMPS[@]}"; do
+      name="$(build_run_name_default "$tmp")"
+      cmd=(uv run python3 evaluate-decode.py \
+        eval.run_default=true eval.run_custom=false \
+        model.fast_inference=true \
+        model.model_name="${model_name}" \
+        eval.batch_size_groups=${batch_groups} \
+        eval.num_generations=${num_gen} \
+        default_decode.temperature=${tmp} \
+        wandb.run_name=${name})
 
-    while true; do
-      slot=$(find_free_gpu)
-      if [ "$slot" -ge 0 ]; then
-        echo "Running (DEFAULT): ${cmd[*]}"
-        submit_job "$slot" "${cmd[@]}"
-        jobs_submitted=$((jobs_submitted+1))
-        break
-      fi
-      sleep 2
+      while true; do
+        slot=$(find_free_gpu)
+        if [ "$slot" -ge 0 ]; then
+          echo "Running (DEFAULT): ${cmd[*]}"
+          submit_job "$slot" "${cmd[@]}"
+          jobs_submitted=$((jobs_submitted+1))
+          break
+        fi
+        sleep 2
+      done
     done
   done
 done
