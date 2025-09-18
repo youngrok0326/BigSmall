@@ -8,7 +8,7 @@ model:
 wandb:
   enable: true
   project_name: "SMC_Inference"
-  run_name: "debug"
+  run_name: "Original"
 
 datasets:
   # - "amc23"
