@@ -540,6 +540,10 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
         smc_topk = int(custom_decode_cfg.get("smc_topk", -1))
         conf_window = int(custom_decode_cfg.get("smc_confidence_window_size", 50))
         conf_eta = float(custom_decode_cfg.get("smc_confidence_eta", 1.0))
+        cdf_alpha_val = confidence_cfg.get("cdf_alpha") if confidence_cfg else None
+        if cdf_alpha_val is None:
+            cdf_alpha_val = custom_decode_cfg.get("cdf_alpha", 0.25) if custom_decode_cfg is not None else 0.25
+        cdf_alpha = float(cdf_alpha_val)
         temperature = float(_decode_param("temperature", 1.0))
         top_p = float(_decode_param("top_p", 1.0))
         top_k = int(_decode_param("top_k", 0))
@@ -580,6 +584,7 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
             smc_topk=smc_topk,
             window_size=conf_window,
             confidence_eta=conf_eta,
+            cdf_alpha=cdf_alpha,
             max_new_tokens=max_new_tokens,
             scoring=scoring,
             confidence_group=conf_group,

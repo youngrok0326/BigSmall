@@ -313,6 +313,7 @@ class SMCVLLM:
         smc_topk: int,
         window_size: int,
         confidence_eta: float,
+        cdf_alpha: float = 0.25,
         max_new_tokens: int,
         scoring: str = "entropy",
         confidence_group: str = "mean",
@@ -335,6 +336,7 @@ class SMCVLLM:
         self.smc_topk = int(smc_topk)
         self.window_size = int(window_size)
         self.confidence_eta = float(confidence_eta)
+        self.cdf_alpha = max(float(cdf_alpha), 1e-8)
         self.max_new_tokens = int(max_new_tokens)
         self.return_all = bool(return_all)
         self.return_eos = bool(return_eos)
@@ -511,6 +513,19 @@ class SMCVLLM:
         score = -mean_logprob
         return float(score)
 
+    def _cdf_logprob_from_logprobs(self, logprob_entry) -> float:
+        vals = self._collect_logprob_values(logprob_entry)
+
+        if not vals:
+            return 0.0
+        vals_tensor = torch.tensor(vals, dtype=torch.float32)
+        vals_tensor = self._apply_topk(vals_tensor)
+        mean_logprob = float(vals_tensor.mean().item())
+        x = max(-mean_logprob, 0.0)
+        alpha = self.cdf_alpha
+        score = 1.0 - math.exp(-alpha * x)
+        return float(min(max(score, 1e-6), 0.995))
+
     def _mean_prob_from_logprobs(self, logprob_entry) -> float:
         vals = self._collect_logprob_values(logprob_entry)
 
@@ -563,6 +578,8 @@ class SMCVLLM:
             return self._mean_logprob_from_logprobs
         if scoring == "prob":
             return self._mean_prob_from_logprobs
+        if scoring == "cdf":
+            return self._cdf_logprob_from_logprobs
         raise ValueError(f"Unsupported confidence.scoring: {scoring}")
 
     def _resolve_group_reducer(self, mode: str):

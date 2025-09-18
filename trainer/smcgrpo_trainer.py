@@ -1390,6 +1390,10 @@ class GRPOTrainer(Trainer):
         smc_topk = int(smc_cfg.get("smc_topk", -1))
         conf_window = int(smc_cfg.get("smc_confidence_window_size", 512))
         conf_eta = float(smc_cfg.get("smc_confidence_eta", 1.0))
+        cdf_alpha_val = confidence_cfg.get("cdf_alpha") if confidence_cfg else None
+        if cdf_alpha_val is None:
+            cdf_alpha_val = smc_cfg.get("cdf_alpha", 0.25)
+        cdf_alpha = float(cdf_alpha_val)
         include_stop = smc_cfg.get("include_stop_str_in_output", True)
         report_to = getattr(self.args, "report_to", None)
 
@@ -1426,6 +1430,7 @@ class GRPOTrainer(Trainer):
             smc_topk,
             conf_window,
             conf_eta,
+            cdf_alpha,
             include_stop,
             self.num_generations,
             self.pad_token_id,
@@ -1467,6 +1472,7 @@ class GRPOTrainer(Trainer):
                 confidence_group=conf_group,
                 confidence_aggregation=conf_aggregation,
                 confidence_eta=conf_eta,
+                cdf_alpha=cdf_alpha,
                 return_all=return_all,
                 return_eos=return_eos,
                 wandb_logging=log_wandb,

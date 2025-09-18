@@ -51,7 +51,8 @@ custom_decode:
   return_eos: true
   return_all: false
   confidence:
-    scoring: "entropy" #"entropy" #logprob, prob
+    scoring: "entropy" #"entropy" #logprob, prob, cdf
+    cdf_alpha: 0.25
     group: "mean" #"mean" #geo
     aggregation: "mean" # prod, min, mean, last
 

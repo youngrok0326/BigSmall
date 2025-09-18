@@ -61,7 +61,8 @@ smc:
   return_eos: false
   return_all: false
   confidence:
-    scoring: "entropy" #logprob, prob
+    scoring: "entropy" #logprob, prob, cdf
+    cdf_alpha: 0.25
     group: "mean" #geo
     aggregation: "last" # prod, min, mean, last
 prm: 
