@@ -691,12 +691,6 @@ class SMCVLLM:
             )
 
         if not collect_extras:
-            if self.log_wandb:
-                self._log_final_table(
-                    global_call_step,
-                    [self.N for _ in range(G)],
-                    per_step_not_selected,
-                )
             return encoded_final
 
         primary_encoded_by_group: List[List[List[int]]] = []
@@ -747,13 +741,6 @@ class SMCVLLM:
             if saved_groups is not None
             else [[] for _ in range(G)]
         )
-
-        if self.log_wandb:
-            self._log_final_table(
-                global_call_step,
-                group_sizes,
-                per_step_not_selected,
-            )
 
         return {
             "group_sizes": group_sizes,
@@ -1027,35 +1014,4 @@ class SMCVLLM:
             mean_eos = (sum(eos_counts) / len(eos_counts)) if eos_counts else 0.0
             mean_std = (sum(weight_vals) / len(weight_vals)) if weight_vals else 0.0
             table.add_data(global_step, idx + 1, mean_not, mean_eos, mean_std)
-        wandb.log({"smc/reasoning_step_metrics": table}, commit=False)
-
-    def _log_final_table(
-        self,
-        global_step: int,
-        group_sizes: List[int],
-        per_step_not_selected: List[List[int]],
-    ) -> None:
-        if not self.log_wandb:
-            return
-        try:
-            import wandb  # type: ignore
-        except ImportError:
-            return
-        if getattr(wandb, "run", None) is None:
-            return
-        table = wandb.Table(columns=["global_step", "stat", "value"])
-
-        if group_sizes:
-            mean_generated = sum(group_sizes) / len(group_sizes)
-            table.add_data(global_step, "mean_generated_sequences", mean_generated)
-
-        for idx, counts in enumerate(per_step_not_selected):
-            if not counts:
-                continue
-            mean_val = sum(counts) / len(counts)
-            table.add_data(
-                global_step,
-                f"mean_not_resampled_step_{idx + 1}",
-                mean_val,
-            )
-        wandb.log({"smc/final_generation_stats": table}, commit=True)
+        wandb.log({"smc/reasoning_step_metrics": table}, commit=True)

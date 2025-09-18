@@ -1,0 +1,96 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.6028225806451613
+      ],
+      "for_acc": [
+        0.0020161290322580645
+      ],
+      "both_acc": [
+        0.0
+      ],
+      "lengths": [
+        520.3326612903226
+      ],
+      "ans_frac": [
+        0.22911298081386774
+      ],
+      "for_frac": [
+        4.8003072196620584e-05
+      ],
+      "both_frac": [
+        0.0
+      ],
+      "examples": [
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nConvert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "To convert the rectangular coordinates $(x, y)$ to polar coordinates $(r, \\theta)$, we use the following formulas:1. $r = \\sqrt{x^2 + y^2}$\n2. $\\theta = \\arctan\\left(\\frac{y}{x}\\right)$For the point $(0, 3)$:1. Calculate $r$: \n   \\[\n   r = \\sqrt{(0)^2 + (3)^2} = \\sqrt{0 + 9} = 3\n   \\]2. Calculate $\\theta$: \n   Since the point $(0, 3)$ lies on the positive $y$-axis, $\\theta = \\frac{\\pi}{2}$. This angle is between $0$ and $2\\pi$ because the problem requires $\\theta$ to be non-negative in the given range.Therefore, the polar coordinates for the point $(0, 3)$ are $\\left(3, \\frac{\\pi}{2}\\right)$.Thus, the final answer is: $\\boxed{\\left(3, \\frac{\\pi}{2}\\right)}$.",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nDefine\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "p - q",
+          "completion": "1. Let's start by defining $c = p$. Thus, we have $\\sum_{j = 1}^\\infty\\sum_{k=1}^\\infty\\frac{1}{(j + k)^3} = \\sum_{j = 1}^\\infty\\sum_{k=1}^\\infty\\frac{1}{(j+k)^3}$. 2. Perform the inner circle ($k$-sum) change of variables: $k = j + t$, then $k = t + 1$. This gives you:$$\\sum_{j = 1}^\\infty \\sum_{t = 0}^{\\infty}\\frac{1}{(j+t)^3} = \\sum_{j = 1}^\\infty \\sum_{t = 0}^{\\infty}\\frac{1}{(j+t)^3} = \\sum_{j = 1}^\\infty \\sum_{t=0}^{\\infty}\\frac{1}{(j + t)^3}$$3. Now, let's change the index of summation, letting $u = t + 1$. This transforms the second sum into:$$\\sum_{u = 1}^\\infty \\sum_{j = 1}^\\infty\\frac{1}{(u + j)^3}$$4. On the other hand, we have the expression $q = \\sum_{k=1}^\\infty\\frac{1}{k^3}$. Therefore, for any $n$, we can write $q = \\sum_{k = 1}^\\infty\\frac{1}{k^3} = \\sum_{k = 1}^n\\frac{1}{k^3} + \\frac{1}{(n+1)^3} + \\sum_{k = n+1}^\\infty\\frac{1}{k^3}$.\n   \n5. Therefore, we have:   \\[\\sum_{k = 1}^n\\frac{1}{k^3} + \\frac{1}{(n+1)^3}\\sum_{k = n+1}^\\infty\\frac{1}{k^3} = q +\\frac{1}{(n+1)^3}\\sum_{k = n+1}^\\infty\\frac{1}{k^3}\\]6. Hence,   \\[\\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty\\frac{1}{(j+k)^3} = \\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty\\frac{1}{(j+k)^3} = \\sum_{j = 1}^\\infty\\sum_{t = 0}^\\infty\\frac{1}{(j + t)^3}\\]7. After applying the change of variable $t = k - 1$ to the first inner sum, we get:\\[\\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty\\frac{1}{(j+k)^3} = \\sum_{j = 1}^\\infty\\sum_{t = 0}^\\infty\\frac{1}{(j + t + 1)^3}\\\\]8. Simplify the summation:\\[\\sum_{j = 1}^\\infty\\sum_{t = 0}^\\infty\\frac{1}{(j + t + 1)^3} = \\frac{1}{2}\\sum_{j = 1}^\\infty\\sum_{t = 0}^\\infty\\frac{1}{(j + t + 1)^3} = \\frac{1}{2}\\left(\\sum_{j = 1}^\\infty\\frac{1}{j^3} + \\sum_{t = 0}^\\infty\\frac{1}{t^3} + \\sum_{j = 1}^\\infty\\frac{1}{(j + t + 1)^3}\\right)\\]9. Combine the summations two times:\\[\\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty\\frac{1}{(j+k)^3} = \\frac{p}{2} + \\frac{q}{2}\\]10. Subtract one part of the defined $c$, that is the $q$ term, from the combined summation:\\[\\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty\\frac{1}{(j + k)^3} = \\frac{p}{2} + \\frac{",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nIf $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\frac{14}{3}",
+          "completion": "First, we evaluate $f(-2)$. \nWe have $f(-2) = \\frac{3(-2)-2}{-2-2}$. We simplify this expression to obtain $f(-2) = \\frac{-8}{-4}$.Second, we evaluate $f(-1)$. \nWe have $f(-1) = \\frac{3(-1)-2}{-1-2}$. We simplify this expression to obtain $f(-1) = \\frac{-5}{-3}$.Third, we evaluate $f(0)$. \nWe have $f(0) = \\frac{3(0)-2}{0-2}$. We simplify this expression to obtain $f(0) = \\frac{-2}{-2}$.Finally, we sum the values of $f(-2)$, $f(-1)$, and $f(0)$.\nWe have $f(-2) + f(-1) + f(0) = \\frac{-8}{-4} + \\frac{-5}{-3} + \\frac{-2}{-2}$. We simplify this expression to obtain $f(-2) + f(-1) + f(0) = 2 + \\frac{5}{3} + 1$.Therefore, the final answer is $\\boxed{\\frac{14}{3}}$.",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nHow many positive whole-number divisors does 196 have?<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "9",
+          "completion": "## Step 1: Prime factorization of 196\nTo find the number of divisors, we'll first need to find the prime factorization of 196.196 can be factored into prime factors as follows:\n- $196 = 2 \\times 98$, since $196 \\div 2 = 98$\n- $98 = 2 \\times 49$, since $98 \\div 2 = 49$\n- $49 = 7 \\times 7$, so we have $98 = 2 \\times 49 = 2 \\times 7 \\times 7$.Therefore, $196 = 2^2 \\times 7^2$.## Step 2: Calculate the number of divisors\nNow, we know that the number of divisors of a number can be found by adding 1 to each of the exponents in the prime factorization of that number, and then multiplying those results.For $196 = 2^2 \\times 7^2$, we have:\n- The exponent for 2 is 2, so we add 1 (for 2) = 3.\n- The exponent for 7 is 2, so we add 1 (for 7) = 3.Multiplying these together, we get:\n- $3 \\times 3 = 9$Therefore, 196 has 9 positive divisors.The final answer is: $\\boxed{9}$",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nThe results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\text{Evelyn}",
+          "completion": "## Step 1: ##\nTo determine which student has the greatest average speed, we need to calculate the average speed for each trainee.## Step 2: ##\nFirst, calculate the average speed for Evelyn.- Evelyn's trainee is at point (1.25, 4.5) on the time-distance graph.\n- The time for Evelyn is 1.25 units.\n- The distance Evelyn has run is 4.5 units.Average speed for Evelyn = (distance / time) = (4.5 units / 1.25 units) = 3.6 units.Next, calculate the average speed for Briana.- Briana's trainee is at point (2.5, 2.2) on the time-distance graph.\n- The time for Briana is 2.5 units.\n- The distance Briana has run is 2.2 units.Average speed for Briana = (distance / time) = (2.2 units / 2.5 units) = 0.88 units.Then, calculate the average speed for Carla.- Carla's trainee is at point (4.25, 5.2) on the time-distance graph.\n- The time for Carla is 4.25 units.\n- The distance Carla has run is 5.2 units.Average speed for Carla = (distance / time) = (5.2 units / 4.25 units) = 1.23 units.Next, calculate the average speed for Debra.- Debra's trainee is at point (5.6, 2.8) on the time-distance graph.\n- The time for Debra is 5.6 units.\n- The distance Debra has run is 2.8 units.Average speed for Debra = (distance / time) = (2.8 units / 5.6 units) = 0.5 units.## Conclusion:\nTherefore, the student with the greatest average speed is Evelyn.Therefore, the final answer is: $\\boxed{\\text{Evelyn}}$.",
+          "correct": true,
+          "format_correct": false
+        }
+      ],
+      "pass_at_k": {
+        "0.1": [
+          0.36057404653118075
+        ],
+        "0.2": [
+          0.45183874993754347
+        ],
+        "0.3": [
+          0.49839084255163935
+        ],
+        "0.4": [
+          0.5275681510383299
+        ],
+        "0.5": [
+          0.5478121489725
+        ],
+        "0.6": [
+          0.5630448681336211
+        ],
+        "0.7": [
+          0.5754142061374291
+        ],
+        "0.8": [
+          0.586086725852589
+        ],
+        "0.9": [
+          0.5947929009866423
+        ],
+        "1.0": [
+          0.6028225806451613
+        ]
+      }
+    }
+  }
+}

@@ -4,13 +4,13 @@
 set -euo pipefail
 
 MODEL_NAMES=(${MODEL_NAMES:-"Qwen/Qwen2.5-1.5B-Instruct"})
-CDF_ALPHAS=(0.2 0.3)
+CDF_ALPHAS=(0.5 0.4)
 SMC_TOPKS=(20 40)
 CONF_GROUPS=(mean geo)
 AGGREGATIONS=(mean prod min last)
 WINDOW_SIZES=(1 8 32 64 128 256 512)
 BATCH_GEN_PAIRS=(
-  "512 8"
+  "128 8"
 )
 
 DEFAULT_TEMPS=()
