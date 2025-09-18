@@ -1,0 +1,96 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.6008064516129032
+      ],
+      "for_acc": [
+        0.0
+      ],
+      "both_acc": [
+        0.0
+      ],
+      "lengths": [
+        511.81854838709677
+      ],
+      "ans_frac": [
+        0.22779563723978757
+      ],
+      "for_frac": [
+        0.0
+      ],
+      "both_frac": [
+        0.0
+      ],
+      "examples": [
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nConvert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "To convert the rectangular coordinates $(x, y)$ to polar coordinates $(r, \\theta)$, we use the following formulas:1. $r = \\sqrt{x^2 + y^2}$ (for the distance from the origin to the point)\n2. $\\theta = \\arctan\\left(\\frac{y}{x}\\right)$ (for the angle from the positive x-axis to the point, projected onto the positive x-axis by the right-hand rule)Applying these to the point $(0, 3)$, we get:Step 1:\nFor the distance, we have $r = \\sqrt{0^2 + 3^2} = \\sqrt{9} = 3$.For the angle, since the point is on the positive y-axis, $\\theta = \\frac{\\pi}{2}$.Step 2:\nConfirming, $\\arctan\\left(\\frac{3}{0}\\right) \\rightarrow \\frac{\\pi}{2}$.Therefore, the polar coordinates are $\\left(3, \\frac{\\pi}{2}\\right)$.Therefore, the final answer is: $\\boxed{(3, \\frac{\\pi}{2})}$.",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nDefine\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "p - q",
+          "completion": "1. Let's start by defining $c = p$. Thus, we have $\\sum_{j = 1}^\\infty\\sum_{k=1}^\\infty\\frac{1}{(j + k)^3} = \\sum_{j = 1}^\\infty\\sum_{k=1}^\\infty\\frac{1}{(j+k)^3}$. 2. We begin by manipulating the double sum $\\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty\\frac{1}{(j + k)^3}$:$$\\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty\\frac{1}{(j + k)^3} = \\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty\\frac{1}{(k + j)^3} = \\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty\\frac{1}{(j + k)^3}$$3. We swap the order of summation:$$=\\sum_{k=1}^\\infty \\sum_{j=1}^\\infty\\frac{1}{(j+k)^3}$$4. By applying Abel's summation twice, we get:$$=\\sum_{k=1}^\\infty\\frac{-1(2k - 1) + 3k}{k^3} + c_1 = \\sum_{k=1}^\\infty\\frac{2}{k^4}-\\sum_{k=1}^\\infty\\frac{1}{k^4} = c_2 - c$$5. Now, for $p$:$$p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} = \\sum_{k = 1}^\\infty \\frac{1}{k^2 - 1} + \\sum_{k = 1}^\\infty\\frac{1}{k^2} = p +c_4$$6. For $q$:$$q = \\sum_{k = 1}^\\infty \\frac{1}{k^3} = \\sum_{k = 1}^\\infty \\frac{1}{k^3 - 1} + \\sum_{k = 1}^\\infty \\frac{1}{k^3} = q +c_4$$7. Substituting above into the original, we have:$$\\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty\\frac{1}{(j+k)^3} = \\sum_{k=1}^\\infty\\frac{2}{k^4}-\\sum_{k=1}^\\infty\\frac{1}{k^4} = p - q$$Therefore, the final answer is: $\\boxed{p - q}$.",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nIf $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\frac{14}{3}",
+          "completion": "Case 1: Simplify $f(x)$$$f(x) = \\frac{3x-2}{x-2} = \\frac{3(x-2)+4}{x-2} = \\frac{3(x-2)}{x-2}+\\frac{4}{x-2} = 3 + \\frac{4}{x-2}$$Case 2: Compute $f(-2)$, $f(-1)$, and $f(0)$$$f(-2) = 3-\\frac{4}{-2-2}=\\frac{15}{2}$$$$f(-1) = 3-\\frac{4}{-1-2}=\\frac{14}{3}$$$$f(0) = 3-\\frac{4}{0-2}=\\frac{7}{2}$$Case 3: Sum $f(-2)$, $f(-1)$, and $f(0)$$$f(-2)+f(-1)+f(0) = \\frac{15}{2}+\\frac{14}{3}+\\frac{7}{2} = \\frac{65}{6}$$Therefore, the value of $f(-2)+f(1)$ is $\\boxed{\\frac{65}{6}}$.",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nHow many positive whole-number divisors does 196 have?<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "9",
+          "completion": "## Step 1: Factorize 196 into its prime factors.\n- Find the prime factors of 196, which are 2 and 7. ## Step 2: Determine the number of divisors for each distinct prime factor.\n- For 2, the exponent is 2 (since 196 = 2^2 * 7^2).\n- For 7, the exponent is 2 (since 196 = 2^2 * 7^2).## Step 3: Calculate the total number of divisors.\n- The total number of divisors is given by (sum of exponents + 1) for each prime factor. - For 2: (2 + 1) = 3\n- For 7: (2 + 1) = 3- Therefore, 2^2 * 7^2 = 3 * 3.- Summing these up gives us 3 * 3 = 9.## Step 4: Conclude the final answer.\n- Therefore, 196 has 9 positive whole-number divisors.Therefore, the final answer is: $\\boxed{9}$.",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nThe results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\text{Evelyn}",
+          "completion": "To determine which student has the greatest average speed, we need to calculate the average speed for each student based on the information provided.### Step 1: Calculate Average Speed\nAverage speed is given by the formula:\n\\[ \\text{Average Speed} = \\frac{\\text{Total Distance}}{\\text{Total Time}} \\]- **Evelyn**:\n\\[ \\text{Distance} = 4.5 \\ \\text{units} \\]\n\\[ \\text{Time} = 1.25 \\ \\text{units} \\]\n\\[ \\text{Average Speed}_{Evelyn} = \\frac{4.5}{1.25} = 3.6 \\ \\text{units per unit} \\]- **Briana**:\n\\[ \\text{Distance} = 2.2 \\ \\text{units} \\]\n\\[ \\text{Time} = 2.5 \\ \\text{units} \\]\n\\[ \\text{Average Speed}_{Briana} = \\frac{2.2}{2.5} = 0.88 \\ \\text{units per unit} \\]- **Carla**:\n\\[ \\text{Distance} = 5.2 \\ \\text{units} \\]\n\\[ \\text{Time} = 4.25 \\ \\text{units} \\]\n\\[ \\text{Average Speed}_{Carla} = \\frac{5.2}{4.25} \\approx 1.23 \\ \\text{units per unit} \\]- **Debra**:\n\\[ \\text{Distance} = 2.8 \\ \\text{units} \\]\n\\[ \\text{Time} = 5.6 \\ \\text{units} \\]\n\\[ \\text{Average Speed}_{Debra} = \\frac{2.8}{5.6} = 0.5 \\ \\text{units per unit} \\]- **Angela**:\n\\[ \\text{Distance} = 1.4 \\ \\text{units} \\]\n\\[ \\text{Time} = 6.8 \\ \\text{units} \\]\n\\[ \\text{Average Speed}_{Angela} = \\frac{1.4}{6.8} \\approx 0.209 \\ \\text{units per unit} \\]### Step 2: Compare Average Speeds\nNow, we compare the average speeds:\n- **Evelyn**: 3.6 units per unit\n- **Briana**: 0.88 units per unit\n- **Carla**: 1.23 units per unit\n- **Debra**: 0.5 units per unit\n- **Angela**: ~0.209 units per unitThe student with the greatest average speed is **Evelyn** with an average speed of **3.6 units per unit**.Therefore, the final answer is:\n\\[ \\boxed{Evelyn} \\]",
+          "correct": true,
+          "format_correct": false
+        }
+      ],
+      "pass_at_k": {
+        "0.1": [
+          0.34718763234174604
+        ],
+        "0.2": [
+          0.4384286111686083
+        ],
+        "0.3": [
+          0.48516981255509944
+        ],
+        "0.4": [
+          0.5171604113883138
+        ],
+        "0.5": [
+          0.539952863119792
+        ],
+        "0.6": [
+          0.5570244656351758
+        ],
+        "0.7": [
+          0.570990422873028
+        ],
+        "0.8": [
+          0.5823481952689283
+        ],
+        "0.9": [
+          0.5925114594318317
+        ],
+        "1.0": [
+          0.6008064516129032
+        ]
+      }
+    }
+  }
+}

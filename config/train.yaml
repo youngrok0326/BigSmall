@@ -22,8 +22,8 @@ rl:
   algorithm: "SMCGRPO"
   dataset: "math"
   max_prompt_length: 512
-  max_completion_length: 1024
-  num_generations: 8
+  max_completion_length: 50 #TODO: debugging temporarily
+  num_generations: 4
   max_steps: 2
   save_strategy: "time"
   save_steps: 100
@@ -61,12 +61,12 @@ smc:
   return_eos: false
   return_all: false
   confidence:
-    scoring: "entropy" #logprob, prob, cdf
+    scoring: "prob" #logprob, prob, cdf
     cdf_alpha: 0.25
     group: "mean" #geo
     aggregation: "last" # prod, min, mean, last
 prm: 
-  use_prm: true
+  use_prm: false
   model_name: Qwen/Qwen2.5-Math-PRM-7B # Skywork-o1-Open-PRM-Qwen-2.5-1.5B
   aggregation: "model" # last, min, prod, model
   gpu_memory_utilization: 1.0
