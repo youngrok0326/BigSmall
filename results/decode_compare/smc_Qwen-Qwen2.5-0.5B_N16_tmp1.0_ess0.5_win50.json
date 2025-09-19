@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.14717741935483872
+      ],
+      "for_acc": [
+        0.0020161290322580645
+      ],
+      "both_acc": [
+        0.0
+      ],
+      "lengths": [
+        347.9193548387097
+      ],
+      "ans_frac": [
+        0.022051411290322582
+      ],
+      "for_frac": [
+        0.00012600806451612903
+      ],
+      "both_frac": [
+        0.0
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: 10 points actually\n\nTo convert a point from rectangular coordinates $(x, y)$ to polar coordinates $(r, \\theta)$, we use the following relationships:\n\n1. $\\displaystyle r = \\sqrt{x",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution:  We know that\n\\[P = \\sum_{k = 1}^\\infty \\frac{1}{k^2} = \\frac{\\pi^2}{6},\\]and\n\\[Q = \\sum_{k = 1}^\\infty \\frac{1}{k^3} = \\frac{\\pi^4}{90},\\]so\n\\[\\begin{aligned} \\sum_{j = 1}^\\infty \\sum_{k = -\\sum_{j = 1}^\\infty \\sum_{k = j + 1}^\\infty \\frac{1}{k^2(1 - \\sum_{j = 1}^{\\infty}\\,^{1}^+}\\, \\quad \\left( \\sum a_{k}^{}\\right) ^{\\beta_1)$, we have $\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\cdot 5} = \\frac{1}{2} \\cdot \\frac{1}{ \\cdot 5}$ memo\n4. : 2 p + q = - 2 && p - q = - \\dfrac{1}{j^2}+\\dfrac{ not} in trouble with)\n\n  $$ \\sum_{k = 1}^\\infty \\frac{1  + 1  + 1  + 1}^\\infty \\frac{1)$, we hence conclude that, for any $n \\in \\mathbf{$T}=\\sum_{ j = 0}^\\none 36j 1 Even overcome the +1 offset?\n\nAnd one more sketch: $$ \\sum j^2 + k^2=b^3minj + j)$ at the next $j$ and we can write $T = \\sum_{ r = 1} A. 15} \\text{ How does like any regular alphabet,2}k^2=k/ 3] { \\math",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e.,",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution:  The positive whole- numbers are: 1, 2, 3, 4, 5, 6, 7, 8, 9, ",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": " A. Param",
+          "correct": false,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}

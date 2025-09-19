@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.18346774193548387
+      ],
+      "for_acc": [
+        0.004032258064516129
+      ],
+      "both_acc": [
+        0.0020161290322580645
+      ],
+      "lengths": [
+        387.13709677419354
+      ],
+      "ans_frac": [
+        0.025327620967741934
+      ],
+      "for_frac": [
+        0.00025201612903225806
+      ],
+      "both_frac": [
+        0.00012600806451612903
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution:  To convert the point $(0,3)$ in rectangular coordinates to polar coordinates, we need to find the radial distance $r$ and the angle $\\theta$ with respect to the positive horizontal axis. The formula for converting rectangular coordinates to polar coordinates is given by: $$r = \\sqrt{x^2+y^2}$$ $$\\theta = \\arctan\\left(\\frac{y}{x}\\right)$$\nIn this case, the point $(0,3)$ corresponds to $x$-coordinate has a negative value, as we are moving down the number line\nStep 3: The original $y$-component has a negative value, as we are moving to the right of the number line\nStep 4: We can write the original point as $(0,3)$, because we know that a point's original $x$-coordinate is $0$\nStep 5: Let's find the x and y components of the new point $(0,3)$\nStep 6: $x=$original $x$ coordinate $\\times \\text{the negative sign}$\nStep 7: $3=$original $y$ component $\\times \\text{the negative sign}$\nStep 8: $=3x$ and $=-3y$\nStep 9: $=3x-y$\nStep 10: We can plug in the original value of $x$ and $y$ into this formula\nStep 11: $=0 \\times  (-3) -3 \\times 3 = 0 - 9 = -9$\nStep 12: We can now find the $r$ value using the point's original $x$ ($0$) and",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: 1. Evaluate the double sum\n\\[\n\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3} = \\sum_{j = 1}^\\infty \\sum_{k = 1}^k \\frac{1}{j^3} + \\sum_{k = 1}^\\infty \\sum_{j = 1}^k \\frac{k^23 = 23.333333\n15.46\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 20\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 2 and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 6\nExplanation: The positive whole-number divisors of 196 are 1, 2, 4, 5, 7, 14, 19, 28, 47, 94, and 196. Therefore, there are 6 positive whole-number divisors of 196.\nPlease write the solution for the math problem.\nSure! I can provide you with the solution to the math problem \"How many positive whole-number divisors does 196 have?\" Here's",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": "11.5\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nProblem\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Let a and b be positive integers. Each of the following statements is true EXCEPT\n[asy]\ndraw((1,0)--(1,5), linewidth(2));\ndraw((2,0)--(2,5), linewidth(2));\ndraw((3,0)--(3,5), linewidth(2));\ndraw((4,0)--(4,5), linewidth(2));\ndraw((5,0)--(5,5), linewidth(2));\ndraw((6,0)--(6,5), linewidth(2));\n\ndot(1.5,black);\ndot(3.25,black);\ndot(4.25,black);\ndot(5.75,black);\ndot(6,black);\n[/asy]\nThe greatest common divisor of a and b is\n(a) 12\n(b) 14\n(c) 7\n(d) 6\n(e) 5\nWhat is the name of the video game development firm that marketed a video game called Halo?\nThe Bashkir, a Yakut family, is descended from Alaskans. These people have a name that means\n(a) water\n(b) white\n(c) gold\n(d) water\n(e) gold\nWhat is the opposite of covering the ground with a mulch of material?\n<think> </think> <answer> </answer>\nAnswer: 26\nExplanation:\nTo find the average speed, we need to calculate the total distance traveled and the total time taken.\n\nThe graph shows that Evelyn has the slowest distance (0 to 3), Briana has the next slowest distance (2 to 4), and Deborah has the fastest distance (4 to 6).\n\nTo find the average speed, we need to divide the total distance by the total time taken. The total distance is the distance from the origin to Evelyn's position (distance 2.5 to 2.8) plus the distance from the origin to Deborah's position (distance 3 to 5.2) plus the distance from the origin to Angela's position (distance ",
+          "correct": false,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}

@@ -16,25 +16,30 @@
 set -euo pipefail
 
 # Fixed model list (override by setting MODEL_NAMES env if desired)
-MODEL_NAMES=(${MODEL_NAMES:-"Qwen/Qwen2.5-1.5B-Instruct"})
+MODEL_NAMES=(${MODEL_NAMES:-Qwen/Qwen2.5-1.5B-Instruct Qwen/Qwen2.5-3B-Instruct})
 
 # Custom SMC confidence sweeps (values applied on top of config/decode_eval.yaml)
-SCORINGS=("entropy" "logprob" "prob")
+SCORINGS=("prob") # "entropy" "logprob"
 declare -A TOPK_MAP=(
   [entropy]="20 40"
   [logprob]="20 40"
   [prob]="1"
 )
-CONF_GROUPS=("mean" "geo")
-AGGREGATIONS=("mean" "prod" "min" "last")
-WINDOW_SIZES=(1 8 32 64 128 256 512)
+CONF_GROUPS=("geo") # "mean" 
+AGGREGATIONS=("last") # "mean" "prod" "min" 
+WINDOW_SIZES=(512)
 
 # Evaluate each (batch_size_groups, num_generations) pair in sequence
 BATCH_GEN_PAIRS=(
   "512 8"
   "512 16"
   "512 32"
-  "512 64"
+  "256 64"
+  "256 128"
+  "128 256"
+  "128 512"
+  "512 2"
+  "512 4"
 )
 
 # Default-decoding temperatures

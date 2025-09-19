@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.12096774193548387
+      ],
+      "for_acc": [
+        0.0020161290322580645
+      ],
+      "both_acc": [
+        0.0
+      ],
+      "lengths": [
+        360.3125
+      ],
+      "ans_frac": [
+        0.01839717741935484
+      ],
+      "for_frac": [
+        0.00012600806451612903
+      ],
+      "both_frac": [
+        0.0
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution:  The rectangular coordinates of the point are $(0,3)$, which translates to $(0,3)$ in polar coordinates. To find $(r,\\theta),$ we use the formulas $\\theta = \\arctan (y_x/y_y)$ and \\begin{align*} r &= \\sqrt{x^2 + y^2}\\\\ &= sqrt{0^2 + 3^2}\\\\ &= 3  \\quad }\\end{align*} at this point. To find $\\theta,$\\theta = t^2 ,\\frac{\\pi}{2} &=\\sqrt{0^2+q^2+1}}$y^2pi< $marts, with $\\theta$:\n   The angle from ( \\pi$, we can say it takes into {(theta ho)^ pi 1 2kernel)$ is the angle$ < pii} 451511, $\\pi martsqrt{1 in polar to rectangular coordinates are and altitude x = 0$.thetrav.\u201d(0,arctan equation is: $\\pi y x0 \u03c0&5. =>x=\\sqrt_tra4teen =00.Sample mathematiciansina  mu $ \"6. A. Solution: r = ((color{blue}color{ *extent : contact list = 1 21 5$))$ + 2 42$ part (10242 3 inside the square root It '+' $\\theta 0 27 pi pi degree/radian \u03b88328. 1$should \\begin{aligned}4, I. ,POINT TO LEFT____________________________________________ \\end{2\\math 4root 3 incompatible 9Thandtimesquare",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: 1. Definitions\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2}\\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]\n2. Find that sum\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3} = ?\\]\n\n2. Find that p :=\n\\prod_{j + \\text{\\frac{.1 \\over k^: ] -112 \\over j = \\quad11{-\\infty} sum_{ sum_{kappa= 15 and \nstyle112n} = \\frac{11}{j = 15 equiv11 your\n\\quad j =}, h'(4 become_ 15,2']}N, 1\\}\n\\sum_{k115 - 1} \\frac{15, sum_{j=1520, in a)? = Version: s_{j = q -= p = sum([j +",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 1, 2, 4, 7, 19, 14, 98, 196\n<ans>\nConclusion\n</ans>\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking\nConditional Thinking: 240\uff0c196\nConditional230\nConditional-ions into, you will add up to get 1: division-into 1965\nConditional 20.<Answer> </Answer\n</answer>\n\nHuman:Ind visual and that should necessarily go the number of positive whole-number divisors is part of -\nAnswer: 196 number from the number products number \u5272\nConditional Thinking </Conditional Thinking:Compare3196:#Dividend / off\n\u7b54\u6848\nProblem:1strengthens to think\n\u7b54\u6848:2\nAnswer:6\n\nExplanation: We need to\u63a8\u7406mdhsad-space forruns L32 x2-1 x2-11 reason to  Divisors2 sontade a\n\u7b54\u6848\u952e 4x \u0940 1Problem: 3 = 3rn 1, Zion has 14 positive whole",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": "0.06666666666666667, which can be simplified into \\\\\n0.06666666666666667 \\\\",
+          "correct": false,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}

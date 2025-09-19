@@ -1,7 +1,7 @@
 model:
   model_name: "Qwen/Qwen2.5-1.5B-Instruct"
   gpu_memory_utilization: 0.8
-  max_seq_length: 1536
+  max_seq_length: 1024
   load_in_4bit: true
   fast_inference: true
 
@@ -25,7 +25,7 @@ eval:
   # Number of prompt groups per batch (each group produces multiple trajectories)
   batch_size_groups: 512
   num_generations: 64
-  max_new_tokens: 1024
+  max_new_tokens: 512
   # Values <= 1.0 are interpreted as proportions (pass@(proportion)); larger values use absolute k
   pass_k: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
   # Which decoding modes to run
@@ -47,14 +47,14 @@ custom_decode:
   # tokens_per_step: 16  # leave commented to use step_token mode
   smc_confidence_eta: 1.0 #TODO: temperature로 교체
   smc_confidence_window_size: 1
-  smc_topk: 20
+  smc_topk: 1
   return_eos: true
   return_all: false
   confidence:
-    scoring: "entropy" #"entropy" #logprob, prob, cdf
+    scoring: "prob" #"entropy" #logprob, prob, cdf
     cdf_alpha: 0.25
-    group: "mean" #"mean" #geo
-    aggregation: "mean" # prod, min, mean, last
+    group: "geo" #"mean" #geo
+    aggregation: "last" # prod, min, mean, last
 
 prm: 
   use_prm: false

@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.16733870967741934
+      ],
+      "for_acc": [
+        0.0020161290322580645
+      ],
+      "both_acc": [
+        0.0
+      ],
+      "lengths": [
+        386.7681451612903
+      ],
+      "ans_frac": [
+        0.027091733870967742
+      ],
+      "for_frac": [
+        0.00012600806451612903
+      ],
+      "both_frac": [
+        0.0
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: 1. Given: $\\sum_{k = 1}^\\infty \\frac{1}{k^2} = p$ and $\\sum_{k = 1}^\\infty \\frac{1}{k^3} = q.$\n2. We are asked to express: $\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}$ in terms of $p$ and ) as follows:\n12. Therefore, we can simplify this from Equation (11) as follows:\n13. Therefore, we can simplify this from Equation (12) as follows:\n14. Therefore, we can simplify this from Equation (13) as follows:\n15. Therefore, we can simplify this from Equation (14) as follows:\n16. Therefore, we can simplify this from Equation (15) as follows:\n\\frac{1}{j + k} = \\frac{1}{p} \\cdot \\frac{1}{p(j)}.$ Notice that $\\frac{1}{p(j)} = \\frac{1}{p} \\cdot \\frac{1}{p + j}.$ Thus:\n\n5. $\\frac{1}{j + k} = \\frac{1}{p} \\cdot \\frac{1}{p} \\cdot \\frac{1}{p(j)} \\cdot \\frac{1}{p(j)} = \\frac{1}{p^2} \\cdot \\frac{1}{p} \\cdot \\frac{1}{p(j)} \\cdot \\frac{1}{p(j)}.$\n\n6. Now, $\\frac{1.\n9. Now multiply 2 by 1 which gives 2.\n10. Now multiply 2 by 1 which gives 2.\n11. Now multiply 2 by and 1 which gives 2.\n12. Sum the first ten terms will give a sum of 21.\n13. The sum of the first 10 terms from the sum of the 1st term to the tenth term is 21.\n14. The next term will be \n<q>_2_3</q>\n, so the next term is 23.\n15. The next term",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: 1) Find $f(-2)$ first.\n$$f(-2) = \\frac{3(-2)-2}{-2-2}$$\n$$f(-2) = \\frac{-6 - 2}{-4}$$\n$$f(-2) = \\frac{-8}{-4}$$\n$$f(-2) = 2$$\n2) Find $f(-1)$ first.\n$$f(-1) = \\frac{3(-1)-2. The value of $f(0)$ is 0 - 0 = 0.\n7. Therefore, the value of $f(-2)$ + $f(-1)$ + 2}{-3}$$\n$$f(-1) = \\frac{-3}{-3}$$\n$$f(-1) = 1$$\n3) Find $f(0)$ first.\n$$f(0) = \\frac{3(0.\nStep 8: Let's find the value of f(x) at x = -2, x = -1, a2, a3, a4 a1, a2, a3, a4a1, a2, a3, a4a1, a2, a3, a4a1, a2, a3, a4\n\na1, a2, a3, a4a1, a2, a3, a4a2, a1, a2, a3, a4a2, a1, a2, a3, a4a1, a2, a3, a4a3, a2, a3, a4a3, a2,",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 0, 1, 2, 4, 19, 38, 76, 196 \nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\n196\n, which gives us 2 as a prime factor.\n3. List the prime factors: Now that we have found the prime factor of 196, we can list out the list of prime factors:>\n196/2= 196 can be divided by 2^2 (>\n2\n2\nof the number 2), so the next largest factor is 2^2.\n6. 3^2 is also a factor, so the next largest factor is 3^2.\n7. Now, the number 196 can be divided by 2^2 (>\n2\n2\nof the number 2), so the next largest factor is 2^2.\n8. 3^2 is also a factor, so the next largest factor is 3^2.\n9. Now, the number 196 can",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": "1. Calculate the average speed of Evelyn\nThe distances she covered are 1.25 units, 2.5 units, 4.25 units, 5.6 units, and 6.8 units.\nEvelyn's average speed is $\\frac{1.25 \\times 2.5 \\times 4.25 \\times 5.6 \\times 6.8}{5}$.\n2. Calculate the average speed of Briana\nThe team was running 50 laps around the track in total, totaling 1000 meters.\nEach lap is 500 meters long, and 6.8 units.\nBriana's average speed is $\\frac{1.5 \\times 2.5 \\times 4.25 \\times 5.6));\nlabel(scale(.85)*\"distance\", (3, 4), W);\ndot((0,2.5));\nlabel(scale(.85)*\"00 time\", (0, 0), SW);\nlabel(scale(.85)*\"distance\", (6 units.\nCarla's average speed is $\\frac{1.85 \\times 2.5 \\times 4.25 \\times 5.6 \\times(1.0)(label(scale(.85)*\"Briana\", (4, 2.2), N));\ndot((2, 0.8));\ntimes(1.0)(label(scale(.85)*\"Angela\", (2, 0.8), E));\ndot((5.5, 3.5));\ntimes(1.0)(label(scale(.85)*\"Debra\", (5.5, 3.5), NE));\ndot((6, 3.9));\ntimes(1.0)(label scale(.85)*\"Angela's average speed is $\\frac{2 \\begin{aligned} +x & = 1.25 \\\\ -x & = 6 \\\\ x - y = 0\\end{aligned} \\Rightarrow\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nAnswer\nthinks\nBriana's average speed is 45 meters per",
+          "correct": false,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}

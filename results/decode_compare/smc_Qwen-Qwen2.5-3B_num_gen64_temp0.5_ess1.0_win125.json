@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.25201612903225806
+      ],
+      "for_acc": [
+        0.05846774193548387
+      ],
+      "both_acc": [
+        0.024193548387096774
+      ],
+      "lengths": [
+        751.3427419354839
+      ],
+      "ans_frac": [
+        0.04596144153225806
+      ],
+      "for_frac": [
+        0.0026146673387096773
+      ],
+      "both_frac": [
+        0.0009450604838709678
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution:  <think>\nThe point $(0,3)$ is in the $y$-axis.  The radius is the distance from the origin to the point, which is 3.  The angle is the angle between the positive $x$-axis and the line connecting the origin to the point, which is $\\frac{\\pi}{2}$ radians.\n</think>\n<answer>\n$(3,\\frac{\\pi}{2})$\n</answer>",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "1. <think>\nTo solve the given problem, we need to find a way to express the sum \\(\\sum_{j=1}^\\infty \\sum_{k=1}^\\infty \\frac{1}{(j+k)^3}\\) in terms of \\(p\\) and \\(q\\).\n\nFirst, let's consider the double sum \\(\\sum_{j=1}^\\infty \\sum_{k=1}^\\infty \\frac{1}{(j+k)^3}\\). We can rewrite this sum by changing the order of summation. Let's define a new variable \\(j + 1 }{1sum_{\\}} \\frac{1\\{}}{1 +\\{}}{do{1}11}}{j}1\\1{13\\frac\\1\\111}111infty3}1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "1) <think>\nTo find the value of $f(-2) + f(-1) + f(0)$, we need to evaluate the function $f(x)$ at $x = -2$, $x = -1$, and $x = 0$.\n</think>\n2) <think>\nFirst, let's evaluate $f(-2)$:\n$f(-2) = \\frac{3(-2)-2}{-2-2} = \\frac{-6-2}{-4} = \\frac{-8}{-4} = 2$\n</think>\n3) <think>\n</answer\nNext, which is not\n>\n</think>\n</Answer>\nNext6 22\n 1.>\n4.> think\nthink>thinkthink\n2\n</think>\n</think\n</ink2</thinkthinkthinkthink>\n>\n</think\n5think\nthink\n>\nthink\n</think\nthinkthink\nthinkthinkthinkink</ink\nthink\nthink>\nthink\nthinkthinkinkinkinkthinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkinkink",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "Reasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 196 = 2 2 * 7 2\nThe positive whole-number divisors are 1, 2, 4, 7, 14, 28, 49, 98, and 196.\n<think>\n196 = 2 2 * 7 2\nThe positive whole-number divisors are 1, 2, 4, 7, 14, 28, 49, 98, and 196.\n</think>\n<answer>\n9\n</answer>",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": " <think>\nTo determine which student has the greatest average speed, we need to calculate the average speed for each student. Average speed is calculated by dividing the total distance traveled by the total time taken.\n\n1. **Evelyn**:\n   - Distance: 10 miles\n   - Time: 1 hour\n   - Average speed = Distance / Time = 10 miles / 1 hour = 10 mph\n\n2. **Briana**:\n   - Distance: 8 miles\n   - Time: 1.5 hours\n   - Average speed = Distance / Time = 8 miles per unit\n</think\n- 2.5,  . 2\n- 2.22.2 2552 53.52.52 222. 22222 22 22 222 225222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222",
+          "correct": false,
+          "format_correct": true
+        }
+      ]
+    }
+  }
+}
