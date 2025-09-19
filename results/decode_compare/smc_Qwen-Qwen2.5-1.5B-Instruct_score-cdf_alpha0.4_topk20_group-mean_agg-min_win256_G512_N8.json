@@ -1,0 +1,96 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.6189516129032258
+      ],
+      "for_acc": [
+        0.0020161290322580645
+      ],
+      "both_acc": [
+        0.0
+      ],
+      "lengths": [
+        517.2258064516129
+      ],
+      "ans_frac": [
+        0.22658329438663938
+      ],
+      "for_frac": [
+        2.1001344086021504e-05
+      ],
+      "both_frac": [
+        0.0
+      ],
+      "examples": [
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nConvert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "1. **Expression for $r$**:\n   Using the formula for $r$ (distance from the origin to a point on a coordinate plane), where $(x,y)$ is a point on the plane,\n   \\[\n   r = \\sqrt{x^2 + y^2}\n   \\]\n   Here, the point $(x,y)$ is $(0,3)$. So substitute with\n   \\[\n   r = \\sqrt{0^2 + 3^2} = \\sqrt{9} = 3\n   \\]2. **Corresponding Angle $\\theta$**:\n   For the angle $\\theta$, use the formula\n   \\[\n   \\theta = \\tan^{-1}\\left(\\frac{y}{x}\\right)\n   \\]\n   Substitute $x = 0$ and $y = 3$,\n   \\[\n   \\theta = \\tan^{-1}\\left(\\frac{3}{0}\\right)\n   \\]\n   Since the point $(0,3)$ is on the positive $y$-axis, $\\theta$ corresponds to $\\frac{\\pi}{2}$. Thus,\n   \\[\n   \\theta = \\arctan(\\infty) = \\frac{\\pi}{2}\n   \\]3. **Final Polar Coordinate**:\n   The point $(0, 3)$ in rectangular coordinates translates to polar coordinates $\\left(3, \\frac{\\pi}{2}\\right)$.### Conclusion:\nTherefore, the final answer is: $\\boxed{\\left(3, \\frac{\\pi}{2}\\right)}$.",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nDefine\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "p - q",
+          "completion": "1. Let's start by defining $c = p$. Thus, we have $\\sum_{j = 1}^\\infty\\sum_{k=1}^\\infty\\frac{1}{(j + k)^3} = \\sum_{j = 1}^\\infty\\sum_{k=1}^\\infty\\frac{1}{(j+k)^3}$. 2. We begin by manipulating the double sum $\\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty\\frac{1}{(j + k)^3}$:    \\[\n    = \\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j+k)^3}.\n    \\]    This is equivalent to asking how many sums are needed, assuming a limit $M$ such that $\\sum_{j=1}^M\\sum_{k=1}^M \\frac{1}{(j+k)^3}$ is well-defined:    \\[\n    \\leq \\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty \\frac{1}{(j+k)^3} \\leq \\sum_{j = 1}^\\infty\\sum_{k = 1}^\\infty \\frac{1}{k^3}.\n    \\]3. We note that $p$ and $q$ are the series we are summing. We need to incorporate these into the new series:    \\[\n    = \\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3} \\leq \\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\n    \\]4. To properly incorporate $q$ into the series, we should consider the sum of the sequence $q$:    \\[\n    = 1 - \\left(\\frac{1}{2^2} + \\frac{1}{4^2} + \\frac{1}{5^2} + \\cdots\\right) = 1 - \\frac{q}{2}.\n    \\]5. Next, we handle $p$ and $q$ in $p$:    \\[\n    = 1 - \\left(\\frac{1}{4^2} + \\frac{1}{6^2} + \\frac{1}{8^2} + \\cdots\\right).\n    \\]6. Combining the results:    \\[\n    = 1 - \\left(\\frac{q}{2} + \\frac{p}{4}\\right) - \\frac{1}{2} = 1 - \\left(\\frac{q}{2} + \\frac{p}{4}\\right).\n    \\]7. Thus, the summation can be written in terms of $p$ and $q$:    \\[\n    = 1 - \\left(\\frac{1}{2}p + \\frac{1}{4}q\\right).\n    \\]### Conclusion:\nTherefore, the series can be expressed as:\n$$\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3} = 1 - \\frac{1}{2}p - \\frac{1}{4}q.$$Therefore, the final answer is:\n$$\\boxed{1 - \\frac{1}{2}p - \\frac{1}{4}q}.$$",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nIf $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\frac{14}{3}",
+          "completion": "Case 1: Simplify $f(x)$$$f(x) = \\frac{3x-2}{x-2} = \\frac{3(x-2)+4}{x-2} = \\frac{3(x-2)}{x-2}+\\frac{4}{x-2} = 3 + \\frac{4}{x-2}$$Case 2: Substitute the values$$f(-2) = 3 + \\frac{4}{-2-2} = 3 + \\frac{4}{-4} = 3-1 = 2$$\n$$f(-1) = 3 + \\frac{4}{-1-2} = 3 + \\frac{4}{-3} = 3- \\frac{4}{3} = \\frac{9-4}{3} = \\frac{5}{3}$$\n$$f(0) = 3 + \\frac{4}{0-2} = 3+ \\frac{4}{-2} = 3 - 2 = 1$$Case 3: Add the results$$f(-2) + f(-1) + f(0) = 2 + \\frac{5}{3} + 1 = \\frac{6}{3} + \\frac{5}{3} + \\frac{3}{3} = \\frac{14}{3}$$Therefore, the answer is $\\boxed{\\frac{14}{3}}$.",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nHow many positive whole-number divisors does 196 have?<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "9",
+          "completion": "## Step 1: Prime factorization of 196\nTo find the number of divisors, we'll first need to find the prime factorization of 196.196 can be factored into prime numbers as: $196 = 2^2 \\times 7^2$.## Step 2: Determine the number of divisors\nGiven a number in the form a^x * b^y * c^z... where a, b, c, etc. are prime factors, the total number of divisors is given by (x+1)(y+1)(z+1)... for each prime factor.Using our 196 prime factorization, we have 2^2 and 7^2. For 2^2, we get (2+1) = 3 divisors. For 7^2, we get another (2+1) = 3 divisors.## Step 3: Calculate the total number of divisors\nMultiplying the number of divisors for each prime factor gives us the total number of divisors. Total divisors = (2+1)(2+1) = 3 * 3 = 9.Therefore, the final answer is: $\\boxed{9}$.",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nThe results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\text{Evelyn}",
+          "completion": "## Step 1: ##\nTo determine which student has the greatest average speed, we need to calculate the average speed for each trainee.## Step 2: ##\n- For Evelyn, the rise is 4.8 units (distance) and there are 1.25 time intervals. Average speed (\\(\\overline{v}_E\\)) = \\(\\frac{4.8}{1.25}\\)\n- For Briana, the rise is 2.2 units (distance), and there are 2.5 time intervals. Average speed (\\(\\overline{v}_B\\)) = \\(\\frac{2.2}{2.5}\\)\n- For Carla, the rise is 5.2 units (distance), and there are 4.25 time intervals. Average speed (\\(\\overline{v}_C\\)) = \\(\\frac{5.2}{4.25}\\)\n- For Debra, the rise is 2.8 units (distance), and there are 5.6 time intervals. Average speed (\\(\\overline{v}_D\\)) = \\(\\frac{2.8}{5.6}\\)## Step 3: ##\nAfter calculations:- Evelyn: \\(\\overline{v}_E = \\frac{4.8}{1.25} = 3.84\\) mph\n- Briana: \\(\\overline{v}_B = \\frac{2.2}{2.5} = 0.88\\) mph\n- Carla: \\(\\overline{v}_C = \\frac{5.2}{4.25} \\approx 1.24\\) mph\n- Debra: \\(\\overline{v}_D = \\frac{2.8}{5.6} = 0.5\\) mphTherefore, the final answer is: $\\boxed{Evelyn}$",
+          "correct": true,
+          "format_correct": false
+        }
+      ],
+      "pass_at_k": {
+        "0.1": [
+          0.3631574917165829
+        ],
+        "0.2": [
+          0.45309583308169615
+        ],
+        "0.3": [
+          0.5022000756619578
+        ],
+        "0.4": [
+          0.5339182489824
+        ],
+        "0.5": [
+          0.557122441251992
+        ],
+        "0.6": [
+          0.5743109400557119
+        ],
+        "0.7": [
+          0.58844556844424
+        ],
+        "0.8": [
+          0.6004535890618107
+        ],
+        "0.9": [
+          0.6103184617502123
+        ],
+        "1.0": [
+          0.6189516129032258
+        ]
+      }
+    }
+  }
+}

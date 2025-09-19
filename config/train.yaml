@@ -1,5 +1,5 @@
 model:
-  model_name: Qwen/Qwen2.5-0.5B-instruct #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
+  model_name: Qwen/Qwen2.5-1.5B-instruct #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
   gpu_memory_utilization: 0.9
   max_seq_length: 1536
   lora_rank: 64
@@ -60,6 +60,7 @@ smc:
   smc_topk: 20
   return_eos: false
   return_all: false
+  drop_reward_coef: 0.1
   confidence:
     scoring: "prob" #logprob, prob, cdf
     cdf_alpha: 0.25

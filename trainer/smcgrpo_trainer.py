@@ -211,6 +211,7 @@ def _smc_drop_bonus(
     kinds: Sequence[_SMCTrajectoryKind],
     drop_steps: Sequence[int],
     total_steps: Sequence[int],
+    coef: float,
     device: torch.device,
 ) -> torch.Tensor:
     reward = torch.zeros(len(kinds), dtype=torch.float32, device=device)
@@ -222,7 +223,7 @@ def _smc_drop_bonus(
     drop_tensor = torch.tensor(drop_steps, dtype=torch.float32, device=device)
     total_tensor = torch.tensor(total_steps, dtype=torch.float32, device=device)
     denom = torch.where(total_tensor <= 0, torch.ones_like(total_tensor), total_tensor)
-    reward[drop_mask] = 0.1 * torch.clamp(drop_tensor[drop_mask] + 1.0, min=0.0) / denom[drop_mask]
+    reward[drop_mask] = coef * torch.clamp(drop_tensor[drop_mask] + 1.0, min=0.0) / denom[drop_mask]
     return reward
 
 class RepeatSampler(Sampler):
@@ -768,6 +769,7 @@ class GRPOTrainer(Trainer):
         self.max_prompt_length = args.max_prompt_length
         self.max_completion_length = args.max_completion_length  # = |o_i| in the GRPO paper
         self.num_generations = args.num_generations  # = G in the GRPO paper
+        self._smc_drop_coef = 0.1
         self.temperature = args.temperature
         self.top_p = args.top_p
         self.top_k = args.top_k
@@ -994,6 +996,7 @@ class GRPOTrainer(Trainer):
             _smc_cfg = {}
             if getattr(self.args, "generation_kwargs", None):
                 _smc_cfg = (self.args.generation_kwargs or {}).get("smc", {})
+            self._smc_drop_coef = float(_smc_cfg.get("drop_reward_coef", self._smc_drop_coef))
 
             smc_params = {
                 "use_smc": bool(_smc_cfg),
@@ -1522,7 +1525,7 @@ class GRPOTrainer(Trainer):
         conf_scoring = str(confidence_cfg.get("scoring", smc_cfg.get("scoring", "entropy")))
         conf_group = str(confidence_cfg.get("group", "mean"))
         conf_aggregation = str(confidence_cfg.get("aggregation", "last"))
-        return_all = bool(smc_cfg.get("return_all", False)) and (not self.model.training)
+        return_all = bool(smc_cfg.get("return_all", False))
         return_eos = bool(smc_cfg.get("return_eos", False))
         smc_topk = int(smc_cfg.get("smc_topk", -1))
         conf_window = int(smc_cfg.get("smc_confidence_window_size", 512))
@@ -1532,6 +1535,7 @@ class GRPOTrainer(Trainer):
             cdf_alpha_val = smc_cfg.get("cdf_alpha", 0.25)
         cdf_alpha = float(cdf_alpha_val)
         include_stop = smc_cfg.get("include_stop_str_in_output", True)
+        self._smc_drop_coef = float(smc_cfg.get("drop_reward_coef", self._smc_drop_coef))
         report_to = getattr(self.args, "report_to", None)
 
         if isinstance(report_to, str):
@@ -1677,8 +1681,8 @@ class GRPOTrainer(Trainer):
                     self.num_generations,
                     smc_meta,
                 )
-                kwargs = {"images": [[img] for img in images]} if has_images else {}
                 has_images = images is not None
+                kwargs = {"images": [[img] for img in images]} if has_images else {}
             else:
                 completion_ids_list = payload
                 smc_meta = _smc_build_uniform_meta(
@@ -1777,175 +1781,6 @@ class GRPOTrainer(Trainer):
             smc_meta = _smc_build_uniform_meta(
                 completion_ids.size(0), self.num_generations, int(self.max_completion_length)
             )
-
-        """ # Generate completions using either vLLM or regular generation
-        elif self.use_vllm:
-            # First, update the vLLM weights if needed
-            if self.state.global_step != self._last_loaded_step:
-                self._move_model_to_vllm()
-                self._last_loaded_step = self.state.global_step
-
-            # Generate completions using vLLM: gather all prompts and use them in a single call in the main process
-            if self.vllm_mode == "server":
-                all_prompts_text = gather_object(prompts_text)
-                if has_images:
-                    all_images = gather_object(images)
-
-                if self.accelerator.is_main_process:
-                    # Since 'prompts' contains 'num_generations' duplicates, we first take unique prompts, and generate
-                    # num_generations outputs for each one. This is faster than generating outputs for each duplicate
-                    # prompt individually.
-                    ordered_set_of_prompts = all_prompts_text[:: self.num_generations]
-
-                    if has_images:
-                        ordered_set_of_images = all_images[:: self.num_generations]
-                    else:
-                        ordered_set_of_images = None
-
-                    with profiling_context(self, "vLLM.generate"):
-                        completion_ids = self.vllm_client.generate(
-                            prompts=ordered_set_of_prompts,
-                            images=ordered_set_of_images,
-                            n=self.num_generations,
-                            repetition_penalty=self.repetition_penalty,
-                            temperature=self.temperature,
-                            top_p=self.top_p,
-                            top_k=-1 if self.top_k is None else self.top_k,
-                            min_p=0.0 if self.min_p is None else self.min_p,
-                            max_tokens=self.max_completion_length,
-                            guided_decoding_regex=self.guided_decoding_regex,
-                            generation_kwargs=self.args.generation_kwargs,
-                        )
-                else:
-                    completion_ids = [None] * len(all_prompts_text)
-                # Broadcast the completions from the main process to all processes, ensuring each process receives its
-                # corresponding slice.
-                completion_ids = broadcast_object_list(completion_ids, from_process=0)
-                process_slice = slice(
-                    self.accelerator.process_index * len(prompts),
-                    (self.accelerator.process_index + 1) * len(prompts),
-                )
-                completion_ids = completion_ids[process_slice]
-
-            # Generate completions using colocated vLLM instances: each device holds vLLM copy and work on their own batch of prompts
-            elif self.vllm_mode == "colocate":
-                if self.guided_decoding_regex:
-                    guided_decoding = GuidedDecodingParams(regex=self.guided_decoding_regex)
-                else:
-                    guided_decoding = None
-
-                generation_kwargs = {
-                    "n": 1,  # vLLM on each GPU generates only 1 in colocate mode
-                    "repetition_penalty": self.repetition_penalty,
-                    "temperature": self.temperature,
-                    "top_p": self.top_p,
-                    "top_k": -1 if self.top_k is None else self.top_k,
-                    "min_p": 0.0 if self.min_p is None else self.min_p,
-                    "max_tokens": self.max_completion_length,
-                    "guided_decoding": guided_decoding,
-                }
-                if self.args.generation_kwargs is not None:
-                    generation_kwargs.update(self.args.generation_kwargs)
-                sampling_params = SamplingParams(**generation_kwargs)
-
-                if self.vllm_tensor_parallel_size > 1:
-                    # Gather prompts from all ranks in the TP group and flatten.
-                    # Each rank starts with its own prompts; after gathering, all ranks see the full group set.
-                    orig_size = len(prompts_text)
-                    gathered_prompts = [None for _ in range(self.vllm_tensor_parallel_size)]
-                    torch.distributed.all_gather_object(gathered_prompts, prompts_text, group=self.tp_group)
-                    all_prompts_text = [p for sublist in gathered_prompts for p in sublist]
-
-                    if has_images:
-                        gathered_images = [None for _ in range(self.vllm_tensor_parallel_size)]
-                        torch.distributed.all_gather_object(gathered_images, images, group=self.tp_group)
-                        all_images = [img for sublist in gathered_images for img in sublist]
-                    else:
-                        all_images = None
-                else:
-                    all_prompts_text = prompts_text
-                    all_images = images if has_images else None
-
-                if has_images and all_images:
-                    vllm_inputs = []
-                    for prompt, image in zip(all_prompts_text, all_images):
-                        if image is not None:
-                            vllm_inputs.append({"prompt": prompt, "multi_modal_data": {"image": image}})
-                        else:
-                            vllm_inputs.append(prompt)
-                else:
-                    vllm_inputs = all_prompts_text
-
-                with profiling_context(self, "vLLM.generate"):
-                    all_outputs = self.llm.generate(vllm_inputs, sampling_params=sampling_params, use_tqdm=False)
-
-                completion_ids = [output.token_ids for outputs in all_outputs for output in outputs.outputs]
-
-                if self.vllm_tensor_parallel_size > 1:
-                    # Slice completions for this rank within its TP group.
-                    # Each rank generates all outputs — we keep only our share.
-                    local_rank_in_group = torch.distributed.get_rank(group=self.tp_group)
-                    tp_slice = slice(local_rank_in_group * orig_size, (local_rank_in_group + 1) * orig_size)
-                    completion_ids = completion_ids[tp_slice]
-
-            # Pad the completions, and concatenate them with the prompts
-            completion_ids = [torch.tensor(ids, device=device) for ids in completion_ids]
-            completion_ids = pad(completion_ids, padding_value=self.pad_token_id)
-            prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
-
-        elif self.use_transformers_paged:
-            # Re-process inputs for paged generation if needed
-            # Note: images are already validated and preprocessed above
-            paged_prompt_inputs = self.processing_class(text=prompts_text, **kwargs)
-            previous_attn = self.model_wrapped.config._attn_implementation
-
-            if is_flash_attn_2_available():
-                self.model_wrapped.config._attn_implementation = "paged_attention"
-            else:
-                self.model_wrapped.config._attn_implementation = "sdpa_paged"
-            with (
-                profiling_context(self, "transformers.generate_batch"),
-                unwrap_model_for_generation(
-                    self.model_wrapped, self.accelerator, gather_deepspeed3_params=self.args.ds3_gather_for_generation
-                ) as unwrapped_model,
-                torch.no_grad(),
-                FSDP.summon_full_params(self.model_wrapped, recurse=False) if self.is_fsdp_enabled else nullcontext(),
-            ):
-                # Cast to the appropriate dtype based on training configuration
-                if self.args.bf16:
-                    unwrapped_model.to(torch.bfloat16)
-                elif self.args.fp16:
-                    unwrapped_model.to(torch.float16)
-                with torch.inference_mode():
-                    all_outputs = unwrapped_model.generate_batch(
-                        paged_prompt_inputs.input_ids, generation_config=self.generation_config, progress_bar=False
-                    )
-            completion_ids = [output.generated_tokens for output in all_outputs.values()]
-            completion_ids = [torch.tensor(ids, device=device) for ids in completion_ids]
-            completion_ids = pad(completion_ids, padding_value=self.pad_token_id, padding_side="right")
-            prompt_ids = [torch.tensor(ids, device=device) for ids in paged_prompt_inputs.input_ids]
-            prompt_ids = pad(prompt_ids, padding_value=self.pad_token_id, padding_side="left")
-            prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
-            # Restore the original attention implementation, training mode
-            self.model_wrapped.config._attn_implementation = previous_attn
-        else:
-            # Regular generation path
-            with (
-                profiling_context(self, "transformers.generate"),
-                unwrap_model_for_generation(
-                    self.model_wrapped, self.accelerator, gather_deepspeed3_params=self.args.ds3_gather_for_generation
-                ) as unwrapped_model,
-                torch.no_grad(),
-                FSDP.summon_full_params(self.model_wrapped, recurse=False) if self.is_fsdp_enabled else nullcontext(),
-            ):
-                prompt_inputs["input_ids"], prompt_inputs["attention_mask"] = prompt_ids, prompt_mask
-                prompt_completion_ids = unwrapped_model.generate(
-                    **prompt_inputs, generation_config=self.generation_config, disable_compile=True
-                )
-            # Compute prompt length and extract completion ids
-            prompt_length = prompt_ids.size(1)
-            prompt_ids = prompt_completion_ids[:, :prompt_length]
-            completion_ids = prompt_completion_ids[:, prompt_length:] """
 
         if smc_meta is None:
             num_samples = completion_ids.size(0) if isinstance(completion_ids, torch.Tensor) else len(completion_ids)
@@ -2058,22 +1893,30 @@ class GRPOTrainer(Trainer):
         local_total_steps = smc_meta.total_steps
         local_kind_values = [kind.value for kind in smc_meta.kinds]
 
-        group_counts_across = gather_object(local_group_counts)
+        def _ensure_list(obj):
+            return obj if isinstance(obj, list) else [obj]
+
+        def _ensure_nested_list(obj):
+            if isinstance(obj, list) and (not obj or isinstance(obj[0], list)):
+                return obj
+            return [obj]
+
+        group_segments = _ensure_list(gather_object(len(local_group_counts)))
         group_offsets: list[int] = []
         total_groups = 0
-        for counts in group_counts_across:
+        for seg_size in group_segments:
             group_offsets.append(total_groups)
-            total_groups += len(counts)
+            total_groups += seg_size
         num_groups_global = total_groups
 
         group_offset = group_offsets[self.accelerator.process_index]
         local_group_indices_global = [group_offset + idx for idx in local_group_indices]
 
-        group_indices_across = gather_object(local_group_indices_global)
-        kinds_across = gather_object(local_kind_values)
-        drop_steps_across = gather_object(local_drop_steps)
-        total_steps_across = gather_object(local_total_steps)
-        sample_counts_across = gather_object(len(local_group_indices_global))
+        group_indices_across = _ensure_nested_list(gather_object(local_group_indices_global))
+        kinds_across = _ensure_nested_list(gather_object(local_kind_values))
+        drop_steps_across = _ensure_nested_list(gather_object(local_drop_steps))
+        total_steps_across = _ensure_nested_list(gather_object(local_total_steps))
+        sample_counts_across = _ensure_list(gather_object(len(local_group_indices_global)))
 
         global_group_indices = [idx for chunk in group_indices_across for idx in chunk]
         global_kind_values = [kind for chunk in kinds_across for kind in chunk]
@@ -2087,6 +1930,7 @@ class GRPOTrainer(Trainer):
             [_SMCTrajectoryKind(value) for value in global_kind_values],
             global_drop_steps,
             global_total_steps,
+            self._smc_drop_coef,
             device,
         )
         if rewards_per_func.size(1) >= 1:

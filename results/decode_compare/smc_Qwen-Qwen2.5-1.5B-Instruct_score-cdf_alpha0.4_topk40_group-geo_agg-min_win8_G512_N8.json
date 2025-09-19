@@ -1,0 +1,96 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.6008064516129032
+      ],
+      "for_acc": [
+        0.004032258064516129
+      ],
+      "both_acc": [
+        0.0020161290322580645
+      ],
+      "lengths": [
+        514.6915322580645
+      ],
+      "ans_frac": [
+        0.23026164168154697
+      ],
+      "for_frac": [
+        0.0001450584640695693
+      ],
+      "both_frac": [
+        0.00011200716845878136
+      ],
+      "examples": [
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nConvert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "1. **Expression for $r$**:\n   Using the formula for $r$ (distance from the origin to a point on a coordinate plane), where $(x,y)$ is a point on the plane,\n   \\[\n   r = \\sqrt{x^2 + y^2}\n   \\]\n   Here, the point $(x,y)$ is $(0,3)$. So substitute with\n   \\[\n   r = \\sqrt{0^2 + 3^2} = \\sqrt{9} = 3\n   \\]2. **Corresponding Angle $\\theta$**:\n   For the angle $\\theta$, use the formula\n   \\[\n   \\theta = \\tan^{-1}\\left(\\frac{y}{x}\\right)\n   \\]\n   Substitute $x = 0$ and $y = 3$,\n   \\[\n   \\theta = \\tan^{-1}\\left(\\frac{3}{0}\\right)\n   \\]\n   Since the point $(0,3)$ is on the positive $y$-axis, $\\theta$ corresponds to $\\frac{\\pi}{2}$. Thus,\n   \\[\n   \\theta = \\frac{\\pi}{2}\n   \\]3. **Combining steps**.Now, combining steps, we find that the polar coordinates for the point $(0,3)$ are:\n- $r = 3$\n- $\\theta = \\frac{\\pi}{2}$.Therefore, the ratio of $r$ to $\\theta$ is:\n\\[\n\\frac{r}{\\theta} = \\frac{3}{\\frac{\\pi}{2}}\n\\]4. **Final Answer**:\n- $r = 3$\n- $\\theta = \\frac{\\pi}{2}$Therefore, the final polar coordinates are $(3, \\frac{\\pi}{2})$.$\\boxed{\\left(3, \\frac{\\pi}{2}\\right)}$",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nDefine\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "p - q",
+          "completion": "1. Let's start by defining $c = p$. Thus, we have $\\sum_{j = 1}^\\infty\\sum_{k=1}^\\infty\\frac{1}{(j + k)^3} = \\sum_{j = 1}^\\infty\\sum_{k=1}^\\infty\\frac{1}{(j+k)^3}$. 2. Perform the inner circle ($k$) integration first. Note that when $j + k = c$, $k$ can be written as $c - j$. Now, the inner circle becomes the double sum: $\\sum_{j=1}^{c-1}\\sum_{k=1}^{c-j}\\frac{1}{(j+c-k)^3} = \\sum_{j=1}^{c-1}\\frac{j+c}{(c-j)^3}$.3. In the next outer circle, let us integrate out $j$, so we just have the sum $\\sum_{1\\leq k \\leq c}\\frac{1}{k^3}$.4. Perform this sum now, using the formula for the sum of a series of reciprocals: \n$\\sum_{1\\leq k \\leq c}\\frac{1}{k^3} = \\sum_{m=1}^c\\frac{1}{m^3}$.5. Substitute $m = c-j$ into the sum:\n$\\sum_{1\\leq k \\leq c}\\frac{1}{k^3} = \\sum_{m=1}^c\\frac{1}{(c-m)^3} = \\sum_{n=1}^c\\frac{1}{n^3}$.6. Now, we need to relate the inner sum to $p$. As mentioned in step 1, $p = \\sum_{k=1}^\\infty \\frac{1}{k^2}$. We can use this to find the pattern between the sums.\nThe pattern suggests that the sum of reciprocals of cubes for numbers up to $c$ is the same as the sum of reciprocals of squares, due to the symmetry in the terms of the series.7. Regarding the inner sum, we have:\n$p = \\sum_{j=1}^c \\frac{j}{j^2} = \\sum_{j=1}^c \\frac{1}{j} - \\sum_{j=1}^c \\frac{1}{j^2}$.8. Therefore, our final answer is:\n$\\sum_{i=1}^c \\frac{1}{i^3} = \\sum_{i=1}^c \\frac{i}{i^2} = \\sum_{i=1}^c \\frac{1}{i} - \\sum_{i=1}^c \\frac{1}{i^2}$.9. The finite sum $q$ is defined as $\\sum_{k=1}^\\infty \\frac{1}{k^3}$. Thus, we can conclude:\\[\n\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty\\frac{1}{(j+k)^3} = p - q\n\\]Therefore, the final answer is: $\\boxed{p - q}$.",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nIf $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\frac{14}{3}",
+          "completion": "Case 1: Simplify $f(x)$$$f(x) = \\frac{3x-2}{x-2} = \\frac{3(x-2)+4}{x-2} = \\frac{3(x-2)}{x-2}+\\frac{4}{x-2} = 3 + \\frac{4}{x-2}$$This wasn't enough information to determine the value of $f(-2)$.Case 2: Evaluate $f(-2)$$$f(-2) = 3 + \\frac{4}{-2-2} = 3 - 4 = -1$$Case 3: Evaluate $f(-1)$$$f(-1) = 3 + \\frac{4}{-1-2} = 3 + \\frac{4}{-3} = \\frac{4}{-3} = -\\frac{4}{3}$$Case 4: Evaluate $f(0)$$$f(0) = 3 + \\frac{4}{0-2} = 3 + \\frac{-2}{2} = 2$$Case 5: Add up the values of the function$$f(-2) + f(-1) + f(0) = -1 +(-\\frac{4}{3}) + 2 = \\frac{5}{3}$$Therefore, the final answer is $\\boxed{\\frac{5}{3}}$.",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nHow many positive whole-number divisors does 196 have?<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "9",
+          "completion": "## Step 1: Prime factorization of 196\nTo find the number of divisors, we'll first need to find the prime factorization of 196.196 can be factored into prime numbers as: $196 = 2^2 \\times 7^2$.## Step 2: Apply the divisor formula\nGiven that 196 is a product of two prime factors, we can find the total number of divisors by adding 1 to each exponent in the prime factorization and then multiplying the results.Since each prime factor appears twice (2^2 and 7^2), we add 1 to each exponent (2 and 2) and multiply: $(2+1) \\times (2+1) = 3 \\times 3 = 9$.The prime factorization directly answers the question without the need for further calculation as we only have one set of prime factors (2^2 * 7^2).## Step 3: Conclusion\nTherefore, the number of positive whole-number divisors of 196 is 9.Therefore, the final answer is: $\\boxed{9}$.",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nThe results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\text{Evelyn}",
+          "completion": "To determine which student has the greatest average speed, we need to calculate the average speed for each student based on the information provided.### Step 1: Calculate Average Speed\nAverage speed is given by the formula:\n\\[ \\text{Average Speed} = \\frac{\\text{Total Distance}}{\\text{Total Time}} \\]For each student, we need to find the total distance and the total time.#### Evelyn's Calculation:\n- Total Distance: 4.5 units (where Wendy completed 4.5 laps)\n- Total Time: 2.8 seconds (since the total distance is 6 units and we have 5 points in total, the time for each point is 2.8 seconds)\\[ \\text{Average Speed}_{\\text{Evelyn}} = \\frac{4.5}{2.8} \\approx 1.607 \\text{ units/s} \\]#### Briana's Calculation:\n- Total Distance: 2.2 units\n- Total Time: 4.2 seconds (since the total distance is 6 units and we have 3 points in total, the time for each point is 4.2 seconds)\\[ \\text{Average Speed}_{\\text{Briana}} = \\frac{2.2}{4.2} \\approx 0.524 \\text{ units/s} \\]#### Carla's Calculation:\n- Total Distance: 5.2 units\n- Total Time: 6 seconds (since the total distance is 6 units and we have 2 points in total, the time for each point is 6 seconds)\\[ \\text{Average Speed}_{\\text{Carla}} = \\frac{5.2}{6} \\approx 0.867 \\text{ units/s} \\]#### Debra's Calculation:\n- Total Distance: 2.8 units\n- Total Time: 5.6 seconds (since the total distance is 6 units and we have 2 points in total, the time for each point is 5.6 seconds)\\[ \\text{Average Speed}_{\\text{Debra}} = \\frac{2.8}{5.6} = 0.5 \\text{ units/s} \\]### Step 2: Compare Average Speeds\nFrom the calculations:\n- Evelyn: \\(\\approx 1.607\\) units/s\n- Briana: \\(\\approx 0.524\\) units/s\n- Carla: \\(\\approx 0.867\\) units/s\n- Debra: \\(0.5\\) units/sThe student with the greatest average speed is **Evelyn** at approximately **1.607 units/s**.Therefore:\n\\[\n\\boxed{Evelyn}\n\\]",
+          "correct": true,
+          "format_correct": false
+        }
+      ],
+      "pass_at_k": {
+        "0.1": [
+          0.35592700595688526
+        ],
+        "0.2": [
+          0.44024660395558973
+        ],
+        "0.3": [
+          0.4860813785920138
+        ],
+        "0.4": [
+          0.5152491053404218
+        ],
+        "0.5": [
+          0.5380087929622007
+        ],
+        "0.6": [
+          0.5558812506494039
+        ],
+        "0.7": [
+          0.5699402358211044
+        ],
+        "0.8": [
+          0.5820057669528172
+        ],
+        "0.9": [
+          0.5921339348770276
+        ],
+        "1.0": [
+          0.6008064516129032
+        ]
+      }
+    }
+  }
+}
