@@ -1,16 +1,8 @@
-# Not All Rollouts are Useful: Down-Sampling Rollouts in LLM Reinforcement Learning
-
-## Table of Contents
-
-- [General Information](#general-information)
-- [Reproducing the Experiments](#reproducing-the-experiments)
-- [License](#license)
-- [Citation](#citation)
-- [Contact](#contact)
+# Inter-Scaling
 
 ## General Information
 
-This repository contains the source code for the experiments in paper ["Not All Rollouts are Useful: Down-Sampling Rollouts in LLM Reinforcement Learning"](https://arxiv.org/abs/2504.13818) by Yixuan Even Xu*, Yash Savani*, Fei Fang, Zico Kolter. We implemented GRPO-PODS (Policy Optimization with Down-Sampling) and compared its performance with vanilla GRPO. Our implementation is based on [Unsloth](https://github.com/unslothai/unsloth) and [OpenR1](https://github.com/huggingface/open-r1).
+Our implementation is based on [Unsloth](https://github.com/unslothai/unsloth).
 
 ## Reproducing the Experiments
 
@@ -32,41 +24,3 @@ This repository contains the source code for the experiments in paper ["Not All 
   ``` bash
   uv run python3 evaluate-run.py
   ```
-
-- To run the multi-GPU experiments, `cd` into the `open-r1` directory, follow the install instructions in the `README.md` file within the directory, and then run the following script.
-
-  ``` bash
-  bash exp.sh
-  ```
-
-  The data can be collected and downloaded from the corresponding wandb runs and plotted using the plotting scripts.
-
-- To generate the plots in the paper, enter
-
-  ``` bash
-  uv run python3 scripts/plot.py
-  uv run python3 scripts/plot-h100s.py
-  ```
-  
-## License
-
-This repository's source code is available under the [Apache-2.0 License](LICENSE).
-
-## Citation
-
-If you use this code in your research, please cite our paper:
-
-```bibtex
-@article{xu2025not,
-  title={Not All Rollouts are Useful: Down-Sampling Rollouts in LLM Reinforcement Learning},
-  author={Xu, Yixuan Even and Savani, Yash and Fang, Fei and Kolter, Zico},
-  journal={arXiv preprint arXiv:2504.13818},
-  year={2025}
-}
-```
-
-## Contact
-
-For any questions or issues, please contact us via email:
-- Yixuan Even Xu: yixuanx@cs.cmu.edu
-- Yash Savani: ysavani@cs.cmu.edu

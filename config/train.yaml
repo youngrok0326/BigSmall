@@ -1,7 +1,7 @@
 model:
   model_name: Qwen/Qwen2.5-3B-instruct #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
-  gpu_memory_utilization: 0.85
-  max_seq_length: 1536
+  gpu_memory_utilization: 0.75
+  max_seq_length: 1024
   lora_rank: 64
   load_in_4bit: true
   fast_inference: true # use_vllm
@@ -17,17 +17,17 @@ model:
 wandb:
   enable: true
   project_name: "SMCGRPO_MAIN"
-  run_name: Original #"Instruct-GSM8K-16-16-Run1"
+  run_name: Original_3B_512 #"Instruct-GSM8K-16-16-Run1"
 rl:
   algorithm: "GRPO" # GRPO, SMCGRPO
   dataset: "math"
   max_prompt_length: 512
-  max_completion_length: 1024 #TODO: debugging temporarily
+  max_completion_length: 512 #TODO: debugging temporarily
   num_generations: 16
-  max_steps: 1000
-  save_strategy: "time"
-  save_steps: 100
-  save_interval: 1800
+  max_steps: 8000
+  save_strategy: "steps"
+  save_steps: 500
+  save_interval: 500 # 1800
   max_time: .inf
   beta: 0.0
   epsilon: 0.2
@@ -46,7 +46,7 @@ optim:
   warmup_ratio: 0.01
   temperature: 0.9
   max_grad_norm: 0.1
-  per_device_train_batch_size: 512 # We now expect `per_device_train_batch_size` to be a multiple of `num_generations`
+  per_device_train_batch_size: 16 # We now expect `per_device_train_batch_size` to be a multiple of `num_generations`
   gradient_accumulation_steps: 1
   logging_steps: 1
 smc:
@@ -56,19 +56,19 @@ smc:
   max_steps: 1000
   # tokens_per_step: 16  # leave commented to use step_token mode
   smc_confidence_eta: 1.0 #TODO: temperature로 교체
-  smc_confidence_window_size: 1024
-  smc_topk: 20
+  smc_confidence_window_size: 512
+  smc_topk: 1
   return_eos: false
   return_all: false
   drop_reward_coef: 0.1
   confidence:
     scoring: "prob" #logprob, prob, cdf
     cdf_alpha: 0.25
-    group: "mean" #geo
+    group: "geo" #geo
     aggregation: "last" # prod, min, mean, last
 prm: 
   use_prm: false
   model_name: Qwen/Qwen2.5-Math-PRM-7B # Skywork-o1-Open-PRM-Qwen-2.5-1.5B
   aggregation: "model" # last, min, prod, model
   gpu_memory_utilization: 1.0
-  cuda: 5
+  cuda: 1
