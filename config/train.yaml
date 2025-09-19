@@ -1,6 +1,6 @@
 model:
-  model_name: Qwen/Qwen2.5-1.5B-instruct #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
-  gpu_memory_utilization: 0.9
+  model_name: Qwen/Qwen2.5-3B-instruct #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
+  gpu_memory_utilization: 0.85
   max_seq_length: 1536
   lora_rank: 64
   load_in_4bit: true
@@ -16,15 +16,15 @@ model:
   random_state: 42
 wandb:
   enable: true
-  project_name: "SMCGRPO"
-  run_name: debug #"Instruct-GSM8K-16-16-Run1"
+  project_name: "SMCGRPO_MAIN"
+  run_name: Original #"Instruct-GSM8K-16-16-Run1"
 rl:
-  algorithm: "SMCGRPO"
+  algorithm: "GRPO" # GRPO, SMCGRPO
   dataset: "math"
   max_prompt_length: 512
-  max_completion_length: 50 #TODO: debugging temporarily
-  num_generations: 4
-  max_steps: 2
+  max_completion_length: 1024 #TODO: debugging temporarily
+  num_generations: 16
+  max_steps: 1000
   save_strategy: "time"
   save_steps: 100
   save_interval: 1800
@@ -39,7 +39,7 @@ rl:
 optim:
   learning_rate: 5e-6
   lr_scheduler_type: "constant"
-  optim: "adamw_8bit" #TODO: muon optimizer
+  optim: "adamw_8bit"
   adam_beta1: 0.9
   adam_beta2: 0.99
   weight_decay: 0.1
@@ -50,10 +50,10 @@ optim:
   gradient_accumulation_steps: 1
   logging_steps: 1
 smc:
-  use_smc: true
+  use_smc: false
   step_token: "\n\n"
   stop_token: "\\boxed"
-  max_steps: 32
+  max_steps: 1000
   # tokens_per_step: 16  # leave commented to use step_token mode
   smc_confidence_eta: 1.0 #TODO: temperature로 교체
   smc_confidence_window_size: 1024
