@@ -1,6 +1,6 @@
 model:
-  model_name: Qwen/Qwen2.5-3B-instruct #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
-  gpu_memory_utilization: 0.75
+  model_name: Qwen/Qwen2.5-1.5B-instruct #"Qwen/Qwen2.5-Math-1.5B-Instruct" #"Qwen/Qwen2.5-3B-Instruct"
+  gpu_memory_utilization: 0.5
   max_seq_length: 1024
   lora_rank: 64
   load_in_4bit: true
@@ -19,7 +19,7 @@ wandb:
   project_name: "SMCGRPO_MAIN"
   run_name: Original_3B_512 #"Instruct-GSM8K-16-16-Run1"
 rl:
-  algorithm: "GRPO" # GRPO, SMCGRPO
+  algorithm: "SMCGRPO" # GRPO, SMCGRPO
   dataset: "math"
   max_prompt_length: 512
   max_completion_length: 512 #TODO: debugging temporarily
@@ -50,16 +50,16 @@ optim:
   gradient_accumulation_steps: 1
   logging_steps: 1
 smc:
-  use_smc: false
+  use_smc: true
   step_token: "\n\n"
   stop_token: "\\boxed"
   max_steps: 1000
   # tokens_per_step: 16  # leave commented to use step_token mode
   smc_confidence_eta: 1.0 #TODO: temperature로 교체
-  smc_confidence_window_size: 512
+  smc_confidence_window_size: 32
   smc_topk: 1
   return_eos: false
-  return_all: false
+  return_all: true
   drop_reward_coef: 0.1
   confidence:
     scoring: "prob" #logprob, prob, cdf

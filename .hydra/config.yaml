@@ -1,7 +1,7 @@
 model:
-  model_name: Qwen/Qwen2.5-0.5B-instruct
+  model_name: Qwen/Qwen2.5-1.5B-instruct
   gpu_memory_utilization: 0.5
-  max_seq_length: 1536
+  max_seq_length: 1024
   lora_rank: 64
   load_in_4bit: true
   fast_inference: true
@@ -16,18 +16,18 @@ model:
   random_state: 42
 wandb:
   enable: false
-  project_name: SMCGRPO
-  run_name: debug
+  project_name: SMCGRPO_MAIN
+  run_name: Original_3B_512
 rl:
   algorithm: SMCGRPO
   dataset: math
   max_prompt_length: 512
-  max_completion_length: 1024
-  num_generations: 8
-  max_steps: 2
-  save_strategy: time
-  save_steps: 100
-  save_interval: 1800
+  max_completion_length: 512
+  num_generations: 16
+  max_steps: 8000
+  save_strategy: steps
+  save_steps: 500
+  save_interval: 500
   max_time: .inf
   beta: 0.0
   epsilon: 0.2
@@ -46,7 +46,7 @@ optim:
   warmup_ratio: 0.01
   temperature: 0.9
   max_grad_norm: 0.1
-  per_device_train_batch_size: 128
+  per_device_train_batch_size: 16
   gradient_accumulation_steps: 1
   logging_steps: 1
 smc:
@@ -56,19 +56,21 @@ smc:
 
     '
   stop_token: \boxed
-  max_steps: 32
-  smc_beta: 1.0
+  max_steps: 1000
   smc_confidence_eta: 1.0
-  smc_confidence_window_size: 1024
-  smc_topk: 20
-  return_all: false
+  smc_confidence_window_size: 32
+  smc_topk: 1
+  return_eos: false
+  return_all: true
+  drop_reward_coef: 0.5
   confidence:
-    scoring: entropy
-    group: mean
-    aggregation: current
+    scoring: prob
+    cdf_alpha: 0.25
+    group: geo
+    aggregation: last
 prm:
-  use_prm: true
+  use_prm: false
   model_name: Qwen/Qwen2.5-Math-PRM-7B
   aggregation: model
-  gpu_memory_utilization: 0.8
-  cuda: 5
+  gpu_memory_utilization: 1.0
+  cuda: 1
