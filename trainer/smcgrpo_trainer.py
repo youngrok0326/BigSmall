@@ -1963,7 +1963,7 @@ class GRPOTrainer(Trainer):
                 [rewards_per_func, drop_bonus.unsqueeze(1)],
                 dim=1,
             )
-        breakpoint()
+        
         reward_weights = self.reward_weights.to(device).unsqueeze(0)
         weighted_rewards = (rewards_per_func * reward_weights).nansum(dim=1)
 
