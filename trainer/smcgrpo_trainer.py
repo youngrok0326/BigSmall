@@ -211,6 +211,7 @@ def _smc_drop_bonus(
     kinds: Sequence[_SMCTrajectoryKind],
     drop_steps: Sequence[int],
     total_steps: Sequence[int],
+    scheme: str,
     device: torch.device,
 ) -> torch.Tensor:
     reward = torch.zeros(len(kinds), dtype=torch.float32, device=device)
@@ -222,7 +223,13 @@ def _smc_drop_bonus(
     drop_tensor = torch.tensor(drop_steps, dtype=torch.float32, device=device)
     total_tensor = torch.tensor(total_steps, dtype=torch.float32, device=device)
     denom = torch.where(total_tensor <= 0, torch.ones_like(total_tensor), total_tensor)
-    reward[drop_mask] = torch.clamp(drop_tensor[drop_mask] + 1.0, min=0.0) / denom[drop_mask]
+    progress = torch.clamp(drop_tensor[drop_mask] + 1.0, min=0.0) / denom[drop_mask]
+    scheme = scheme.lower()
+    if scheme == "penalty":
+        reward[drop_mask] = -(1.0 - progress)
+    else:
+        # Default to proportional progress
+        reward[drop_mask] = progress
     return reward
 
 class RepeatSampler(Sampler):
@@ -769,7 +776,7 @@ class GRPOTrainer(Trainer):
         self.max_completion_length = args.max_completion_length  # = |o_i| in the GRPO paper
         self.num_generations = args.num_generations  # = G in the GRPO paper
         self._smc_drop_coef = 0.1
-        self._smc_drop_reward_name = "drop_bonus"
+        self._smc_drop_reward_scheme = "progress"
         self._enable_drop_bonus = False
         self.temperature = args.temperature
         self.top_p = args.top_p
@@ -998,6 +1005,10 @@ class GRPOTrainer(Trainer):
             if getattr(self.args, "generation_kwargs", None):
                 _smc_cfg = (self.args.generation_kwargs or {}).get("smc", {})
             return_all_cfg = bool(_smc_cfg.get("return_all", False))
+            drop_scheme = str(_smc_cfg.get("drop_reward_scheme", self._smc_drop_reward_scheme)).lower()
+            if drop_scheme not in {"progress", "penalty"}:
+                drop_scheme = "progress"
+            self._smc_drop_reward_scheme = drop_scheme
             self._smc_drop_coef = float(_smc_cfg.get("drop_reward_coef", self._smc_drop_coef))
             self._set_drop_bonus_enabled(return_all_cfg)
 
@@ -1417,28 +1428,33 @@ class GRPOTrainer(Trainer):
         elif self.vllm_mode == "colocate":
             self.llm.reset_prefix_cache()
 
-    def _set_drop_bonus_enabled(self, enable: bool) -> None:
-        """Synchronize the drop-bonus reward head with the generator configuration."""
-        enable = bool(enable)
-        weights_list = self.reward_weights.tolist()
-        if enable:
-            if self._smc_drop_reward_name in self.reward_func_names:
-                idx = self.reward_func_names.index(self._smc_drop_reward_name)
-                weights_list[idx] = float(self._smc_drop_coef)
-            else:
-                self.reward_func_names.append(self._smc_drop_reward_name)
-                weights_list.append(float(self._smc_drop_coef))
-        else:
-            if self._smc_drop_reward_name in self.reward_func_names:
-                idx = self.reward_func_names.index(self._smc_drop_reward_name)
-                self.reward_func_names.pop(idx)
-                weights_list.pop(idx)
+    def _current_drop_reward_name(self) -> str:
+        return "drop_penalty" if self._smc_drop_reward_scheme == "penalty" else "drop_progress"
 
-        self.reward_weights = torch.tensor(
-            weights_list,
-            dtype=self.reward_weights.dtype,
-            device=self.reward_weights.device,
-        )
+    def _set_drop_bonus_enabled(self, enable: bool) -> None:
+        """Synchronize the drop-reward head with the generator configuration and scheme."""
+        enable = bool(enable)
+        dtype = self.reward_weights.dtype
+        device = self.reward_weights.device
+        reward_names = list(self.reward_func_names)
+        weights_list = [float(w) for w in self.reward_weights.tolist()]
+
+        drop_names = {"drop_progress", "drop_penalty"}
+        # Remove any previously registered drop reward to avoid duplicates when scheme changes.
+        idx = 0
+        while idx < len(reward_names):
+            if reward_names[idx] in drop_names:
+                reward_names.pop(idx)
+                weights_list.pop(idx)
+                continue
+            idx += 1
+
+        if enable:
+            reward_names.append(self._current_drop_reward_name())
+            weights_list.append(float(self._smc_drop_coef))
+
+        self.reward_func_names = reward_names
+        self.reward_weights = torch.tensor(weights_list, dtype=dtype, device=device)
         self._enable_drop_bonus = enable
 
     @profiling_decorator
@@ -1562,6 +1578,10 @@ class GRPOTrainer(Trainer):
             cdf_alpha_val = smc_cfg.get("cdf_alpha", 0.25)
         cdf_alpha = float(cdf_alpha_val)
         include_stop = smc_cfg.get("include_stop_str_in_output", True)
+        drop_scheme = str(smc_cfg.get("drop_reward_scheme", self._smc_drop_reward_scheme)).lower()
+        if drop_scheme not in {"progress", "penalty"}:
+            drop_scheme = "progress"
+        self._smc_drop_reward_scheme = drop_scheme
         self._smc_drop_coef = float(smc_cfg.get("drop_reward_coef", self._smc_drop_coef))
         self._set_drop_bonus_enabled(return_all)
         report_to = getattr(self.args, "report_to", None)
@@ -1957,6 +1977,7 @@ class GRPOTrainer(Trainer):
                 [_SMCTrajectoryKind(value) for value in global_kind_values],
                 global_drop_steps,
                 global_total_steps,
+                self._smc_drop_reward_scheme,
                 device,
             )
             rewards_per_func = torch.cat(

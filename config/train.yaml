@@ -60,6 +60,7 @@ smc:
   smc_topk: 1
   return_eos: false
   return_all: true
+  drop_reward_scheme: progress # progress | penalty
   drop_reward_coef: 0.1
   confidence:
     scoring: "prob" #logprob, prob, cdf
