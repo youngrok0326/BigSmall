@@ -1647,6 +1647,7 @@ class GRPOTrainer(Trainer):
         conf_aggregation = str(confidence_cfg.get("aggregation", "last"))
         return_all = bool(smc_cfg.get("return_all", False))
         return_eos = bool(smc_cfg.get("return_eos", False))
+        random_sampling = bool(smc_cfg.get("random_sampling", False))
         smc_topk = int(smc_cfg.get("smc_topk", -1))
         conf_window = int(smc_cfg.get("smc_confidence_window_size", 512))
         conf_eta = float(smc_cfg.get("smc_confidence_eta", 1.0))
@@ -1698,6 +1699,7 @@ class GRPOTrainer(Trainer):
             conf_aggregation,
             return_all,
             return_eos,
+            random_sampling,
             smc_topk,
             conf_window,
             conf_eta,
@@ -1748,6 +1750,7 @@ class GRPOTrainer(Trainer):
                 return_eos=return_eos,
                 wandb_logging=log_wandb,
                 prm=prm_model,
+                random_sampling=random_sampling,
             )
             self._smc_vllm_signature = signature
 

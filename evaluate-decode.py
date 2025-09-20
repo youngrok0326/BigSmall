@@ -550,6 +550,7 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
         top_k = top_k if top_k > 0 else -1
         min_p = float(custom_decode_cfg.get("min_p", 0.0))
         repetition_penalty = float(custom_decode_cfg.get("repetition_penalty", 1.0))
+        random_sampling = bool(custom_decode_cfg.get("random_sampling", False))
         max_new_tokens = int(cfg.eval.max_new_tokens)
 
         pad_token_id = tokenizer.pad_token_id
@@ -593,6 +594,7 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
             return_eos=return_eos,
             wandb_logging=logging_enabled,
             prm=prm_model,
+            random_sampling=random_sampling,
         )
 
         with tqdm(total=total_queries, desc=progress_desc or "custom", unit="prompt", dynamic_ncols=True) as pbar:

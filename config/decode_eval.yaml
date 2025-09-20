@@ -51,6 +51,7 @@ custom_decode:
   return_eos: true
   return_all: false
   return_all_limit_per_group: null
+  random_sampling: false # for baseline
   confidence:
     scoring: "prob" #"entropy" #logprob, prob, cdf
     cdf_alpha: 0.25

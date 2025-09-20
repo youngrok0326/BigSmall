@@ -322,6 +322,7 @@ class SMCVLLM:
         return_eos: bool = False,
         wandb_logging: bool = False,
         prm: Optional[Any] = None,
+        random_sampling: bool = False,
     ) -> None:
         self.llm = llm
         self.tok = tokenizer
@@ -344,6 +345,7 @@ class SMCVLLM:
         self._call_index = 0
         self.prm = prm
         self._use_prm = prm is not None
+        self.random_sampling = bool(random_sampling)
 
         scoring = str(scoring).lower()
         confidence_group = str(confidence_group).lower()
@@ -928,8 +930,30 @@ class SMCVLLM:
                 weight_stds[g] = float(ws_alive.std(unbiased=False).item())
             else:
                 weight_stds[g] = 0.0
+            if self.random_sampling:
+                dead = [j for j in range(self.N) if particles[start + j].is_stopped]
+
+                if not dead:
+                    not_selected_counts[g] = 0
+                    continue
+                sampled = torch.randint(
+                    len(alive),
+                    (len(dead),),
+                    device=ws_alive.device,
+                )
+                sampled_indices = sampled.cpu().tolist()
+                parents = [alive[idx] for idx in sampled_indices]
+                not_selected_counts[g] = 0
+
+                for dest_offset, parent in zip(dead, parents):
+                    particles[start + dest_offset] = self._clone_particle(
+                        particles[start + parent]
+                    )
+                continue
+
             sampled = torch.multinomial(ws_alive, num_samples=self.N, replacement=True)
-            parents = [alive[idx] for idx in sampled.tolist()]
+            sampled_indices = sampled.cpu().tolist()
+            parents = [alive[idx] for idx in sampled_indices]
 
             selected_counts = {idx_parent: 0 for idx_parent in alive}
 
