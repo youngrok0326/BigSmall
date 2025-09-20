@@ -26,8 +26,8 @@ rl:
   num_generations: 16
   max_steps: 8000
   save_strategy: steps
-  save_steps: 500
-  save_interval: 500
+  save_steps: 100
+  save_interval: 100
   max_time: .inf
   beta: 0.0
   epsilon: 0.2
@@ -46,7 +46,7 @@ optim:
   warmup_ratio: 0.01
   temperature: 0.9
   max_grad_norm: 0.1
-  per_device_train_batch_size: 16
+  per_device_train_batch_size: 1
   gradient_accumulation_steps: 1
   logging_steps: 1
 smc:
@@ -60,9 +60,11 @@ smc:
   smc_confidence_eta: 1.0
   smc_confidence_window_size: 32
   smc_topk: 1
-  return_eos: false
+  return_eos: true
   return_all: true
-  drop_reward_coef: 0.5
+  drop_reward_scheme: progress
+  drop_reward_coef: 0.1
+  return_all_limit_per_group: 128
   confidence:
     scoring: prob
     cdf_alpha: 0.25

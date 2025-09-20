@@ -14,6 +14,7 @@
 
 import copy
 import inspect
+import math
 import os
 import re
 import textwrap
@@ -132,11 +133,15 @@ def _smc_build_uniform_meta(num_samples: int, num_generations: int, fallback_ste
     return _SMCBatchMeta(group_counts, group_indices, drop_steps, total_steps, kinds)
 
 
-def _smc_flatten_bundle(payload: dict[str, Any], fallback_steps: int) -> tuple[list[list[int]], _SMCBatchMeta]:
+def _smc_flatten_bundle(
+    payload: dict[str, Any],
+    fallback_steps: int,
+    limit_per_group: Optional[int] = None,
+) -> tuple[list[list[int]], _SMCBatchMeta]:
     completions_by_group: list[list[list[int]]] = payload.get("completions", [])  # type: ignore[assignment]
     saved: list[list[tuple[int, list[int]]]] = payload.get("saved", [])  # type: ignore[assignment]
     reasoning_steps: list[int] = payload.get("group_reasoning_steps", [])  # type: ignore[assignment]
-
+    breakpoint()
     flattened: list[list[int]] = []
     group_counts: list[int] = []
     group_indices: list[int] = []
@@ -144,8 +149,74 @@ def _smc_flatten_bundle(payload: dict[str, Any], fallback_steps: int) -> tuple[l
     total_steps: list[int] = []
     kinds: list[_SMCTrajectoryKind] = []
 
+    if limit_per_group is not None and limit_per_group < 0:
+        limit_per_group = 0
+
+    def _sample_extras(
+        extras: list[tuple[int, list[int]]],
+        limit: Optional[int],
+    ) -> list[tuple[int, list[int]]]:
+        if not extras or limit is None or limit >= len(extras):
+            return extras
+        if limit <= 0:
+            return []
+
+        by_step: dict[int, list[int]] = {}
+        for idx, (step_idx, _seq) in enumerate(extras):
+            step_val = int(step_idx)
+            by_step.setdefault(step_val, []).append(idx)
+
+        total = sum(len(indices) for indices in by_step.values())
+        if total <= limit:
+            return extras
+
+        allocations: dict[int, int] = {}
+        fractional: list[tuple[float, int]] = []
+        for step_val, indices in by_step.items():
+            raw = len(indices) * limit / total
+            assign = min(len(indices), int(math.floor(raw)))
+            allocations[step_val] = assign
+            fractional.append((raw - assign, step_val))
+
+        assigned = sum(allocations.values())
+        remaining = limit - assigned
+        if remaining > 0:
+            fractional.sort(key=lambda item: (-item[0], item[1]))
+            for _frac, step_val in fractional:
+                if remaining == 0:
+                    break
+                capacity = len(by_step[step_val]) - allocations[step_val]
+                if capacity <= 0:
+                    continue
+                take = min(capacity, remaining)
+                allocations[step_val] += take
+                remaining -= take
+        if remaining > 0:
+            for step_val in sorted(by_step.keys()):
+                if remaining == 0:
+                    break
+                capacity = len(by_step[step_val]) - allocations[step_val]
+                if capacity <= 0:
+                    continue
+                take = min(capacity, remaining)
+                allocations[step_val] += take
+                remaining -= take
+
+        selected_indices: list[int] = []
+        for step_val, indices in by_step.items():
+            take = allocations.get(step_val, 0)
+            if take <= 0:
+                continue
+            perm = torch.randperm(len(indices))
+            chosen = perm[:take].tolist()
+            selected_indices.extend(indices[idx] for idx in chosen)
+
+        selected_indices.sort()
+        return [extras[idx] for idx in selected_indices]
+
     for group_idx, primary in enumerate(completions_by_group):
         extras = saved[group_idx] if group_idx < len(saved) else []
+        extras = _sample_extras(extras, limit_per_group)
         step_cap = int(reasoning_steps[group_idx]) if group_idx < len(reasoning_steps) else fallback_steps
 
         for seq in primary:
@@ -777,6 +848,7 @@ class GRPOTrainer(Trainer):
         self.num_generations = args.num_generations  # = G in the GRPO paper
         self._smc_drop_coef = 0.1
         self._smc_drop_reward_scheme = "progress"
+        self._smc_return_all_limit: Optional[int] = None
         self._enable_drop_bonus = False
         self.temperature = args.temperature
         self.top_p = args.top_p
@@ -1009,6 +1081,11 @@ class GRPOTrainer(Trainer):
             if drop_scheme not in {"progress", "penalty"}:
                 drop_scheme = "progress"
             self._smc_drop_reward_scheme = drop_scheme
+            limit_cfg = _smc_cfg.get("return_all_limit_per_group", self._smc_return_all_limit)
+            if limit_cfg is None:
+                self._smc_return_all_limit = None
+            else:
+                self._smc_return_all_limit = max(int(limit_cfg), 0)
             self._smc_drop_coef = float(_smc_cfg.get("drop_reward_coef", self._smc_drop_coef))
             self._set_drop_bonus_enabled(return_all_cfg)
 
@@ -1582,6 +1659,11 @@ class GRPOTrainer(Trainer):
         if drop_scheme not in {"progress", "penalty"}:
             drop_scheme = "progress"
         self._smc_drop_reward_scheme = drop_scheme
+        limit_cfg = smc_cfg.get("return_all_limit_per_group", self._smc_return_all_limit)
+        if limit_cfg is None:
+            self._smc_return_all_limit = None
+        else:
+            self._smc_return_all_limit = max(int(limit_cfg), 0)
         self._smc_drop_coef = float(smc_cfg.get("drop_reward_coef", self._smc_drop_coef))
         self._set_drop_bonus_enabled(return_all)
         report_to = getattr(self.args, "report_to", None)
@@ -1719,7 +1801,11 @@ class GRPOTrainer(Trainer):
             payload = smc_runner.generate(prompts_text, original_prompts)
 
             if _smc_is_bundle(payload):
-                completion_ids_list, smc_meta = _smc_flatten_bundle(payload, int(self.max_completion_length))
+                completion_ids_list, smc_meta = _smc_flatten_bundle(
+                    payload,
+                    int(self.max_completion_length),
+                    self._smc_return_all_limit,
+                )
                 inputs, prompts, original_prompts, prompts_text, images = _smc_expand_batch(
                     inputs,
                     prompts,
@@ -1969,7 +2055,7 @@ class GRPOTrainer(Trainer):
         global_kind_values = [kind for chunk in kinds_across for kind in chunk]
         global_drop_steps = [step for chunk in drop_steps_across for step in chunk]
         global_total_steps = [step for chunk in total_steps_across for step in chunk]
-
+        breakpoint()
         if rewards_per_func.size(0) != len(global_group_indices):
             raise ValueError("SMC metadata misalignment with reward tensor")
         if self._enable_drop_bonus:

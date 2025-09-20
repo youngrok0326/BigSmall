@@ -741,7 +741,7 @@ class SMCVLLM:
             if saved_groups is not None
             else [[] for _ in range(G)]
         )
-
+        breakpoint()
         return {
             "group_sizes": group_sizes,
             "completions": completions_by_group,
