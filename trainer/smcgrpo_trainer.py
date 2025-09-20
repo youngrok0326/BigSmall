@@ -141,7 +141,7 @@ def _smc_flatten_bundle(
     completions_by_group: list[list[list[int]]] = payload.get("completions", [])  # type: ignore[assignment]
     saved: list[list[tuple[int, list[int]]]] = payload.get("saved", [])  # type: ignore[assignment]
     reasoning_steps: list[int] = payload.get("group_reasoning_steps", [])  # type: ignore[assignment]
-    breakpoint()
+    
     flattened: list[list[int]] = []
     group_counts: list[int] = []
     group_indices: list[int] = []
@@ -2055,7 +2055,7 @@ class GRPOTrainer(Trainer):
         global_kind_values = [kind for chunk in kinds_across for kind in chunk]
         global_drop_steps = [step for chunk in drop_steps_across for step in chunk]
         global_total_steps = [step for chunk in total_steps_across for step in chunk]
-        breakpoint()
+        
         if rewards_per_func.size(0) != len(global_group_indices):
             raise ValueError("SMC metadata misalignment with reward tensor")
         if self._enable_drop_bonus:
