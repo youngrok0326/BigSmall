@@ -36,6 +36,29 @@
       },
       "justMyCode": false,
       "subProcess": true
+    },
+    {
+      "name": "UV: Train Original_BASE_0.5B_512_N8_D8",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/train.py",
+      "console": "integratedTerminal",
+      "args": [
+        "model.gpu_memory_utilization=0.8",
+        "wandb.project_name=SMCGRPO_MAIN_BASE",
+        "wandb.run_name=Original_BASE_0.5B_512_N8_D8",
+        "model.model_name=Qwen/Qwen2.5-0.5B",
+        "rl.algorithm=GRPO",
+        "rl.num_generations=8",
+        "smc.use_smc=false",
+        "hydra.run.dir=.",
+        "wandb.enable=false"
+      ],
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "5"
+      },
+      "justMyCode": false,
+      "subProcess": true
     }
   ]
 }

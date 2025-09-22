@@ -112,8 +112,10 @@ def main(cfg: DictConfig) -> None:
         **rlparams,
     )
     reward_funcs = [correctness_reward_func]
-    if cfg.rl.dataset in {"gsm8k", "math"}:
-        reward_funcs.extend([format_reward_func, xmlcount_reward_func])
+    # if cfg.rl.dataset in {"gsm8k", "math"}:
+    #     reward_funcs.extend([format_reward_func, xmlcount_reward_func])
+    if cfg.rl.dataset == "gsm8k":
+        reward_funcs = reward_funcs + [format_reward_func, xmlcount_reward_func]
     trainer = Trainer(
         model = model,
         processing_class = tokenizer,

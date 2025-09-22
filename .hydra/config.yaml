@@ -1,6 +1,6 @@
 model:
-  model_name: Qwen/Qwen2.5-1.5B-instruct
-  gpu_memory_utilization: 0.5
+  model_name: Qwen/Qwen2.5-0.5B
+  gpu_memory_utilization: 0.8
   max_seq_length: 1024
   lora_rank: 64
   load_in_4bit: true
@@ -16,14 +16,15 @@ model:
   random_state: 42
 wandb:
   enable: false
-  project_name: SMCGRPO_MAIN
-  run_name: Original_3B_512
+  project_name: SMCGRPO_MAIN_BASE
+  run_name: Original_BASE_0.5B_512_N8_D8
 rl:
-  algorithm: SMCGRPO
+  algorithm: GRPO
   dataset: math
   max_prompt_length: 512
   max_completion_length: 512
-  num_generations: 16
+  num_generations: 8
+  num_generations_grad: 8
   max_steps: 8000
   save_strategy: steps
   save_steps: 100
@@ -50,7 +51,7 @@ optim:
   gradient_accumulation_steps: 1
   logging_steps: 1
 smc:
-  use_smc: true
+  use_smc: false
   step_token: '
 
 
@@ -58,10 +59,11 @@ smc:
   stop_token: \boxed
   max_steps: 1000
   smc_confidence_eta: 1.0
-  smc_confidence_window_size: 32
+  smc_confidence_window_size: 512
   smc_topk: 1
   return_eos: true
-  return_all: true
+  return_all: false
+  self_reward: true
   drop_reward_scheme: progress
   drop_reward_coef: 0.1
   return_all_limit_per_group: 128
@@ -74,5 +76,5 @@ prm:
   use_prm: false
   model_name: Qwen/Qwen2.5-Math-PRM-7B
   aggregation: model
-  gpu_memory_utilization: 1.0
-  cuda: 1
+  gpu_memory_utilization: 0.9
+  cuda: 2
