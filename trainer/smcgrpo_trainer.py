@@ -1925,6 +1925,7 @@ class GRPOTrainer(Trainer):
         prompts_text = [maybe_apply_chat_template(example, self.processing_class)["prompt"] for example in inputs]
 
         smc_meta: Optional[_SMCBatchMeta] = None
+        sequence_lengths: Optional[torch.Tensor] = None
 
         if (self.use_vllm or hasattr(self, "llm")):
             if self.state.global_step != self._last_loaded_step:
@@ -1985,9 +1986,15 @@ class GRPOTrainer(Trainer):
                         re.sub(rf"({re.escape(self.image_token)})+", self.image_token, text) for text in prompts_text
                     ]
 
+            raw_lengths = torch.tensor(
+                [len(ids) for ids in completion_ids_list],
+                device=prompt_ids.device,
+                dtype=torch.long,
+            )
             completion_ids = [torch.tensor(ids, device=prompt_ids.device) for ids in completion_ids_list]
             completion_ids = pad(completion_ids, padding_value=self.pad_token_id, padding_side="right")
             prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
+            sequence_lengths = raw_lengths
 
         else:
             # Default path: route through HF custom_generate (your existing SMC/HF path)
@@ -2058,12 +2065,11 @@ class GRPOTrainer(Trainer):
                 int(self.max_completion_length),
             )
 
-        # Mask everything after the first EOS token
-        is_eos = completion_ids == self.eos_token_id
-        eos_idx = torch.full((is_eos.size(0),), is_eos.size(1), dtype=torch.long, device=device)
-        eos_idx[is_eos.any(dim=1)] = is_eos.int().argmax(dim=1)[is_eos.any(dim=1)]
-        sequence_indices = torch.arange(is_eos.size(1), device=device).expand(is_eos.size(0), -1)
-        completion_mask = (sequence_indices <= eos_idx.unsqueeze(1)).int()
+        # Build completion mask from true sequence lengths (vLLM strips EOS tokens)
+        sequence_lengths = raw_lengths
+        max_completion_tokens = completion_ids.size(1)
+        sequence_indices = torch.arange(max_completion_tokens, device=device).unsqueeze(0)
+        completion_mask = (sequence_indices < sequence_lengths.unsqueeze(1)).int()
 
         # Convert tensor to a list of lists of token IDs. This will be passed to the reward function, avoiding the need
         # to re-tokenize completions if the reward is computed from tokens.
@@ -2072,11 +2078,14 @@ class GRPOTrainer(Trainer):
         ]
 
         # Sum along sequence dimension (dim=1) to get completion length per sequence, used for logging
-        completion_lengths = completion_mask.sum(1)
+        if sequence_lengths is None:
+            sequence_lengths = completion_mask.sum(1)
+        completion_lengths = sequence_lengths
 
         # If mask_truncated_completions is enabled, zero out truncated completions in completion_mask
+        max_length_cap = int(self.max_completion_length)
         if self.mask_truncated_completions:
-            truncated_completions = ~is_eos.any(dim=1)
+            truncated_completions = sequence_lengths >= max_length_cap
             completion_mask = completion_mask * (~truncated_completions).unsqueeze(1).int()
 
         # Concatenate prompt_mask with completion_mask for logit computation
@@ -2246,6 +2255,7 @@ class GRPOTrainer(Trainer):
         weighted_rewards = weighted_rewards[keep_mask]
         weighted_with_conf = weighted_with_conf[keep_mask]
         confidences_tensor = confidences_tensor[keep_mask]
+        sequence_lengths = sequence_lengths[keep_mask]
         global_group_indices = [idx for idx, keep in zip(global_group_indices, keep_mask_list) if keep]
         global_kind_values = [kind for kind, keep in zip(global_kind_values, keep_mask_list) if keep]
         global_drop_steps = [step for step, keep in zip(global_drop_steps, keep_mask_list) if keep]
@@ -2277,7 +2287,6 @@ class GRPOTrainer(Trainer):
         prompt_mask = prompt_mask[local_keep_mask_tensor]
         completion_ids = completion_ids[local_keep_mask_tensor]
         completion_mask = completion_mask[local_keep_mask_tensor]
-        is_eos = is_eos[local_keep_mask_tensor]
         if old_per_token_logps is not None:
             old_per_token_logps = old_per_token_logps[local_keep_mask_tensor]
         if ref_per_token_logps is not None:
@@ -2301,6 +2310,7 @@ class GRPOTrainer(Trainer):
             has_images = len(images) > 0
 
         completion_lengths = completion_mask.sum(1)
+        sequence_lengths = completion_lengths
         attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
         prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
 
@@ -2420,13 +2430,15 @@ class GRPOTrainer(Trainer):
         self._metrics[mode]["num_tokens"] = [self.state.num_input_tokens_seen]
 
         # Log completion lengths, mean, min, max
-        agg_completion_lengths = self.accelerator.gather(completion_lengths)
+        agg_completion_lengths = self.accelerator.gather(sequence_lengths)
         self._metrics[mode]["completions/mean_length"].append(agg_completion_lengths.float().mean().item())
         self._metrics[mode]["completions/min_length"].append(agg_completion_lengths.float().min().item())
         self._metrics[mode]["completions/max_length"].append(agg_completion_lengths.float().max().item())
 
         # Identify sequences that terminated with EOS and log their lengths
-        agg_terminated_with_eos = self.accelerator.gather(is_eos.any(dim=1))
+        terminated_flags = (sequence_lengths < max_length_cap).int()
+        agg_terminated_flags = self.accelerator.gather(terminated_flags)
+        agg_terminated_with_eos = agg_terminated_flags.bool()
         term_completion_lengths = agg_completion_lengths[agg_terminated_with_eos]
         clipped_completions_ratio = 1 - len(term_completion_lengths) / len(agg_completion_lengths)
         self._metrics[mode]["completions/clipped_ratio"].append(clipped_completions_ratio)
