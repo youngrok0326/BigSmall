@@ -17,7 +17,7 @@ model:
 wandb:
   enable: true
   project_name: "SMCGRPO_MAIN"
-  run_name: SMC_Self_1.5B_512_N8 #"Instruct-GSM8K-16-16-Run1"
+  run_name: SMC_Self_1.5B_512_W512_N8 #"Instruct-GSM8K-16-16-Run1"
 rl:
   algorithm: "SMCGRPO" # GRPO, SMCGRPO
   dataset: "math"
@@ -26,9 +26,9 @@ rl:
   num_generations: 8
   num_generations_grad: 8
   max_steps: 8000
-  save_strategy: "time" #"steps"
+  save_strategy: "steps" #"steps"
   save_steps: 100
-  save_interval: 1800 # 1800
+  save_interval: 100 #1800 # 1800
   max_time: .inf
   beta: 0.0
   epsilon: 0.2
@@ -57,7 +57,7 @@ smc:
   max_steps: 1000
   # tokens_per_step: 16  # leave commented to use step_token mode
   smc_confidence_eta: 1.0 #TODO: temperature로 교체
-  smc_confidence_window_size: 128
+  smc_confidence_window_size: 512
   smc_topk: 1
   return_eos: true
   return_all: false #TODO: no longer needed.
