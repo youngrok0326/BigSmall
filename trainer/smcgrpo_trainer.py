@@ -103,6 +103,7 @@ class _SMCBatchMeta:
     drop_steps: list[int]
     total_steps: list[int]
     kinds: list[_SMCTrajectoryKind]
+    confidences: list[float]
 
     @property
     def num_groups(self) -> int:
@@ -117,7 +118,12 @@ def _smc_is_bundle(payload: Any) -> bool:
     return isinstance(payload, dict) and "completions" in payload and "group_sizes" in payload
 
 
-def _smc_build_uniform_meta(num_samples: int, num_generations: int, fallback_steps: int) -> _SMCBatchMeta:
+def _smc_build_uniform_meta(
+    num_samples: int,
+    num_generations: int,
+    fallback_steps: int,
+    confidences: Optional[Sequence[float]] = None,
+) -> _SMCBatchMeta:
     if num_generations <= 0:
         raise ValueError("num_generations must be positive")
     if num_samples % num_generations != 0:
@@ -130,7 +136,18 @@ def _smc_build_uniform_meta(num_samples: int, num_generations: int, fallback_ste
     drop_steps = [-1] * len(group_indices)
     total_steps = [fallback_steps] * len(group_indices)
     kinds = [_SMCTrajectoryKind.LEGACY] * len(group_indices)
-    return _SMCBatchMeta(group_counts, group_indices, drop_steps, total_steps, kinds)
+    if confidences is None:
+        confidences = [1.0 for _ in range(num_samples)]
+    if len(confidences) != num_samples:
+        raise ValueError("confidences length must match num_samples")
+    return _SMCBatchMeta(
+        group_counts,
+        group_indices,
+        drop_steps,
+        total_steps,
+        kinds,
+        list(map(float, confidences)),
+    )
 
 
 def _smc_flatten_bundle(
@@ -139,27 +156,31 @@ def _smc_flatten_bundle(
     limit_per_group: Optional[int] = None,
 ) -> tuple[list[list[int]], _SMCBatchMeta]:
     completions_by_group: list[list[list[int]]] = payload.get("completions", [])  # type: ignore[assignment]
+    completion_confidences: list[list[float]] = payload.get("completion_confidences", [])  # type: ignore[assignment]
     saved: list[list[tuple[int, list[int]]]] = payload.get("saved", [])  # type: ignore[assignment]
+    saved_confidences: list[list[float]] = payload.get("saved_confidences", [])  # type: ignore[assignment]
     reasoning_steps: list[int] = payload.get("group_reasoning_steps", [])  # type: ignore[assignment]
-    
+
     flattened: list[list[int]] = []
     group_counts: list[int] = []
     group_indices: list[int] = []
     drop_steps: list[int] = []
     total_steps: list[int] = []
     kinds: list[_SMCTrajectoryKind] = []
+    confidences: list[float] = []
 
     if limit_per_group is not None and limit_per_group < 0:
         limit_per_group = 0
 
     def _sample_extras(
         extras: list[tuple[int, list[int]]],
+        confs: list[float],
         limit: Optional[int],
-    ) -> list[tuple[int, list[int]]]:
+    ) -> tuple[list[tuple[int, list[int]]], list[float]]:
         if not extras or limit is None or limit >= len(extras):
-            return extras
+            return extras, confs
         if limit <= 0:
-            return []
+            return [], []
 
         by_step: dict[int, list[int]] = {}
         for idx, (step_idx, _seq) in enumerate(extras):
@@ -212,30 +233,44 @@ def _smc_flatten_bundle(
             selected_indices.extend(indices[idx] for idx in chosen)
 
         selected_indices.sort()
-        return [extras[idx] for idx in selected_indices]
+        return [extras[idx] for idx in selected_indices], [confs[idx] for idx in selected_indices]
 
     for group_idx, primary in enumerate(completions_by_group):
         extras = saved[group_idx] if group_idx < len(saved) else []
-        extras = _sample_extras(extras, limit_per_group)
+        extras_conf = saved_confidences[group_idx] if group_idx < len(saved_confidences) else []
+        extras, extras_conf = _sample_extras(extras, extras_conf, limit_per_group)
+        if len(extras_conf) < len(extras):
+            extras_conf = extras_conf + [1.0] * (len(extras) - len(extras_conf))
         step_cap = int(reasoning_steps[group_idx]) if group_idx < len(reasoning_steps) else fallback_steps
+        primary_conf = []
+        if completion_confidences:
+            if group_idx < len(completion_confidences):
+                primary_conf = completion_confidences[group_idx]
+            else:
+                primary_conf = []
 
-        for seq in primary:
+        for seq_idx, seq in enumerate(primary):
             flattened.append(seq)
             group_indices.append(group_idx)
             drop_steps.append(-1)
             total_steps.append(step_cap)
             kinds.append(_SMCTrajectoryKind.LEGACY)
+            if primary_conf and seq_idx < len(primary_conf):
+                confidences.append(float(primary_conf[seq_idx]))
+            else:
+                confidences.append(1.0)
 
-        for step_idx, seq in extras:
+        for (step_idx, seq), conf in zip(extras, extras_conf):
             flattened.append(seq)
             group_indices.append(group_idx)
             drop_steps.append(int(step_idx))
             total_steps.append(max(step_cap, int(step_idx) + 1))
             kinds.append(_SMCTrajectoryKind.DROPPED)
+            confidences.append(float(conf))
 
         group_counts.append(len(primary) + len(extras))
 
-    meta = _SMCBatchMeta(group_counts, group_indices, drop_steps, total_steps, kinds)
+    meta = _SMCBatchMeta(group_counts, group_indices, drop_steps, total_steps, kinds, confidences)
     return flattened, meta
 
 
@@ -302,6 +337,82 @@ def _smc_drop_bonus(
         # Default to proportional progress
         reward[drop_mask] = progress
     return reward
+
+
+def _max_variance_subset(rewards: torch.Tensor, subset_size: int) -> list[int]:
+    if subset_size <= 0 or rewards.numel() == 0:
+        return []
+    if rewards.numel() <= subset_size:
+        return list(range(rewards.numel()))
+    if subset_size == 1:
+        return [int(torch.argmax(rewards).item())]
+
+    sorted_vals, sorted_indices = torch.sort(rewards, descending=True)
+    sorted_indices = sorted_indices.tolist()
+
+    def _variance(idx_list: list[int]) -> float:
+        if not idx_list:
+            return float("-inf")
+        selected = rewards[idx_list]
+        return float(torch.var(selected, unbiased=False).item())
+
+    best_indices = sorted_indices[:subset_size]
+    best_variance = _variance(best_indices)
+
+    for i in range(subset_size + 1):
+        prefix = sorted_indices[:i]
+        suffix_count = subset_size - i
+        if suffix_count < 0:
+            continue
+        suffix = sorted_indices[-suffix_count:] if suffix_count > 0 else []
+        candidate = prefix + suffix
+        if len(candidate) != subset_size:
+            continue
+        candidate_variance = _variance(candidate)
+        if candidate_variance > best_variance:
+            best_variance = candidate_variance
+            best_indices = candidate
+
+    return best_indices
+
+
+def _build_legacy_keep_mask(
+    group_indices: Sequence[int],
+    kinds: Sequence[str],
+    rewards: torch.Tensor,
+    num_generations_grad: int,
+) -> list[bool]:
+    rewards = rewards.detach()
+    total = len(group_indices)
+    keep_mask: list[bool] = [False] * total
+    if total == 0:
+        return keep_mask
+
+    dropped_label = _SMCTrajectoryKind.DROPPED.value
+    legacy_label = _SMCTrajectoryKind.LEGACY.value
+
+    groups: dict[int, list[int]] = defaultdict(list)
+    for idx, (group_idx, kind) in enumerate(zip(group_indices, kinds)):
+        groups[int(group_idx)].append(idx)
+        if kind == dropped_label:
+            keep_mask[idx] = True
+        elif kind not in {legacy_label, dropped_label}:
+            keep_mask[idx] = True
+
+    for _, indices in groups.items():
+        legacy_indices = [idx for idx in indices if kinds[idx] == legacy_label]
+        if not legacy_indices:
+            continue
+        if len(legacy_indices) <= num_generations_grad:
+            for pos in legacy_indices:
+                keep_mask[pos] = True
+            continue
+        legacy_rewards = rewards[legacy_indices]
+        selected_rel = _max_variance_subset(legacy_rewards, num_generations_grad)
+        for rel_idx in selected_rel:
+            keep_mask[legacy_indices[rel_idx]] = True
+
+    return keep_mask
 
 class RepeatSampler(Sampler):
     """
@@ -846,9 +957,23 @@ class GRPOTrainer(Trainer):
         self.max_prompt_length = args.max_prompt_length
         self.max_completion_length = args.max_completion_length  # = |o_i| in the GRPO paper
         self.num_generations = args.num_generations  # = G in the GRPO paper
+        self.num_generations_grad = args.num_generations_grad
+        self.num_generations_grad_raw = args.num_generations_grad
+        if self.num_generations_grad is None:
+            self.num_generations_grad = self.num_generations
+        self._downsample_disabled = (
+            self.num_generations_grad_raw is not None and self.num_generations_grad_raw <= 0
+        )
+        self._num_generations_grad_effective = (
+            self.num_generations if self._downsample_disabled else self.num_generations_grad
+        )
+        if self._downsample_disabled:
+            self.num_generations_grad = self._num_generations_grad_effective
         self._smc_drop_coef = 0.1
         self._smc_drop_reward_scheme = "progress"
         self._smc_return_all_limit: Optional[int] = None
+        self._smc_return_eos: bool = False
+        self._smc_self_reward: bool = False
         self._enable_drop_bonus = False
         self.temperature = args.temperature
         self.top_p = args.top_p
@@ -973,6 +1098,8 @@ class GRPOTrainer(Trainer):
             "completion": deque(maxlen=args.generation_batch_size),
             "rewards": defaultdict(lambda: deque(maxlen=args.generation_batch_size)),
             "advantages": deque(maxlen=args.generation_batch_size),
+            "self_confidence": deque(maxlen=args.generation_batch_size),
+            "self_weighted_reward": deque(maxlen=args.generation_batch_size),
         }
 
         # Ensure each process receives a unique seed to prevent duplicate completions when generating with
@@ -1077,6 +1204,8 @@ class GRPOTrainer(Trainer):
             if getattr(self.args, "generation_kwargs", None):
                 _smc_cfg = (self.args.generation_kwargs or {}).get("smc", {})
             return_all_cfg = bool(_smc_cfg.get("return_all", False))
+            self._smc_return_eos = bool(_smc_cfg.get("return_eos", self._smc_return_eos))
+            self._smc_self_reward = bool(_smc_cfg.get("self_reward", self._smc_self_reward))
             drop_scheme = str(_smc_cfg.get("drop_reward_scheme", self._smc_drop_reward_scheme)).lower()
             if drop_scheme not in {"progress", "penalty"}:
                 drop_scheme = "progress"
@@ -1647,6 +1776,8 @@ class GRPOTrainer(Trainer):
         conf_aggregation = str(confidence_cfg.get("aggregation", "last"))
         return_all = bool(smc_cfg.get("return_all", False))
         return_eos = bool(smc_cfg.get("return_eos", False))
+        self._smc_return_eos = return_eos
+        self._smc_self_reward = bool(smc_cfg.get("self_reward", self._smc_self_reward))
         random_sampling = bool(smc_cfg.get("random_sampling", False))
         smc_topk = int(smc_cfg.get("smc_topk", -1))
         conf_window = int(smc_cfg.get("smc_confidence_window_size", 512))
@@ -2028,6 +2159,7 @@ class GRPOTrainer(Trainer):
         local_drop_steps = smc_meta.drop_steps
         local_total_steps = smc_meta.total_steps
         local_kind_values = [kind.value for kind in smc_meta.kinds]
+        local_conf_values = smc_meta.confidences
 
         def _ensure_list(obj):
             return obj if isinstance(obj, list) else [obj]
@@ -2052,15 +2184,19 @@ class GRPOTrainer(Trainer):
         kinds_across = _ensure_nested_list(gather_object(local_kind_values))
         drop_steps_across = _ensure_nested_list(gather_object(local_drop_steps))
         total_steps_across = _ensure_nested_list(gather_object(local_total_steps))
+        confidences_across = _ensure_nested_list(gather_object(local_conf_values))
         sample_counts_across = _ensure_list(gather_object(len(local_group_indices_global)))
 
         global_group_indices = [idx for chunk in group_indices_across for idx in chunk]
         global_kind_values = [kind for chunk in kinds_across for kind in chunk]
         global_drop_steps = [step for chunk in drop_steps_across for step in chunk]
         global_total_steps = [step for chunk in total_steps_across for step in chunk]
-        
+        global_confidences = [conf for chunk in confidences_across for conf in chunk]
+
         if rewards_per_func.size(0) != len(global_group_indices):
             raise ValueError("SMC metadata misalignment with reward tensor")
+        if len(global_confidences) != len(global_group_indices):
+            raise ValueError("SMC confidence metadata misalignment with reward tensor")
         if self._enable_drop_bonus:
             drop_bonus = _smc_drop_bonus(
                 [_SMCTrajectoryKind(value) for value in global_kind_values],
@@ -2076,17 +2212,161 @@ class GRPOTrainer(Trainer):
         
         reward_weights = self.reward_weights.to(device).unsqueeze(0)
         weighted_rewards = (rewards_per_func * reward_weights).nansum(dim=1)
+        confidences_tensor = torch.tensor(global_confidences, dtype=torch.float32, device=device)
+        weighted_with_conf = weighted_rewards * confidences_tensor
+
+        num_legacy_global = sum(1 for kind in global_kind_values if kind == _SMCTrajectoryKind.LEGACY.value)
+        downsample_enabled = (
+            not self._downsample_disabled
+            and self._num_generations_grad_effective > 0
+            and num_legacy_global > self._num_generations_grad_effective
+        )
+
+        keep_mask_list: list[bool]
+        if downsample_enabled:
+            keep_mask_list = _build_legacy_keep_mask(
+                global_group_indices,
+                global_kind_values,
+                weighted_with_conf,
+                self._num_generations_grad_effective,
+            )
+        else:
+            keep_mask_list = [True] * len(global_group_indices)
+
+        legacy_kept = sum(
+            1
+            for keep, kind in zip(keep_mask_list, global_kind_values)
+            if keep and kind == _SMCTrajectoryKind.LEGACY.value
+        )
+        legacy_dropped = num_legacy_global - legacy_kept
+
+        keep_mask = torch.tensor(keep_mask_list, dtype=torch.bool, device=weighted_rewards.device)
+
+        rewards_per_func = rewards_per_func[keep_mask]
+        weighted_rewards = weighted_rewards[keep_mask]
+        weighted_with_conf = weighted_with_conf[keep_mask]
+        confidences_tensor = confidences_tensor[keep_mask]
+        global_group_indices = [idx for idx, keep in zip(global_group_indices, keep_mask_list) if keep]
+        global_kind_values = [kind for kind, keep in zip(global_kind_values, keep_mask_list) if keep]
+        global_drop_steps = [step for step, keep in zip(global_drop_steps, keep_mask_list) if keep]
+        global_total_steps = [step for step, keep in zip(global_total_steps, keep_mask_list) if keep]
+        global_confidences = [conf for conf, keep in zip(global_confidences, keep_mask_list) if keep]
+
+        orig_sample_counts = sample_counts_across
+        orig_offsets: list[int] = []
+        running = 0
+        for count in orig_sample_counts:
+            orig_offsets.append(running)
+            running += count
+
+        keep_counts_across: list[int] = []
+        for count, offset in zip(orig_sample_counts, orig_offsets):
+            segment_mask = keep_mask[offset : offset + count]
+            keep_counts_across.append(int(segment_mask.sum().item()))
+
+        local_orig_offset = orig_offsets[self.accelerator.process_index]
+        local_orig_count = orig_sample_counts[self.accelerator.process_index]
+        local_keep_mask_tensor = keep_mask[local_orig_offset : local_orig_offset + local_orig_count]
+        local_keep_mask_list = local_keep_mask_tensor.cpu().tolist()
+
+        sample_counts_across = keep_counts_across
+
+        local_keep_mask_tensor = local_keep_mask_tensor.to(prompt_ids.device)
+
+        prompt_ids = prompt_ids[local_keep_mask_tensor]
+        prompt_mask = prompt_mask[local_keep_mask_tensor]
+        completion_ids = completion_ids[local_keep_mask_tensor]
+        completion_mask = completion_mask[local_keep_mask_tensor]
+        is_eos = is_eos[local_keep_mask_tensor]
+        if old_per_token_logps is not None:
+            old_per_token_logps = old_per_token_logps[local_keep_mask_tensor]
+        if ref_per_token_logps is not None:
+            ref_per_token_logps = ref_per_token_logps[local_keep_mask_tensor]
+
+        completion_ids_list = [
+            seq for seq, keep in zip(completion_ids_list, local_keep_mask_list) if keep
+        ]
+        completions_text = [
+            text for text, keep in zip(completions_text, local_keep_mask_list) if keep
+        ]
+        prompts_text = [
+            text for text, keep in zip(prompts_text, local_keep_mask_list) if keep
+        ]
+        prompts = [prompt for prompt, keep in zip(prompts, local_keep_mask_list) if keep]
+        original_prompts = [
+            prompt for prompt, keep in zip(original_prompts, local_keep_mask_list) if keep
+        ]
+        if has_images and images is not None:
+            images = [img for img, keep in zip(images, local_keep_mask_list) if keep]
+            has_images = len(images) > 0
+
+        completion_lengths = completion_mask.sum(1)
+        attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
+        prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
+
+        filtered_group_indices = [
+            idx for idx, keep in zip(local_group_indices, local_keep_mask_list) if keep
+        ]
+        filtered_drop_steps = [
+            step for step, keep in zip(local_drop_steps, local_keep_mask_list) if keep
+        ]
+        filtered_total_steps = [
+            step for step, keep in zip(local_total_steps, local_keep_mask_list) if keep
+        ]
+        filtered_kinds = [
+            kind for kind, keep in zip(smc_meta.kinds, local_keep_mask_list) if keep
+        ]
+        filtered_confidences = [
+            conf for conf, keep in zip(smc_meta.confidences, local_keep_mask_list) if keep
+        ]
+        new_group_counts = [0] * len(local_group_counts)
+        for idx in filtered_group_indices:
+            new_group_counts[idx] += 1
+        smc_meta = _SMCBatchMeta(
+            new_group_counts,
+            filtered_group_indices,
+            filtered_drop_steps,
+            filtered_total_steps,
+            filtered_kinds,
+            filtered_confidences,
+        )
+        local_group_counts = smc_meta.group_counts
+        local_group_indices = smc_meta.group_indices
+        local_drop_steps = smc_meta.drop_steps
+        local_total_steps = smc_meta.total_steps
+        local_kind_values = [kind.value for kind in smc_meta.kinds]
+        local_group_indices_global = [group_offset + idx for idx in local_group_indices]
+
+        prompt_inputs["input_ids"] = prompt_ids
+        prompt_inputs["attention_mask"] = prompt_mask
+        for key in ("pixel_values", "image_grid_thw", "pixel_attention_mask", "image_sizes"):
+            if key not in prompt_inputs:
+                continue
+            value = prompt_inputs[key]
+            if isinstance(value, torch.Tensor):
+                prompt_inputs[key] = value[local_keep_mask_tensor]
+            elif isinstance(value, (list, tuple)):
+                filtered_items = [item for item, keep in zip(value, local_keep_mask_list) if keep]
+                prompt_inputs[key] = type(value)(filtered_items) if isinstance(value, tuple) else filtered_items
+
+        training_rewards_tensor = weighted_with_conf if self._smc_self_reward else weighted_rewards
 
         if num_groups_global == 0:
             group_mean = torch.zeros(0, dtype=torch.float32, device=device)
             group_std = torch.zeros(0, dtype=torch.float32, device=device)
             std_zero_mask = torch.zeros(0, dtype=torch.bool, device=device)
-            advantages_all = weighted_rewards
+            advantages_all = training_rewards_tensor
+            base_group_mean = group_mean
+            base_group_std = group_std
+            self_group_mean = group_mean
+            self_group_std = group_std
         else:
             group_indices_tensor = torch.tensor(global_group_indices, dtype=torch.long, device=device)
-            group_sum = torch.bincount(group_indices_tensor, weights=weighted_rewards, minlength=num_groups_global)
+            group_sum = torch.bincount(
+                group_indices_tensor, weights=training_rewards_tensor, minlength=num_groups_global
+            )
             group_sq_sum = torch.bincount(
-                group_indices_tensor, weights=weighted_rewards ** 2, minlength=num_groups_global
+                group_indices_tensor, weights=training_rewards_tensor**2, minlength=num_groups_global
             )
             group_count = torch.bincount(group_indices_tensor, minlength=num_groups_global).clamp(min=1)
             group_mean = group_sum / group_count
@@ -2095,9 +2375,28 @@ class GRPOTrainer(Trainer):
             std_zero_mask = group_std == 0
             sample_mean = group_mean[group_indices_tensor]
             sample_std = group_std[group_indices_tensor]
-            advantages_all = weighted_rewards - sample_mean
+            advantages_all = training_rewards_tensor - sample_mean
             if self.scale_rewards:
                 advantages_all = advantages_all / (sample_std + 1e-4)
+
+            base_group_sum = torch.bincount(
+                group_indices_tensor, weights=weighted_rewards, minlength=num_groups_global
+            )
+            base_group_sq_sum = torch.bincount(
+                group_indices_tensor, weights=weighted_rewards**2, minlength=num_groups_global
+            )
+            base_group_mean = base_group_sum / group_count
+            base_group_var = torch.clamp(base_group_sq_sum / group_count - base_group_mean**2, min=0.0)
+            base_group_std = torch.sqrt(base_group_var)
+            self_group_sum = torch.bincount(
+                group_indices_tensor, weights=weighted_with_conf, minlength=num_groups_global
+            )
+            self_group_sq_sum = torch.bincount(
+                group_indices_tensor, weights=weighted_with_conf**2, minlength=num_groups_global
+            )
+            self_group_mean = self_group_sum / group_count
+            self_group_var = torch.clamp(self_group_sq_sum / group_count - self_group_mean**2, min=0.0)
+            self_group_std = torch.sqrt(self_group_var)
 
         sample_offsets: list[int] = []
         running = 0
@@ -2108,6 +2407,8 @@ class GRPOTrainer(Trainer):
         local_count = len(local_group_indices_global)
         advantages = advantages_all[local_offset : local_offset + local_count].clone()
         all_process_advantages = advantages_all.clone()
+        local_confidences_tensor = confidences_tensor[local_offset : local_offset + local_count]
+        local_weighted_with_conf = weighted_with_conf[local_offset : local_offset + local_count]
 
         mean_grouped_rewards = group_mean
         std_grouped_rewards = group_std
@@ -2141,9 +2442,36 @@ class GRPOTrainer(Trainer):
             self._metrics[mode][f"rewards/{reward_func_name}/mean"].append(mean_rewards)
             std_rewards = nanstd(rewards_per_func[:, i]).item()
             self._metrics[mode][f"rewards/{reward_func_name}/std"].append(std_rewards)
-        self._metrics[mode]["reward"].append(mean_grouped_rewards.mean().item())
-        self._metrics[mode]["reward_std"].append(std_grouped_rewards.mean().item())
+        self._metrics[mode]["reward"].append(
+            mean_grouped_rewards.mean().item() if mean_grouped_rewards.numel() > 0 else 0.0
+        )
+        self._metrics[mode]["reward_std"].append(
+            std_grouped_rewards.mean().item() if std_grouped_rewards.numel() > 0 else 0.0
+        )
         self._metrics[mode]["frac_reward_zero_std"].append(is_std_zero.float().mean().item())
+        self._metrics[mode]["reward_original/mean"].append(
+            base_group_mean.mean().item() if base_group_mean.numel() > 0 else 0.0
+        )
+        self._metrics[mode]["reward_original/std"].append(
+            base_group_std.mean().item() if base_group_std.numel() > 0 else 0.0
+        )
+        self._metrics[mode]["reward_self/mean"].append(
+            self_group_mean.mean().item() if self_group_mean.numel() > 0 else 0.0
+        )
+        self._metrics[mode]["reward_self/std"].append(
+            self_group_std.mean().item() if self_group_std.numel() > 0 else 0.0
+        )
+        agg_confidences = self.accelerator.gather(confidences_tensor)
+        if agg_confidences.numel() > 0:
+            agg_confidences = agg_confidences.float()
+            self._metrics[mode]["self_confidence/mean"].append(agg_confidences.mean().item())
+            self._metrics[mode]["self_confidence/std"].append(agg_confidences.std(unbiased=False).item())
+        agg_self_rewards = self.accelerator.gather(weighted_with_conf)
+        if agg_self_rewards.numel() > 0:
+            agg_self_rewards = agg_self_rewards.float()
+            self._metrics[mode]["self_reward/mean"].append(agg_self_rewards.mean().item())
+            self._metrics[mode]["self_reward/std"].append(agg_self_rewards.std(unbiased=False).item())
+        self._metrics[mode]["downsample/legacy_dropped"].append(float(max(legacy_dropped, 0)))
 
         # Log prompt and completion texts
         self._logs["prompt"].extend(gather_object(prompts_text))
@@ -2151,6 +2479,8 @@ class GRPOTrainer(Trainer):
         for i, name in enumerate(self.reward_func_names):
             self._logs["rewards"][name].extend(rewards_per_func[:, i].tolist())
         self._logs["advantages"].extend(all_process_advantages.tolist())
+        self._logs["self_confidence"].extend(confidences_tensor.detach().cpu().tolist())
+        self._logs["self_weighted_reward"].extend(weighted_with_conf.detach().cpu().tolist())
 
         if has_images:
             self._logs["image"].extend(gather_object(images))
@@ -2386,6 +2716,8 @@ class GRPOTrainer(Trainer):
                     "completion": self._logs["completion"],
                     **self._logs["rewards"],
                     "advantage": self._logs["advantages"],
+                    "self_confidence": self._logs["self_confidence"],
+                    "self_weighted_reward": self._logs["self_weighted_reward"],
                 }
 
                 if self._logs["image"]:

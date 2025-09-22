@@ -284,6 +284,12 @@ class GRPOConfig(TrainingArguments):
             "* gradient_accumulation_steps) must be evenly divisible by this value."
         },
     )
+    num_generations_grad: Optional[int] = field(
+        default=None,
+        metadata={
+            "help": "Number of generations per prompt used for gradient computation. Defaults to `num_generations`.",
+        },
+    )
     max_completion_length: Optional[int] = field(
         default=256,
         metadata={"help": "Maximum length of the generated completion."},
@@ -619,6 +625,22 @@ class GRPOConfig(TrainingArguments):
             raise ValueError(
                 "GRPO requires at least 2 generations per prompt to calculate the advantages. You provided "
                 f"{self.num_generations}, which is less than the minimum required."
+            )
+
+        if self.num_generations_grad is None:
+            self.num_generations_grad = self.num_generations
+
+        if self.num_generations_grad < 0:
+            if self.num_generations_grad != -1:
+                raise ValueError(
+                    "num_generations_grad must be a positive integer or -1 to disable down-sampling."
+                )
+        elif self.num_generations_grad == 0:
+            raise ValueError("num_generations_grad must be a positive integer or -1 to disable down-sampling.")
+        elif self.num_generations_grad > self.num_generations:
+            raise ValueError(
+                "num_generations_grad cannot exceed num_generations. Received "
+                f"{self.num_generations_grad} > {self.num_generations}."
             )
 
         if self.delta is not None and self.use_liger_loss:

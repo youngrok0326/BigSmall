@@ -57,6 +57,7 @@ def main(cfg: DictConfig) -> None:
         "max_prompt_length": cfg.rl.max_prompt_length,
         "max_completion_length": cfg.rl.max_completion_length,
         "num_generations": cfg.rl.num_generations,
+        "num_generations_grad": cfg.rl.num_generations_grad,
         "max_steps": cfg.rl.max_steps,
         "save_steps": cfg.rl.save_steps,
         "beta": cfg.rl.beta,
