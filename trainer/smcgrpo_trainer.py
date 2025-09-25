@@ -2135,7 +2135,16 @@ class GRPOTrainer(Trainer):
             truncated_completions = lengths_for_mask >= max_length_cap
             completion_mask = completion_mask * (~truncated_completions).unsqueeze(1).int()
 
-        # Concatenate prompt_mask with completion_mask for logit computation
+        # Align completion tensors to the maximum generated length to avoid gather mismatches downstream.
+        effective_keep = int(completion_mask.sum(dim=1).max().item())
+        effective_keep = max(effective_keep, 1)
+        if completion_ids.size(1) != effective_keep:
+            completion_ids = completion_ids[:, :effective_keep].contiguous()
+            completion_mask = completion_mask[:, :effective_keep].contiguous()
+        completion_lengths = completion_lengths.clamp_max(effective_keep)
+
+        # Rebuild concatenated ids/masks after potential trimming so shapes stay consistent.
+        prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
         attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)  # (B, P+C)
 
         logits_to_keep = completion_ids.size(1)  # we only need to compute the logits for the completion tokens
