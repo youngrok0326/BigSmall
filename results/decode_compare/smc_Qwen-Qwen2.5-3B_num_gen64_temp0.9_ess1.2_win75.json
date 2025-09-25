@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.35080645161290325
+      ],
+      "for_acc": [
+        0.036290322580645164
+      ],
+      "both_acc": [
+        0.004032258064516129
+      ],
+      "lengths": [
+        491.8790322580645
+      ],
+      "ans_frac": [
+        0.029107862903225805
+      ],
+      "for_frac": [
+        0.0010080645161290322
+      ],
+      "both_frac": [
+        6.300403225806451e-05
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: 1\n\nthink\nTo convert a point from rectangular (Cartesian) coordinates to polar coordinates, we need to utilize the relationships between the two coordinate systems. Given a point $(x, y)$ in rectangular coordinates, we can find the corresponding polar coordinates $(r, \\theta)$ using the following formulas:\n\n<answer>\n$r = \\sqrt{x^2 + y^2} polar coordinates to convert the$th (x,y$x+ 0}{0= 9.\n$$\n<answer>\n(3, \\frac{\\pi}{2})\n</answer>",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": " <think>\nWe can start by considering the expression $\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}.$ \nNotice that this expression can be rewritten as $\\sum_{j = 1}^\\infty \\frac{1}{j^3} \\sum_{2. Observe/y}\\\\\nAssuming k = 4}}}$ </answer>sum_{k=1}^{\\infty} \\sum{k} \\d the \\path,}sum{1} \\frac{111111}} If = 4circ sum (itexleft4^3}}\n\n4{\n\nTheeq}\\inthes3\\sumtext{e\\sum_{gcd2j = 13}1 1o {10s; fraccounx} = 2j + k}\n3. We know that $\\frac45e227\\ in\\end\\in1\\}!1}2 31\\]\n7 22 ju}0=1 q1\\frac1\\5 11\\43234n 8\\3\nms 33\\sum\\_3``123n13, 3{340sum1}3\\3+3 2 3 44$}}{3133}1+1 3 3210 \\sum_{j = 1}1:{3\\21{1\n1433\n 3 3\\3.35}}33\\22{13131 213 33313 21{3933 13333333333 31 }313333s101113}333}}21133| 32k1 23146 333333 2} 3333323}333\n 33 1\\d 331133+33333313 313132333/3313 31 333 32333331 .1}13333333333333333333333313333333333331333313331 313333}33333333333333333333333333131333333333333 333323333 3333 333313333313313333 33333333333333\n5333333333333333333333333 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: 1) <think>f(-2) = \\frac{-6-2}{-2-2} = \\frac{-8}{-4} = 2</think>\n2) <think>f(-1) = \\frac{-3-2}{-1-2} = \\frac{-5}{-3} = \\frac{5}{3}</think>\n</think> \\endplace and  -13}{27 4)<think>0} 03\n6) <think>f(0) = \\frac{(-221,=12)2]1-251 f(-1-2f(0f5 + c, I225)\n<think> \n</think>\n2. <think>\nTo find the 0(212  ) =(-2)121110322 -2-22\n</think>2215+2422222 2222123/20f(-1) is found 22-2-22\n2 \n\n\n</think}2-24-2 1\n</think>\n<12252322722\nSo f(-2) + f(-12122-222+123-2 1\u2014\n22222412 22 2302\n22222.5222122222+122427262122\n22122\nAnswer: f(-2) +202222222222222232+22\n=2222123222212\n2\n222222222222222222 2222222222212222\n2 + 62222222 think 2.52222222228/7\n</answer>\n</solution>\n<answer>\n20\n</answer>",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "An AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 196 = 2 * 2 * 7 * 7\nThis implies 196 has 9 positive whole-number divisors.",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": "1) <think>\nTo determine which student has the greatest average speed, we need to calculate the average speed of each student by dividing the total distance covered by the total time taken.\n\nFor Evelyn:\nTotal distance = 100 meters\nTotal time = 2 seconds\nAverage speed = 100 meters / 2 seconds = 50 meters/second\n\nStudentBase 3/i0 = 1}}\n\\>\n\n/12 /$$\\]\n<answer> Evelyn </answer> </div>",
+          "correct": true,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}

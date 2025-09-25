@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.25
+      ],
+      "for_acc": [
+        0.018145161290322582
+      ],
+      "both_acc": [
+        0.0020161290322580645
+      ],
+      "lengths": [
+        662.3689516129032
+      ],
+      "ans_frac": [
+        0.022870463709677418
+      ],
+      "for_frac": [
+        0.0003780241935483871
+      ],
+      "both_frac": [
+        6.300403225806451e-05
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: 4 think\nThe conversion formula is: $r = \\sqrt{x^2 + y^2}$ think\nPut in $x = 0$ and $y = 3:$ $$r = \\sqrt{0^2 + 3^2^{-\\theta^ 'r,\\ 4 (2sin..\nx^2)ds(x,y}(x2+e 45.> \\/r  did4 r = 14r49}2+a\tc5$l{15r 00  step 3,2t1125Jpi 3} 74/ $$ 8033\\05+ 0\\4 1}-1(5 \n</think- \n33)53\\to\\132133r\n\\0\n 33 2 e 4d $3 13\n18223625 4248\ny31 3\\ + 82\n33341 3063 05.091513 53 00377\n73\n\n\n</think>\n{  \\033333\n30.53 323 33\n390410/343\n33 2310 2312 233\n8233 1\n   3\n </answer> </think3\n3533\n23333 33773\n0,3 33no3\n   3 23423347536 3383335\n 0 32\n331 = 237343340337  33333 21 333333333333332\n33 33313g\n33333333  3333333333333\n3333! 3333 333333333333333333 33333333333333333333333333)",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": " Let's solve the problem step by step.\n\n<think>\nWe want to find a way to write the sum\n\\[ \\sum_{j=1}^\\infty \\sum_{k=1}^\\infty \\frac{1}{(j' k = \\sum_{k3k\n2.}\n\\]2.kr\nLet's ^3 30 1}^3}frac_{ k  \\frac{sum.jin3\\limin}43}$.\nThis is}\n}\n\\inftyj,23( p = 31\n\nFirst, \\scriptstyleD}30\\ think\n\n  4}^{s { + jk\\]334 3}1 1+433 \\in1 \\&34 1else 3 3\\\n\n\\3 3{y22\\ 3e2 5x=1 +2k sum 143q +1n}\\\\\n   k3} \\sum_{,2)^{4k4322}c 33\\k=3 3.432\n13deg 13n33 \\-333333713}3333of 1k1331\\3k 133 21{4333333}33313\\3k313 33 \\}533+ = 3 333k3333333333633 333 333 3333333333.\n</fa3333333333333333333333333333331333333333333333333333333333333333333333333323333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: 1. <think>\nTo find the value of \\( f(-2) + f(-1) + f(0) \\) for the function \\( f(x) = \\frac{3x-2}{x-2} \\), we need to -1\n</think> by pl- 8{LARGE43iL \nf(12)2s2\nf -  */<answer:\n</think\nf(-2) = 93\n5> 3x> \n Now, f(-2000. find)think44.15\nthink:\n1),v5. <1 f(-2-2224/22 2-2\n   think\n f 025612y-3/2  =  - 7-1i\n42\nThe answer\n34\n+104\n13. <13 +3 2 answer22,3\n 2132\n = vim 224\n525\n2223 -12Answer:4.53\n3125=231(3 3 -<answer\n21222543\n215.2\n/\\\nanswer\n</think\n351/2 331 Answer\n</think>\n 13 12. 2\n33332\n 122322\n 2 + 4 /113 2 433323 \n 3 1\n2\n1f3\n26\n5\n+5\n34-421533\n2) ]\nAnswer:  4+5/2\n2a4 2  -\n4=-573 3\n23 2335\n\n373-2531\n2435  a23\n4 5321 <2 32\n32333\n243\n123 3h352131 4333.34\n3332 241332252\n2+232\n>32\n2233 32123\n13\n534333\n323 1 3-2122233214211<23\n</23 333\n 1333233133  2\n 3232\n31-</ 3\n1311\n3 123 3333333433323312,/\n</53\n333\n think423\n232 32 22243 33223333\n5335\n2 2133 233333333\n32\n3 323\n23321\n13  335.333332\n333233333323232323 3332\n<think\n-332352\n\n33333\n2232 3 32331333333333\n232\n\n423333333333\n32223331\n22\n</>\n333\n3333333 32333333323 323 3333333333 33333333323333333533343333333\n33323333333331333333 331333333333333 3333333333333333333\n333332333 333333\n323333333333 33333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "An AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 196 = 2^2 * 7^2\nThe positive whole-number divisors of 196 are 1, 2, 4, 7, 14, 28, 49, 198 = 11 Answer\n<answer</answer\nThe problem is9 =",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": " To determine which student has the greatest average speed based on the training run data provided, we need to calculate the average speed for each individual. The average speed can be calculated using the formula:\n\n\\[ \\text{Average Speed} = \\frac{\\text{100'1.5z axis ticks divided by about  the time 1 is 151The average speed = 4. N. th \\i. th \\ 5  3 15300 9 math2 3182class.2145*4d at30 1x 226 4 *7 9speed = distance   2 8 88 0 4 0.54 6002/100133 0.6 2   ll  0  000.91280 1 20 2 5 14 0. 0.1 5.20 5.7 75 0   =   73 5  6 3  33 55 </answer 5 3\n</ans =50230  38 345 75 6.90 66,0243 754.55   = 70  0? 04.67  .2. 3, 50 3 2   2.4 0  8 0 20 10 30.5. \rm 505 620.41 2  1620 00  1 75. 20+  km 04 3  9067 005.501566. 5   31  40  22109  351 10.5 0 00500 0  0   58 7 \f 7 / 7 5 0   5o  @ 4  20 0.0 10 0. 00 1  5  0 1  3 42.0  6. 3 0   0 0  12  0 55  00 7 .  6  0010 00 01 30 3 2 071   90 .0 300.  000  051\n0 0   0  0 11  00   04 04.6 135 04 3t 2. 15 20  7 a 0 0 0  0947  06  3  0  10  0  05 0  01  4  0  00  0 03  0 08 0 03. 0  0  0  0 3   5 0 04 0   0030 0 0 0  60  0 060  50  100  0 2  0  00 00 0  0  00  00  000  0030 0.  0 0 9 0  0   0 0 0 3 0 0  00 0034  0  0 8 00 0002 00000  0  0.00 5 0 59 0 0  0  0  4 03 0   0  0   0  000 40  0  0 1002 0  0  0  0  0   0 0 0   This 30  00000 0  0  400000  0  0  0 0 . 0  0 0  0 00  0  0  5  0 900   0  0  ",
+          "correct": false,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}

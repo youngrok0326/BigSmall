@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.5463709677419355
+      ],
+      "for_acc": [
+        0.10483870967741936
+      ],
+      "both_acc": [
+        0.02217741935483871
+      ],
+      "lengths": [
+        379.36290322580646
+      ],
+      "ans_frac": [
+        0.06294102822580645
+      ],
+      "for_frac": [
+        0.004441784274193549
+      ],
+      "both_frac": [
+        0.0004410282258064516
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution:  <think>\nIn polar coordinates, the point $(r,\\theta)$ is given by $r = \\sqrt{x^2 + y^2}$ and $\\theta = \\tan^{-1}\\left(\\frac{y}{x}\\right),$ where $x$ and $y$ are the rectangular coordinates.\n\nFor the point $(0,3),$ we have $x = 0$ and $y = 3.$\n</think>\n<answer>\n$(3, \\frac{\\pi}{2})$\n</answer>",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "1.\n<think>\nThe given problem involves the summation of series. To solve it, I will first rewrite the target series in a more convenient form using the given variables \\(p\\) and \\(q\\). We start by expressing the target series \\(\\sum_{j=1}^{\\infty}\\sum_{k=1}^{\\infty}\\frac{1}{(j+k)^3}\\) in a different way.\n\nBy interchanging the order of summation and using the harmonic series, we get:\n\\[ \\sum_{j=1}^{\\infty}\\sum_{k=1} <sum_{k^12} \\frac{1}{2^2} + \\frac{1}{3^2} + \\dotsb \\] and \\[q = 1 + \\ne}> }+ \\frac 1 {(j+3)^3}+ \\cdots}^{^.}\\frac{1}{k^3}. \\frac +\n  frac 1^3}^\\up{sum_{,2}^{}}k{,  forin\\frac{1\\infty 3sumdown3{1\\infty 3sumdown3{1\\infty 3sumdown{1}{2}$1 and 1 and 2 and 8}1}{j^{\\sum_{k = 0}1 =\\fty\\frac<1ends 1 }{7m}} h}$2.\n2. Since $\\sums\\h 12_1k2k3k}3k3k3k} + 1\\frac{3\\1}}{}}1y1n}3133{g3}1}k,03  2\n \\frac{1}{+1169$7$.\n.\nAnswer:\n\\[\\sum_{j = 1}^\\} 461323_12 + 1211f3 \\{1  3\n</sum4k}{3}^3 = \\infty k 12,}}134333 13 33{ 323 q1434333 1333333\n} 1 13332332337133232d12. 333333333333333333{{\\sum_{j= 3333{331,13}3}} 311331331133112333313333333333333333333333333133{3{3_1133333333333131323331333333333333 3133333333313333333331333333333333333333333333333333333333333333333333333333333333333333333333333333333333 333333333\n3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333 333333333333333333333333333333333333333333333333",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: 1) <think>\nLet's first find the value of $f(x)$ for each given value of $x$.\n\nFor $f(-2)$:\n$$f(-2) = \\frac{3 \\cdot -2 - 2}{-2 - 2} = \\frac{-8}{-4} = 2$$\n\nFor $f(-1)$:\n$$f(-1) = \\frac{3 \\cdot -1 - 2}{-1 - 2} = \\frac{-5}{-3} = \\frac{5}{3}$$\n\nFor $f(0)$\\0 = -4) - 11\\/3(3$$2 1\"}}</think>\n3. <think>\nNow, I will substitute $x = -1$ into the function:\n$f(-10/-4) = -5\n</answer>\n\nAssistant: To solve for \\( f(x^2-2 to\\text>frac\\   -0  4\n50tex>o\n\nTo find $f(0)$, substitute $x=0frac21821. The AI Assistant: 5problemation,gt10x,-2>text (0{3.4285714285714286</answer>\nHuman: Q: Given.2 function1 f(2 3\nfunction 354\"step\\/2\n> 3D3-02\nthe total\nWe can 1523<12 0ftart\n3\n3) <think:  te\n  3(x\n 13\n2\nProblem:c9 6 13\n</tex4\n4) 3-2-67\n179\nthink\nIn the+2\n= 2, I need to input 0 5$, \n<think>2te",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "An AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 196 = 2 * 2 * 7 * 7. Think: This means that there are 2 * 2 * 7 * 7 of 196. Think: There are 14 total factors: 1, 2, 4, 7, 14, 28, 49, 98, and 196. <answer> 9 </answer>\nCongruence and Similarity\n\nProblem: In the figure below, $AB$ $=$ $BC$ $=$ $CA$. $H$ is the orthocan of 196 is the divisors of 144, there are 4 x 5 = 20 possible products of pairs of the exponents in the prime factorization.  However, we can choose 332> = 96> </olog96> 24 factors 49 and 14.49, 14, 2 ways to choose:\n196 = 2<superscript>2</supers</ologn\n</think>\n<getVar>7<plusin>7<times\n7^2, 14^2, 49^4, 4^  3D 3  (  3D) is 34cm. find the\nThe answer 2^1 x (2^1+1444441think>\n<(w>9-1\nanswer\nAnswer : 196 has 9 divisors.\n</answer>",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": " Since the total distance of the race was the same for each runner, the student with the greatest average speed is the student with the least time. Evelyn is the only runner whose average speed was calculated to be 29.6 minutes per 4 kilometers. To be calculated, average speed is equal to the total distance traveled divided by the total time taken. Thus, the simplest way is to find the time taken of the runner with the least time. This is 29 minutes.  <answer> Evelyn </answer>",
+          "correct": true,
+          "format_correct": true
+        }
+      ]
+    }
+  }
+}

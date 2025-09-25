@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.4415322580645161
+      ],
+      "for_acc": [
+        0.07661290322580645
+      ],
+      "both_acc": [
+        0.010080645161290322
+      ],
+      "lengths": [
+        461.0846774193548
+      ],
+      "ans_frac": [
+        0.04819808467741935
+      ],
+      "for_frac": [
+        0.002331149193548387
+      ],
+      "both_frac": [
+        0.00015751008064516129
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: 1\nTo convert the point $(0,3)$ in rectangular coordinates to polar coordinates, we follow these steps in the mind:\n\nStep 1: Recall the formulas for converting from rectangular to polar coordinates. The formulas are $r = \\sqrt{x^2 + y^2}$ for the radius and $\\theta = \\arctan\\left(\\frac{y}{x}\\right)$ for the angle.\n\nStep 2: Observe the point $(0,3)$ in rectangular coordinates, where theadQ r\n</think>\n<answer>\n(3, \\frac{\\pi}{2})\n</answer>",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "1. Calculate $p$ and $q$.\n2. The problem asks the user to define $p$ and $q$.\n3. The user needs to compute the series sum for $p$ and $q$.\n4. The series sum for $p$ and $q$ is $\\sum_{k = 1}^\\infty \\frac{1}{k^2}$ and $\\sum_{k = 1}^\\infty \\frac{1}{k^3. \\frac{1}^\n\\inomato\n  hat{w}a",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution:  <think>\nFirst, substitute $-2$ into the function to find $f(-2)$: $f(-2) = \\frac{3(-2)-2}{-2-2} = \\frac{-8}{-4} = 2$.\nNext, substitute $-1$ into the function to find $f(-1)$: $f(-1) = \\frac{3(-1)-2}{-1-2} = \\frac{-5}{-3> for$$2}{- 2 -247\n223\n}$. Substitute $x=2$ into the function:\n\n<think>\nSubstituting f(-1), substitute -1 in for x in f(x) so f(-1) = (3(-2\n(answer)\n=2\n  _2 + f(-1) + f(0) <think>  Answer\n        -2/o)(-40231\n<answer>\n2$.\nFinally, we substitute $449\n]=\n$=-1624.1500\n4x+1<answer> the theoh4\n4\nrac83+rac{3-225 2- 0}2 think\n</think\n 30\n2-3310-2-56?2362.0 -2}125-2}{5-42>\n52+1\n} + f022\n422\n23\n23\n122  -< think>\nAnsweranswer< answer>\n$$ 2\n5123-2123-r2 2\nAnswer:43\n4922x3>2223<2560\n<2",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "An AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 196 = 2^2 \u00d7 7^2\nDivisors of 196: 1, 2, 4, 7, 14, 28, 49, 98, 196\n<think>\nThere are 9 whole-number divisors for 196\n</think>\n<answer>\n9\n</answer>\nProblem: How many whole numbers n are divisors of both 10 and 196think\n</think: 2 \u00c3isorsisors1 yearthink>7  2015-1  the7  2015-1  the number 196 has 96\n<division\n</think>\n< think>19.2.00 time: 196 = 2 2 \u00d7 7 2\nThere are (2 +90\n(22\n02129H 1964x40898 2015-1 2015\nAnswer:  8\n2 0 + of 7440at division40160520.03 at least  to15 12 =  70 75:12.\nThe area of a triangle is equal to7\n 190\n225322000\nAnswer: 160\n Solution:\n308\n  2\n21610 64think76 0  20think\n002: 5 + 851001\n29851 9 think43 4\n answer 164>\n9\n</answer>5>\nThat 5806419\nsolution: < think> 196 = 2(24\nSolution: 280: 2     answer3\nthink 568 30 067212 5\n6 9618611\n310741\n7 12  6478\n  090\n022 x 7<superscript>2 800think\n  <think>Only 7th3 of the prime factor\n5 1\n7225\n=2\n4 946 4think\n 0\n74  think\n\n21\n730 Solution118  0* 7 think5 9 522  470013767\n7 3 have 196 has, we need to find\n571 <\nSolution:2\n 96  1 498 527 341002 1\n341002\n1<divize\n  8\n  6\n 17 5\n 5\n 2\nthink\n204answer,9  73\n2  1 think\n5\n7310 3 22735772\n50434 344527. 0359028291192\n277\n11\n7\n369826 3 06209 81 7 1 1\n6546150942739 4 8192  1297 0 3 19 2 53  4 6  73\n3 3 8whole-numberdivisorsdoes 196 91,0148\n30\n 09002  01\n3\n0927   28976>\n5893751\n9\n12250 divisorsyou 25846 3\n465 think:648 210090\n  1 2\n770\n  1\n  0  0  0  1  1  11\n077\n21 8 5 1 543\n 7 think12\n  2\n 1 4 1 64 849\n  1  think\n1 2938  5 19\n1  7977 51   0\n5  5 8 0 think16 1 2 2  2  4\n  5  ",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": " Evelyn is 700 meters in 10 minutes, so her average speed is 700/10 = 70 meters per minute.  Briaan is 400 meters in 4 minutes, so her average speed is 400/4 = 100 meters per minute.  Carla is 1200 meters in 10 minutes, so her average speed is 1200/6 = 200 meters, the answer: 0. Therefore,513d] and begin{m\\frac{(5  Fractions.3 ( 5, 12, 211 2 3 m9 w This means that Evelyn's average speed =frac 710205 Q. </think>\n3. <answer>\nDebraiz111math 00,23 1 15500 413 9 (262239er \\text\nand 6553 \n\n\nThe average speed for Evelyn is\n\n3. calculate the} \nand'055111352543.066 step8.5 2015 957860. 2001555002.1)0   36-5 3 1\n```041513- /c)0.210.2 hour 0909 37,3322.46117 7 1912 .605  444. 276. 262.1 4.1, 2 17150013.66666666\n 5.e\n732120  1 3 2103 0517021.4. 20:1107 454 7 1.87376 241.73f}: 37  203  3   183527893  5  2 04 0 904.. \nAnswer: 50 0 0  2,6 0 124 0982 4 5  333  1\n\nThe combined3 4:  1.09125575 153.12 11270.12-9870.128170.81\n877 6666660728883 5 0 7 7281   210140056 5 202 28 030 58  16378,281 5  30. 2 _14 4 00134  12.  05111 1397 610491.5868339613\n641665 0 2 07 0  0  00 6 33 6 6625036  10  21009651  1701605 656834 95026666666666666 20 00.0 25575  7 01. 2 5 3 0\n09032.08 13  57  80  71  1. 26  461 51.54\n\nThe solution to the math problem is that Evelyn has  0555 3  67  7  0033  305821118630500meters in 1810 116365  0.0  +436.7. 0.  3 1044 03  1203  0 803  086  05 3333\n3 033  0333 003 00 3  00016 064171 00362 00000 0007",
+          "correct": false,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}

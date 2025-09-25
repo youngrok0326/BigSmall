@@ -1,0 +1,96 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.5120967741935484
+      ],
+      "for_acc": [
+        0.010080645161290322
+      ],
+      "both_acc": [
+        0.0
+      ],
+      "lengths": [
+        418.75604838709677
+      ],
+      "ans_frac": [
+        0.03746373720186434
+      ],
+      "for_frac": [
+        0.0002749446617177009
+      ],
+      "both_frac": [
+        0.0
+      ],
+      "examples": [
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nConvert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "To convert the point $(0, 3)$ in rectangular coordinates to polar coordinates, we use the following formulas:$r = \\sqrt{x^2 + y^2}$and$\\theta = \\tan^{-1}\\left(\\frac{y}{x}\\right)$where $r = \\sqrt{0^2 + 3^2} = 3$ and $\\theta = \\tan^{-1}(\\frac{3}{0}) = \\frac{\\pi}{2}$\\Theta$: Either operator is returned in the correct order, so we ignore $\\sin - y = 0$.Therefore, the final answer is: $\\boxed{\\left(3, \\frac{\\pi}{2}\\right)}$poons",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nDefine\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "p - q",
+          "completion": "Additional details:\\[S = \\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}.\\]\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3} = \\sum_{k = 1}^\\infty \\sum_{j = 1}^\\infty \\frac{j}{(j + k)^3}.\\]Now, we can rewrite the double sum using the fact that \\[\\sum_{j = 1}^\\infty j\\,dx\\quad \\text{and} \\quad \\sum_{k = 1}^\\infty k\\,dx,\\] where \\(x\\) is the variable.Substituting these into the double sum, we have\\[ S = \\sum_{z = 1}^\\infty \\sum_{x = z}^\\infty \\frac{1}{(x + z)^3}.\\]Since \\(x\\) is a variable at each step, we can consider it as \\(dx\\) and \\((x + z)\\) as \\(dz\\), so\\[ S = \\int_{x = 1}^\\infty \\int_{z = x}^\\infty \\frac{1}{(z + dx)^3} dx dz.\\]However, factoring out \\(dz\\) in the inner integral gives us\\[ S = \\int_{z = 1}^\\infty \\int_{x = z + dz}^\\infty \\frac{1}{(z + dz)^3} dx dz.\\]Let's find the inner integral first, which is\\[ \\int_{z = 1}^\\infty dx = dz,\\]giving us\\[ \\int_{z = 1}^\\infty dz = \\int_{dx = z + dz}^\\infty dx = dz,\\]and consequently,\\[ \\int_{x = z + dz}^\\infty dx = dz.\\]Thus,\\[ \\int_{z = 1}^\\infty dz = dz.\\]Now, we can rewrite the inner integral as\\[\\int_{z = 1}^\\infty dz = \\int dz,\\]which gives us\\[ dz = dz.\\]Thus,\\[ dz = dz.\\]So we have\\[\\",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nIf $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\frac{14}{3}",
+          "completion": "To find the values of $f(-2)$, $f(0)$, and $f(-1)$, we substitute each value into the expression for $f(x)$.Start with $f(-2)$:$ f(-2) = \\frac{3(-2) - 2}{-2 - 2} = \\frac{-6 - 2}{-4} = \\frac{-8}{-4} = 2 $Next, $f(0)$:$ f(0) = \\frac{3(0) - 2}{0 - 2} = \\frac{-2}{-2} = 1 $Now, we can find $f(-1):$ f(-1) = \\frac{3(-1) - 2}{-1 - 2} = \\frac{-3 - 2}{-3} = \\frac{-5}{-3} = \\frac{5}{3} $So, the value of $f(-2) + f(0) + f(-1)$ is:$ 2 + 1 + \\frac{5}{3} = \\frac{6}{3} + \\frac{3}{3} + \\frac{5}{3} = \\frac{14}{3} $Therefore, the final answer is $\\boxed{\\frac{14}{3}}$, expressed as a common fraction.ViewByIdFlutterRoundedButtonSingleSize\nNo, I cannot provide a Flutter rounded button for single size. I am an AI language model and my instructions are to read my responses into C# and render them.",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nHow many positive whole-number divisors does 196 have?<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "9",
+          "completion": "196 / 1 = 196\n196 / 2 = 98\n98 / 4 = 24.5\n98 / 8 = 13.25\n98 / 16 = 6.5\n98 / 32 = 2.8125 (rounded to 3 decimal places)\n98 / 64 = 1.64375 (rounded to 3 decimal places)So, there are 24 positive whole-number divisors of 196, which are 1, 2, 4, 7, 14, 28, 37, 74, and 196. :)?><?php\n    echo 196 / 1;\n?><?php\n    echo 98 / 2;\n?><?php\n    echo 6.5;\n?><?php\n    echo 1.64375;\n?><?php\n    echo 24.5;\n?><?php\n    echo 98 / 32;\n?><?php\n    echo 98 % 4;\n?><?php\n    echo 98 % 8;\n?><?php\n    echo 98 % 16;\n?><?php\n    echo 98 / 1;\n?><?php\n    echo 98 / 2;\n?><?php\n    echo 98 / 4;\n?>\n<?php\n    echo 98 / 8;\n?><?php\n    echo 98 / 16;\n?><?php\n    echo 98 / 32;\n?><?php\n    echo 98 % 4;\n?><?php\n    echo 98 % 8;\n?><?php\n    echo 98 % 16;\n?><?php\n    echo 98 / 1;\n?><?php\n    echo 98 / 2;\n?><?php\n    echo 98 / 4;\n?><?php\n    echo 98 % 4;\n?><?php\n    echo 98 % 8;\n?><?php\n    echo 98 % 16;\n?><?php\n    echo 98 / 1;\n?><?php\n    echo 98 / 2;\n?><?php\n    echo 9",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "<|im_start|>system\nSolve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem.<|im_end|>\n<|im_start|>user\nThe results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]<|im_end|>\n<|im_start|>assistant\n",
+          "answer": "\\text{Evelyn}",
+          "completion": "- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation. Yes, I made it.Step 1: [Concise description]\n[Insert concise step 1 description]Step 2: [Concise description]\n[Insert concise step 2 description]Step 3: [Concise description]\n[Insert concise step 3 description]Step 4: [Concise description]\n[Insert concise step 4 description]And the final solution is: $\\boxed{Evelyn}$.\n\u7818\nystick",
+          "correct": true,
+          "format_correct": false
+        }
+      ],
+      "pass_at_k": {
+        "0.1": [
+          0.26886637780694983
+        ],
+        "0.2": [
+          0.3398595477188898
+        ],
+        "0.3": [
+          0.38237559370018354
+        ],
+        "0.4": [
+          0.4131835289222767
+        ],
+        "0.5": [
+          0.4372647003461045
+        ],
+        "0.6": [
+          0.4570775531026769
+        ],
+        "0.7": [
+          0.47386911614021615
+        ],
+        "0.8": [
+          0.488387931397744
+        ],
+        "0.9": [
+          0.5009760924883314
+        ],
+        "1.0": [
+          0.5120967741935484
+        ]
+      }
+    }
+  }
+}

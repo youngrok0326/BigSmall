@@ -16,7 +16,7 @@ model:
   random_state: 42
 wandb:
   enable: true
-  project_name: "SMCGRPO_MAIN"
+  project_name: "SMCGRPO_MAIN_BASE"
   run_name: SMC_Self_1.5B_512_W512_N8 #"Instruct-GSM8K-16-16-Run1"
 rl:
   algorithm: "SMCGRPO" # GRPO, SMCGRPO

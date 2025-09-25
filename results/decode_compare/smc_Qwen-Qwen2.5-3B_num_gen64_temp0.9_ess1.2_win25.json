@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.24798387096774194
+      ],
+      "for_acc": [
+        0.008064516129032258
+      ],
+      "both_acc": [
+        0.0
+      ],
+      "lengths": [
+        682.3870967741935
+      ],
+      "ans_frac": [
+        0.019342237903225805
+      ],
+      "for_frac": [
+        0.00012600806451612903
+      ],
+      "both_frac": [
+        0.0
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: 1. <think>\nTo convert from rectangular coordinates to polar coordinates, we need to find the values of r and theta.\n2. </think>\n3. <think>\nThe formula for converting rectangular coordinates (x, y) to polar coordinates (r$\n<think> x_roots\n</think2, $2. 0& = 1$rectangular9n +\\ \\frac{<answer\n\n<!-050{2 ^ - (6n.\\frac3< think  </think>))\nd \\\\ 5 r =3\\r I0}\n</think>54$\\th\n 232tphantom01. 5.0\n</think\n\\3 =3.\n\\3 2. 320\n3. think\n>  4\ny\n33e+3 is 1 46=\n\n\n< 5</39;1 \n```\nan3(3 }9>\\ + 5,30 15\\ \\q1 \\ 0  / 06 93na3\\O\n</think\n31\n6\\ 3 370 5}",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "1. Define $p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{_{k j = \\infty\\sum = \\frac^3\\). First,00\\ek }frac{ \\text{.{}_oughto1infty 3.\n\n\nAnswer:^\\in \\frac{nuukt \\in k \\)^ 3\\under{r_1_i\\l+3}\\left> \\summidk{q^ + 32\\12k \\ge \\frac12k\np\\end{y11\\}d1\\1\\},\\}h 3 --13 + 11=infty3}n}2}pouro=;  \\ast}3 1 ./3k} r }} 3k43\\con71\\331 = q \\ensuremath n Thus,311 W + 1313\n1211 02 21D\n333  \\33k1}3,\n 1}(v3 + 3\n 5t 421533\\ 53,2 11 py}33n131311j} 233  13 + 233k313l3 3101 121 33 223133333311 i+33311 3 }{112333123331134r13 333232\n231 3313313} 33121334133333 23333333323133313333133333333333333333333\n 3333331331\n3 333333133333311t113333333333333333333333333333333333333333333\n33333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: 1. <think>f(-2)=\\frac{3\\cdot(-2)-2}{-2-2}$\n$$= \\frac{-6-2}{-4}$$\n$$= \\frac{-8}{-4}$$\n</think>\n$\\frac{f(-x), find value at > f(-3)2) is$f(-2 1(1) 22+ 3. \n 1i\n</textruly, we -13-2 1\naw 2 2-236,01 think2)2-22--1(-1/27/3 430\n \n 2\n\nAnswer think:\n>\nthe)2 2242\n-2 + +2\n232 3* -52(-1\n</think\nx122- 425 21 <332 -5knows(4> 1 are\n 24\nThink, </ answer 3\n/think\n2/ and the\n21 1311-1=1+think24322\n2\n 2 2123499=-1+-22\nThink\n\n2:2think4 2132122 think\nanswer6\n<think3 1  3f(-1-22222'2221122 5\n 2 think36\n12</answer5\n31 21\n2\n2\n2\n232\n( 23\n7\n 23  222\n3332 322-2\n 12\n 1\n12 22\n2 2215232+ 333323222\n2 337\n5333\n322think  321<think=\n33\n3\n 2232 12\n>223\n>232223\n233\n22 4\n</\n</22\n32\n3 2212212162 32102322\n33 223  132\n323222<2222222 2\n92\n22 221222\n3\n132 223222+1\n4\n4\n32321212222\n2\n22\n2=222\n2222222223\n</answer\n 22 241322232 22 32223223221\n22222223227232223332]2 2222\n2222223 3\n133 3\n2321\n2323 3\n122\n2332 225\n22\n22\n2212323233222232 2 2\n232\n\n\n\n33\n3221\n32212\n232222\n222232232\nAnswer32322332222223332332\n+2\n 32 3322\n222322\n  2322 2232 223\n20332\n22 2233 232132222223213\n3322233 1323332232323213232322222\n32213222222\n22222\n22\n 2\n322222222222222122323 222222 222222 222222232222 2233 232 22223\n2222\n2312\n32\n223233\n2222\n2222</answer222 3222\n 222222\n2222222\n322332322 222",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "An AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 196 = (2*2)*(7*7)\nThus, the total number of positive whole-number divisors of 196 is 3*3 = 9\nAnswer: 9",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": " <think>\nIn order to determine which student has the greatest average speed, we need to calculate the average speed for each student. Average speed is calculated by dividing the total distance traveled by the total time taken. \n\nFor Evelyn, the total distance traveled isos distance travelled distance 4.2. \n\n(1. </answer 585,w +  = t,t asdf  *Evelyn.1 b1 4. 231  the Lthepalying4810 4 21 an 69720 3\n\nFor 15.  0s  52473 45 </answer,1. carla21 7\n</think]4*\n\n4. ble8   50 26\n\n32 41t 2548 0 0 T  .n7.63930003 48 - 9.90  2 2  20  1.9 82) 3.re1   52, 1+   00s07\n6 0 2  50+. 8.her 4 0 560  023.7  2 2552.  8 0\nEvelyni2.4  02  0. >\nawd 0865 3   7  0 0\n   0.  0.3.  8  7  6  7. 0     0dl9 300 2 00 03 407. 6. 5.255  .6  c 25. 2  76.32. . 89. 4090 0  0.59 55 1 500  3 4051. 0i032.8 0 0  2  3   6   4\n5  07 5  5 60 045  0 5  0.2  2.  0 4 3 e2  4 0 96  0. 0   40  050 00  03 0 07 3  6  11.  10  0    01\n0600 4 05  00  56 0100  003 0 07 3 9  440  0 2002 6.03 3 0\n  0 0 2. 0  7 .  03   080 0  0    4 5   35  02    0 003 . 0 04 00  r 0 0  1 0 0  0  0 4  0  0  055  4  0    00 .  0  6 0  80  3 0 5  0.  0 0\nGiven the 0   0  0  0 50  087 0   0. 2  00  30  0   0  0  000 0  0  0   0   2   0 00  0   00  00 0 03 00  5  0  00  0  60  0   0  00 0 0  0 000  05 0 50 0  9  500  6  0  000  0  0 0.  0 0 0 0  0  7 0 0 0 0 23  0  0  0  0 03  00 0 00  0 0  0 0  0  00  0  0  0   0 0 0 ",
+          "correct": false,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}

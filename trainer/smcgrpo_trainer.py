@@ -1924,6 +1924,44 @@ class GRPOTrainer(Trainer):
 
         prompts_text = [maybe_apply_chat_template(example, self.processing_class)["prompt"] for example in inputs]
 
+        if self.max_prompt_length is not None:
+            trunc_inputs = self.processing_class(
+                text=prompts_text,
+                return_tensors="pt",
+                padding=True,
+                padding_side="left",
+                add_special_tokens=False,
+                **kwargs,
+            )
+            trunc_inputs = super()._prepare_inputs(trunc_inputs)
+            trunc_ids, trunc_mask = trunc_inputs["input_ids"], trunc_inputs["attention_mask"]
+
+            protected = [self.image_token_id, self.vision_start_token_id, self.vision_end_token_id]
+            protected = [token for token in protected if token is not None]
+            trunc_ids, trunc_mask = truncate_with_protected_tokens(
+                trunc_ids,
+                trunc_mask,
+                self.max_prompt_length,
+                protected,
+            )
+
+            truncated_prompts_text = self.processing_class.batch_decode(
+                trunc_ids,
+                skip_special_tokens=False,
+                clean_up_tokenization_spaces=False,
+            )
+            truncated_prompts_text = [
+                re.sub(rf"^({re.escape(self.pad_token)})+", "", text) for text in truncated_prompts_text
+            ]
+
+            if self.image_token is not None:
+                truncated_prompts_text = [
+                    re.sub(rf"({re.escape(self.image_token)})+", self.image_token, text)
+                    for text in truncated_prompts_text
+                ]
+
+            prompts_text = truncated_prompts_text
+
         smc_meta: Optional[_SMCBatchMeta] = None
 
         if (self.use_vllm or hasattr(self, "llm")):
@@ -1932,7 +1970,7 @@ class GRPOTrainer(Trainer):
                 self._last_loaded_step = self.state.global_step
 
             smc_runner = self._ensure_smc_vllm()
-            payload = smc_runner.generate(prompts_text, original_prompts)
+            payload = smc_runner.generate(prompts_text, list(prompts_text))
 
             if _smc_is_bundle(payload):
                 completion_ids_list, smc_meta = _smc_flatten_bundle(

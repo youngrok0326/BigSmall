@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.4314516129032258
+      ],
+      "for_acc": [
+        0.0907258064516129
+      ],
+      "both_acc": [
+        0.016129032258064516
+      ],
+      "lengths": [
+        532.6673387096774
+      ],
+      "ans_frac": [
+        0.036920362903225805
+      ],
+      "for_frac": [
+        0.0029296875
+      ],
+      "both_frac": [
+        0.0004725302419354839
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: 1.  <think>First, let's recall the conversion formulas for converting rectangular coordinates (x,y) to polar coordinates (r,theta): r = sqrt(x^2 + y^2) and theta = arctan(y/x). In this case, x = 0 and y = 3. So, r = sqrt(0^2 + 3^2) = 3. To find theta, we know that the point is on the positive y-axis, so theta must be 90 degrees or pi/2 radians. </think>\n2.  <answer>(3, pi/2)</answer> </answer>\n</answer>",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": "1: First, note that \n\\[\n\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3} = \\sum_{\\ell = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(k + \\ell)^3} = \\sum_{k = 1}^\\infty \\sum_{\\ell = 1}^\\infty \\frac{1}{(k + \\ell)^3} = \\sum_{k = 1}^\\infty \\frac{1}{k^3} \\sum_{\\ell = 1}^\\infty \\in.\nThe sum_k^{1n}^{299t}n1infty 3^u{arg_i313$,1}{4}e5.\n</\\$343}1 L_{1x^{}\na{m)5{2(- 3}\\right) nt\\4Z1{9+sum{k_\\<think\n 31 , \\}=1, \\sum(o1(9r6m6qan {lin614 \\{,36102}+34\\2 22.j20\\} 4\\83b.1356, 211ege n9 b3}13=5331111314133{N}3u s\\2 4 \\2n =33{}{1}338183033173p,1123sole,2\\4 33+ 137123\n3312/ 3 .21263343}3724 388333 *3 + \\153. z23313  333383n3193 \\}1n133 5}313391 3331333 3333333133333 6133, 33331313323333313333 13333333 33331 2334333373333>}4 333 3313333333333333133333 333333333333333333 3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333\n33333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: 1. <think>\nTo solve for $f(-2)$, $f(-1)$, and $f(0)$, we will substitute each value into the given function $f(x) = \\frac{3x-2}{x-2}$.\n</think>\n2. <think>\nFor $f(-2)$:\n$f(-2) = \\frac{3(-2)-2}{-2-2} = \\frac{-6-2}{-4} = \\frac{-8}{-4}$.\n</think>\n3. <think>\nFor $f(-1)$:\n$f(-1) = \\frac{3(-1)-2}{-1-2} = \\frac{-3-2}{5/3_2)}88\\4\nFirst\\43> 09= {  -13(-30+868474*2\n_F1\\-= 78 3\n### 1,215h53}\n</think> \n4$3+ -23;0<3x235\n 16. 2+)-27\n43123322. 4163487242712 - 03pipi4h%3\n5\n3 312152\n3\n46  7642_<answer\n 6\n</think\n1002\n-1 8\n16\n3\n71336\n3w00\n.221\n78 336\n412\nExtract the; o 11\n3\n1 54\n72ee\n472%2,924262\n54\n1\"\n\n32/2\n7\n1\n3- _2\n155\n26\n4)\n-325022812 2753\n23588792231412016 1 23+2  = 19327323+22653\n3\n43\n3322128\n212\nend 43\n3\n17 2\n35\n,4 37338 3253 33\n3-34\n52333133333\n 62\n34\n133\n255324235571\n</div4534\n 3551\n 3 323322\n  11\n03\n27\n03\n)342\n234522\n0\n+2\n23\n33\n43\n333\n92035\n242033436332\n13551 131333823\n1\n 3\n58747233 12225393233\n31\n3 723\n33327\n\n21\n2 4432\n55333\n3\n2\n33322\n0\n33925\n32\n625\n3233253\n203233 2332232863\n32\n3533\n53\n5226\n33242\n233335\n\n3032\n 32\n23333\n0\n21\n3333243\n113 33\n384\n2\n21\n254\n42\n23\n2\n323\n32\n32323231\n23\n2 333\n3333321322\n135 23\n 3\n3\n220 \n\n2\n3\n3233 3\n733333\n332\n23\n3\n3\n1333321123333252\n33323322\n\n\n31\n252\n323\n332\n333 332333\n3357\n132323\n3333333\n33\n333\n72\n1\n523\n33353",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "An AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 196 = (2*2)*7*7\n<think>\nThere are (2+1)*(2+1) = 9 divisors.\n</think>\n<answer>\n9 </answer>",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": " <thinking>\nThe students who have the greatest average speed will be the ones with the most distance covered in a given amount of time. The graph displays the distances covered by each student over a certain time period. By looking at the graph, it is apparent that Evelyn covers the most distance in the least amount of time, indicating the greatest average speed. \n</thinking>\n<answer>\nEvelyn</answer>",
+          "correct": true,
+          "format_correct": false
+        }
+      ]
+    }
+  }
+}

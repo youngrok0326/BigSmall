@@ -1,0 +1,64 @@
+{
+  "math500": {
+    "custom": {
+      "ans_acc": [
+        0.38911290322580644
+      ],
+      "for_acc": [
+        0.06451612903225806
+      ],
+      "both_acc": [
+        0.008064516129032258
+      ],
+      "lengths": [
+        548.6270161290323
+      ],
+      "ans_frac": [
+        0.03780241935483871
+      ],
+      "for_frac": [
+        0.0017641129032258064
+      ],
+      "both_frac": [
+        0.00012600806451612903
+      ],
+      "examples": [
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution: ",
+          "answer": "\\left( 3, \\frac{\\pi}{2} \\right)",
+          "completion": "think>\n<answer>\nAnswer\n</answer>\nProblem: Convert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nSolution:  <think>\nTo convert rectangular coordinates to polar coordinates, we use the relationships $r = \\sqrt{x^2 + y^2}$ and $\\theta = \\tan^{-1}\\left(\\frac{y}{x}\\right)$.\nFor the point $(0,3)$, we have $x = 0$ and $y = 3$.\nTherefore, $r = \\sqrt{0^2 + 3^2} = \\sqrt{9} = 3$.\nSince $x = 0$, $\\theta = \\tan^{-1}\\left(\\frac{3}{0}\\right)$.\nTo the answer:\nThink about  exceeds 0.1}$$5, y  <answer>\n3\\x} and the y = 2050r{134 answeris00+3 i\n\\2\ny. 2\" in(U2: , 30\n\\triangle\n<726< thinkre}f2128 < \n3. 0197. \\ s\n54. \\bulleti  (0\n<30>he4ip; \n 31\\  332}2\nct0>\n\nAssistant:ablegtg416, 1&p7/.__6\nont=0-e.9 3125  23 301 4f090 1 4 377 334 73\n\nProblem: 14:6\n025 3-25  22 4 7232.3\n5\n3 01\n03015 3\n73 03670 27 57290 360\n401\n49031.   37410\nB 2 423\n 3 3827690393320  433783 6259 4 72 5 3\n 392 4323640 3\n3 229   22 234  2051 3 228\n004 303 3593 122  2 3 39\n</ 1433  112 023\n19\n23 034\n0,1023 82\n\n\n  3226000333 7.3 2\n 3\n34\ne 3 42\n 2  33c02279413 3 33 33\n342\n30333\n 3\n27232348 390342326 7 7 40\n2 3 23213007333 4236  7\n2\n17223  232\n{ 3 38 3 3300 3\n33\n32 332 382171  4 35 304 133 123\n3233332  2 253\n3090303334\n2 33135 333  3\n32   33\n3 324  23033332 7\n7233 9223 \n430\n36\n  33 3\n 33287 52\n2\n < 3023  43\n334322\n 2002 2  32 3\n320333333832303 30 3  8 333 3\n333 72\n333023 73313\n733333022232333  0\n 3333 303 21\n43\n33 3233  133 3 3332 333\n3433  3 5\n 33333333300 333 3\n33 \\3 2 73053333337",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: Define\n\\[p = \\sum_{k = 1}^\\infty \\frac{1}{k^2} \\quad \\text{and} \\quad q = \\sum_{k = 1}^\\infty \\frac{1}{k^3}.\\]Find a way to write\n\\[\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3}\\]in terms of $p$ and $q.$\nSolution: ",
+          "answer": "p - q",
+          "completion": " <think>The given sum can be written as follows:\n\\begin{align*}\n\\sum_{j = 1}^\\infty \\sum_{k = 1}^\\infty \\frac{1}{(j + k)^3} &= \\sum_{j = 1}^\\infty \\frac{1}{(j + 1)^3} + \\sum_{j = 1}^\\infty \\frac{1}{(j + 2)^3} + \\sum_{j = 1}^\\infty \\frac{1}{(j + 3)^3} write the but not defined and defining operator\\math{^\\infty}\n{j \\h=sum\\sum + }2\\begin{2^-1}{\\Osumn}i2 1\\k=/k, \\infty\\quad \\sum_n t5{\\sum wifk}N k^scr k} = 1 r ^02j\\right} 0t^}j} \\}l right)k}$\n}\n\n4{3\n100.23^\\{u))\n}\\end} 31{41{}/l156}d\njff8{1nt \\sqrt{ \\}k}2t\\1323z}{ 1+ h1\\ {\\419 2372478}.\nTo321}3\n\\}f41\\3\\4s65_253213dkPj,))))}}{322+f 4\n\n2}{13,111\nub}1}11n312e/20113\n1}l1\ne\\3\nk}k\n03341r2 33144121\\3}4123\\_l35312\n7 1 k3i12{61{111131133 4\\13p233{133411,}\n}1333311111112\n221324}2113 3123122131{33312331331123\n6131323\n3113223311331 \n3113331133{33131313133{1311113323111713513133}l11317113213}1331331333333333332313313313333313133131221313133113o i31313133n11333013321331323331311310}13313313333133133313311111331133331131131133331131311113113131331213122311\n323313113811313131133r33321113213321\n113133\n113133331311323133111113313311\n131333131101111123131333113113211t2133\n311313121213313313331121331112133113311311\n1121121111112}332312121313331\n13211331312213122121122311113311}11233113131112113311331113232111111212131213111112313131111",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: ",
+          "answer": "\\frac{14}{3}",
+          "completion": "\n</think>\n<answer>\nAnswer\n</answer>\nProblem: If $f(x) = \\frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.\nSolution: 1) <think> The expression tells us to plug -2, -1, and 0 into the function and add the results. First, plug -2 into the function: f(-2)=\\frac{3(-2)-2}{-2-2}=-\\frac{8}{4}=-2. Next, plug -1 into the function: f(-1)=\\frac{3(-1)-2}{-1-2}=-\\frac{5}{3}. Finally, plug 0 into the function: f(0)=\\frac{3(0)-2}{0-2) To find $x-2]>\n</a\n\nNow}1 $232f(-2) 3x -2\nanswer>2.1293 85\n121\n 54. 0\n22(27 0(n(cc\u00a031\n + -211 (1=2,33253.8, we simplify the 61\n  e 2+52 5<think>\n5+ 14+18.2133 =545\n 9 -11+  0\n2452 755-think 35-2211  =2 802\n 333310323, 0\n4 252 5   -132\n3\n5/2\n 23 37463.22 -232782\n12022\n  343\n2 33  21\n-<answer\n27230n222/1224342\n123\n2 3 1131\n223\n342433122/535312\n3\n 1\n2752\n35.12223335225\n2025\n   30 252 6335542-5945 22\n3\n3 3\n03\n7 2312353323\n Problem: 3\nthink3234662225\n22 311212022325223 20 052     3\nProblem 34\n3 312  33\n0 - think2223 34\n33\n1\n23852 3233 20 22234 36212432 2213 432+33\n23\n32323143\n+ 2 2\n3233\n23333\n2273323 1125232232 33212222\n 233\n\n1\nx  + 03 -2322522733551732232272241332233253333 123 2\n2 329\n223223 3 2333233223 3323 33  3222313 2213233\n33523313  31323252332 2223 3 13223\n3322232 322323123 2 2233\n323 332333323\n2232242335 32333233\n2 32220\n223223 3\n.\n\n332\n13232 32\n2323313\n 33232\n333325 1222 2232 2 333325333\n3223 323\n132432222  3\n 3233343232 232223\n3233\n23332 32302 2522333 13323    33232323",
+          "correct": false,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: ",
+          "answer": "9",
+          "completion": "An AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: How many positive whole-number divisors does 196 have?\nSolution: 196 = 2 * 2 * 7 * 7\nThere are (2 + 1)(2 + 1) = 9 positive whole-number divisors",
+          "correct": true,
+          "format_correct": false
+        },
+        {
+          "prompt": "\nAn AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., \n<think>\nReasoning\n</think>\n<answer>\nAnswer\n</answer>\nProblem: The results of a cross-country team's training run are graphed below. Which student has the greatest average speed? [asy]\nfor ( int i = 1; i <= 7; ++i )\n{\n\ndraw((i,0)--(i,6));\n}\n\nfor ( int i = 1; i <= 5; ++i )\n{\n\ndraw((0,i)--(8,i));\n}\ndraw((-0.5,0)--(8,0), linewidth(1));\ndraw((0,-0.5)--(0,6), linewidth(1));\nlabel(\"$O$\", (0,0), SW);\nlabel(scale(.85)*rotate(90)*\"distance\", (0, 3), W);\nlabel(scale(.85)*\"time\", (4, 0), S);\ndot((1.25, 4.5));\nlabel(scale(.85)*\"Evelyn\", (1.25, 4.8), N);\ndot((2.5, 2.2));\nlabel(scale(.85)*\"Briana\", (2.5, 2.2), S);\ndot((4.25,5.2));\nlabel(scale(.85)*\"Carla\", (4.25, 5.2), SE);\ndot((5.6, 2.8));\nlabel(scale(.85)*\"Debra\", (5.6, 2.8), N);\ndot((6.8, 1.4));\nlabel(scale(.85)*\"Angela\", (6.8, 1.4), E);\n[/asy]\nSolution: ",
+          "answer": "\\text{Evelyn}",
+          "completion": " <think>\nTo find the student with the greatest average speed, we need to calculate the average speed for each student and compare them. Average speed is calculated by dividing the total distance traveled by the total time taken. Since the distance is not provided, we can only compare the time taken for each student to determine the average speed.\n</think>\n<answer>\nBriana\n</answer>",
+          "correct": false,
+          "format_correct": true
+        }
+      ]
+    }
+  }
+}
