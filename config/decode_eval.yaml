@@ -1,5 +1,6 @@
 model:
   model_name: "Qwen/Qwen2.5-1.5B-Instruct"
+  tokenizer_name: ${model.model_name}
   gpu_memory_utilization: 0.8
   max_seq_length: 1024
   load_in_4bit: true
