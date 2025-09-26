@@ -979,7 +979,8 @@ def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wand
 @hydra.main(version_base=None, config_path="config", config_name="decode_eval")
 def main(cfg: DictConfig) -> None:
     # For dataset tokenizer-dependent filtering
-    set_tokenizer_name(cfg.model.model_name)
+    tokenizer_source = cfg.model.get("tokenizer_name", cfg.model.model_name)
+    set_tokenizer_name(tokenizer_source)
 
     # Prepare dated log directory and placeholder log file for this run.
     today = datetime.now().strftime("%Y-%m-%d")

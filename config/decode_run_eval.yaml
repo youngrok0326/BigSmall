@@ -14,6 +14,7 @@ evaluate_decode_overrides: []
 
 model:
   model_name: ${base_model}
+  tokenizer_name: ${base_model}
   gpu_memory_utilization: 0.7
   max_seq_length: 1024
   load_in_4bit: true
