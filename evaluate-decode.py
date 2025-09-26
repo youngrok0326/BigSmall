@@ -904,7 +904,15 @@ def _evaluate_once_custom(
     )
 
 
-def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wandb_run):
+def _evaluate_dataset(
+    model,
+    tokenizer,
+    dataset_name: str,
+    cfg: DictConfig,
+    wandb_run,
+    *,
+    lora_request=None,
+):
     # Prompts already include the unified math system instructions
     ds = get_questions(dataset_name, split=cfg.split)
     max_prompt_len = int(getattr(cfg, "max_prompt_length", -1))
