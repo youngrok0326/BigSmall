@@ -877,9 +877,8 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
 
 
 def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wandb_run):
-    # Style selection matches training/eval convention
-    style = "instruct" # if cfg.model.model_name.endswith("Instruct") else "base"
-    ds = get_questions(dataset_name, split=cfg.split, style=style)
+    # Prompts already include the unified math system instructions
+    ds = get_questions(dataset_name, split=cfg.split)
     max_prompt_len = int(getattr(cfg, "max_prompt_length", -1))
     if max_prompt_len > 0:
         def _prompt_len(text: str) -> int:

@@ -1,12 +1,12 @@
-base_model: "Qwen/Qwen2.5-Math-1.5B-Instruct"
-run_name: "math_instruct_math_64"
+base_model: "Qwen/Qwen2.5-0.5B"
+run_name: "Original_BASE_0.5B_512_N8_D8"
 datasets: 
   # - "amc23"
   # - "gsm8k"
   - "math500"
 max_seq_length: 1024
 temperature: 0.9
-max_tokens: 1024
+max_tokens: 512
 batch_size: 512
 sample_cnt: 5
-repeat_cnt: 5
+repeat_cnt: 1

@@ -122,8 +122,7 @@ def test_model(cfg: DictConfig, lora_name: str, merged_directory: str, results: 
         for dataset_name in cfg.datasets:
             print(f"Testing dataset {dataset_name}...")
             from .data import get_questions
-            dataset_testing = get_questions(dataset_name, split="test",
-                                            style = "instruct" if cfg.base_model[-8:] == "Instruct" else "base")
+            dataset_testing = get_questions(dataset_name, split="test")
             if results is not None and dataset_name in results:
                 results[dataset_name] = test(cfg, model, dataset_testing, results[dataset_name])
             else:

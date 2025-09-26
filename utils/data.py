@@ -14,22 +14,7 @@ def set_tokenizer_name(name):
     global tokenizer_name
     tokenizer_name = name
 
-SYSTEM_PROMPT_BASE = \
-"""
-An AI assistant is given a math problem and solves it step by step. The assistant first thinks about the reasoning process in the mind and then concludes the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., 
-<think>
-Reasoning
-</think>
-<answer>
-Answer
-</answer>
-"""
-
-# SYSTEM_PROMPT_INSTRUCT = \
-# "Please reason step by step, and put your final answer within \\boxed{}."
-
-# SAL-style prompt used
-SYSTEM_PROMPT_INSTRUCT = "Solve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem."
+SYSTEM_PROMPT = "Solve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem."
 
 _CONCLUSION_PREFIX = re.compile(
     r"Therefore,\s*the\s*final\s*answer\s*is:\s*(?:\$\s*)?\\boxed\{",
@@ -40,6 +25,19 @@ _CONCLUSION_SUFFIX = re.compile(
     flags=re.IGNORECASE,
 )
 _STEP_HEADER_PATTERN = re.compile(r"^##\s*Step\s+(\d+)\s*:", flags=re.IGNORECASE | re.MULTILINE)
+
+
+def _system_chat_prompt(tokenizer: AutoTokenizer, question: str) -> str:
+    """Compose a chat-style prompt that always uses the math system instructions."""
+
+    return tokenizer.apply_chat_template(
+        [
+            {'role': 'system', 'content': SYSTEM_PROMPT},
+            {'role': 'user', 'content': question},
+        ],
+        tokenize=False,
+        add_generation_prompt=True,
+    )
 
 
 def _extract_balanced_braces(text: str, start_idx: int) -> tuple[str, int | None]:
@@ -202,30 +200,18 @@ def filter_function(example, tokenizer: AutoTokenizer) -> bool:
     tokenized_prompt = tokenizer(prompt, return_tensors='pt')
     return tokenized_prompt['input_ids'].shape[1] <= 512
 
-def get_math8k_questions(split = "train", style = "base") -> Dataset:
-    # Loads the Math8K dataset, split is either "train" or "test"
+def get_math8k_questions(split: str = "train") -> Dataset:
+    """Load Math8K prompts using the unified system instructions."""
+
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-    data = load_dataset("parquet", data_files=f'datasets/math8k/{split}.parquet')['train']
-    if style == "base":
-        data = data.map(lambda x: {
-            'prompt': SYSTEM_PROMPT_BASE + "Problem: " + x['question'] + "\nSolution: ",
-            'answer': x['gt_answer']
-        })
-    elif style == "instruct":
-        data = data.map(lambda x: {
-            'prompt': tokenizer.apply_chat_template(
-                [
-                    {'role': 'system', 'content': SYSTEM_PROMPT_INSTRUCT},
-                    {'role': 'user', 'content': x['question']}
-                ],
-                tokenize = False, 
-                add_generation_prompt = True
-            ),
-            'answer': x['gt_answer']
-        })
-    else:
-        raise ValueError(f"Unknown style: {style}")
-    data = data.filter(filter_function, fn_kwargs={'tokenizer': tokenizer})
+    data = load_dataset("parquet", data_files=f"datasets/math8k/{split}.parquet")["train"]
+    data = data.map(
+        lambda x: {
+            "prompt": _system_chat_prompt(tokenizer, x["question"]),
+            "answer": x["gt_answer"],
+        }
+    )
+    data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer})
     return data
 
 def extract_gsm8k_answer(text: str) -> str | None:
@@ -234,30 +220,18 @@ def extract_gsm8k_answer(text: str) -> str | None:
         return None
     return text.split("####")[1].strip().replace(",", "")
 
-def get_gsm8k_questions(split = "train", style = "base") -> Dataset:
-    # Loads the GSM8K dataset, split is either "train" or "test"
+def get_gsm8k_questions(split: str = "train") -> Dataset:
+    """Load GSM8K prompts using the unified system instructions."""
+
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-    data = load_dataset('openai/gsm8k', 'main')[split]
-    if style == "base":
-        data = data.map(lambda x: {
-            'prompt': SYSTEM_PROMPT_BASE + "Problem: " + x['question'] + "\nSolution: ",
-            'answer': extract_gsm8k_answer(x['answer'])
-        })
-    elif style == "instruct":
-        data = data.map(lambda x: {
-            'prompt': tokenizer.apply_chat_template(
-                [
-                    {'role': 'system', 'content': SYSTEM_PROMPT_INSTRUCT},
-                    {'role': 'user', 'content': x['question']}
-                ],
-                tokenize = False, 
-                add_generation_prompt = True
-            ),
-            'answer': extract_gsm8k_answer(x['answer'])
-        })
-    else:
-        raise ValueError(f"Unknown style: {style}")
-    data = data.filter(filter_function, fn_kwargs={'tokenizer': tokenizer})
+    data = load_dataset("openai/gsm8k", "main")[split]
+    data = data.map(
+        lambda x: {
+            "prompt": _system_chat_prompt(tokenizer, x["question"]),
+            "answer": extract_gsm8k_answer(x["answer"]),
+        }
+    )
+    data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer})
     return data
 
 def extract_math_answer(text: str) -> str:
@@ -268,101 +242,75 @@ def extract_math_answer(text: str) -> str:
     answer = answer.split("}")[0]
     return answer.strip()
 
-def get_math_questions(split = "train", style = "base") -> Dataset:
-    # Loads the Math dataset, split is either "train" or "test"
+def get_math_questions(split: str = "train") -> Dataset:
+    """Load the MATH dataset prompts with the unified system instructions."""
+
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-    subsets = ['algebra', 'counting_and_probability', 'geometry', 'intermediate_algebra', 
-               'number_theory', 'prealgebra', 'precalculus']
-    datasets = [load_dataset('EleutherAI/hendrycks_math', s, split=split) for s in subsets]
+    subsets = [
+        "algebra",
+        "counting_and_probability",
+        "geometry",
+        "intermediate_algebra",
+        "number_theory",
+        "prealgebra",
+        "precalculus",
+    ]
+    datasets = [load_dataset("EleutherAI/hendrycks_math", s, split=split) for s in subsets]
     data = concatenate_datasets(datasets)
-    if style == "base":
-        data = data.map(lambda x: {
-            'prompt': SYSTEM_PROMPT_BASE + "Problem: " + x['problem'] + "\nSolution: ",
-            'answer': extract_math_answer(x['solution'])
-        })
-    elif style == "instruct":
-        data = data.map(lambda x: {
-            'prompt': tokenizer.apply_chat_template(
-                [
-                    {'role': 'system', 'content': SYSTEM_PROMPT_INSTRUCT},
-                    {'role': 'user', 'content': x['problem']}
-                ],
-                tokenize = False, 
-                add_generation_prompt = True
-            ),
-            'answer': extract_math_answer(x['solution'])
-        })
-    else:
-        raise ValueError(f"Unknown style: {style}")
-    data = data.filter(filter_function, fn_kwargs={'tokenizer': tokenizer}).shuffle(seed=42)
+    data = data.map(
+        lambda x: {
+            "prompt": _system_chat_prompt(tokenizer, x["problem"]),
+            "answer": extract_math_answer(x["solution"]),
+        }
+    )
+    data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer}).shuffle(seed=42)
     return data
 
-def get_math500_questions(split = "test", style = "base") -> Dataset:
-    # Loads the Math500 dataset, split is either "train" or "test"
+def get_math500_questions(split: str = "test") -> Dataset:
+    """Load the Math500 dataset prompts with the unified system instructions."""
+
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-    data = load_dataset('HuggingFaceH4/MATH-500')[split]
-    if style == "base":
-        data = data.map(lambda x: {
-            'prompt': SYSTEM_PROMPT_BASE + "Problem: " + x['problem'] + "\nSolution: ",
-            'answer': x['answer']
-        })
-    elif style == "instruct":
-        data = data.map(lambda x: {
-            'prompt': tokenizer.apply_chat_template(
-                [
-                    {'role': 'system', 'content': SYSTEM_PROMPT_INSTRUCT},
-                    {'role': 'user', 'content': x['problem']}
-                ],
-                tokenize = False, 
-                add_generation_prompt = True
-            ),
-            'answer': x['answer']
-        })
-    else:
-        raise ValueError(f"Unknown style: {style}")
-    data = data.filter(filter_function, fn_kwargs={'tokenizer': tokenizer})
+    data = load_dataset("HuggingFaceH4/MATH-500")[split]
+    data = data.map(
+        lambda x: {
+            "prompt": _system_chat_prompt(tokenizer, x["problem"]),
+            "answer": x["answer"],
+        }
+    )
+    data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer})
     return data
 
-def get_amc23_questions(split = "test", style = "base") -> Dataset:
-    # Loads the AMC23 dataset, split is either "train" or "test"
+
+def get_amc23_questions(split: str = "test") -> Dataset:
+    """Load the AMC23 dataset prompts with the unified system instructions."""
+
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-    data = load_dataset('zwhe99/amc23')[split]
-    if style == "base":
-        data = data.map(lambda x: {
-            'prompt': SYSTEM_PROMPT_BASE + "Problem: " + x['question'] + "\nSolution: ",
-            'answer': str(int(x['answer']))
-        })
-    elif style == "instruct":
-        data = data.map(lambda x: {
-            'prompt': tokenizer.apply_chat_template(
-                [
-                    {'role': 'system', 'content': SYSTEM_PROMPT_INSTRUCT},
-                    {'role': 'user', 'content': x['question']}
-                ],
-                tokenize = False, 
-                add_generation_prompt = True
-            ),
-            'answer': str(int(x['answer']))
-        })
-    else:
-        raise ValueError(f"Unknown style: {style}")
-    data = data.cast_column('answer', Value('string')).filter(filter_function, fn_kwargs={'tokenizer': tokenizer})
+    data = load_dataset("zwhe99/amc23")[split]
+    data = data.map(
+        lambda x: {
+            "prompt": _system_chat_prompt(tokenizer, x["question"]),
+            "answer": str(int(x["answer"])),
+        }
+    )
+    data = data.cast_column("answer", Value("string")).filter(
+        filter_function, fn_kwargs={"tokenizer": tokenizer}
+    )
     return data
 
-def get_questions(name: str, split = "train", style = "base") -> Dataset:
-    # Loads the dataset based on the name provided
+def get_questions(name: str, split: str = "train") -> Dataset:
+    """Load a dataset by name using the unified system instructions."""
+
     if name == "math8k":
-        return get_math8k_questions(split, style)
-    elif name == "gsm8k":
-        return get_gsm8k_questions(split, style)
-    elif name == "math500":
-        return get_math500_questions(split, style)
-    elif name == "amc23":
-        return get_amc23_questions(split, style)
-    elif name == "math":
-        return get_math_questions(split, style)
-    else:
-        raise ValueError(f"Unknown dataset name: {name}")
+        return get_math8k_questions(split)
+    if name == "gsm8k":
+        return get_gsm8k_questions(split)
+    if name == "math500":
+        return get_math500_questions(split)
+    if name == "amc23":
+        return get_amc23_questions(split)
+    if name == "math":
+        return get_math_questions(split)
+    raise ValueError(f"Unknown dataset name: {name}")
 
 # Reward functions
 def correctness_reward_func(completions, answer, **kwargs) -> list[float]:

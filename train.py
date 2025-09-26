@@ -45,7 +45,7 @@ def main(cfg: DictConfig) -> None:
 
     # Load the datasets
     from utils.data import get_questions
-    dataset_training = get_questions(cfg.rl.dataset, split="train", style="instruct")
+    dataset_training = get_questions(cfg.rl.dataset, split="train")
     # dataset_testing  = get_math8k_questions(split = "test")
 
     # Import the trainer and config

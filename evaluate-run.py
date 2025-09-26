@@ -57,8 +57,7 @@ def main(cfg: DictConfig) -> None:
             ckpt_res = results.get(lora_name, {})
             for dataset_name in cfg.datasets:
                 print(f"Testing dataset {dataset_name}...")
-                style = "instruct" if cfg.base_model[-8:] == "Instruct" else "base"
-                dataset_testing = get_questions(dataset_name, split="test", style=style)
+                dataset_testing = get_questions(dataset_name, split="test")
 
                 prev = ckpt_res.get(dataset_name)
                 ckpt_res[dataset_name] = test(cfg, model, dataset_testing, prev, lora_request=lora_request)
