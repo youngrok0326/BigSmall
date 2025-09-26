@@ -1,33 +1,29 @@
-"""Run custom decode evaluation across all LoRA checkpoints.
-
-This orchestrates LoRA merging and delegates per-checkpoint decoding to
-``evaluate-decode.py`` so we can reuse its custom decoding implementation
-and W&B logging without reinitialising the job manually for each checkpoint.
-"""
+"""Run custom decoding for every LoRA checkpoint without reloading the base model."""
 
 import json
 import os
 import re
 import shutil
-import subprocess
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 import hydra
 from hydra.utils import get_original_cwd
-from omegaconf import DictConfig, ListConfig, OmegaConf
+from omegaconf import DictConfig, OmegaConf
+
+from evaluate_decode import run_decode
+from unsloth import FastLanguageModel
+from unsloth_zoo.vllm_utils import load_lora, delete_vllm
 
 
 @dataclass
 class CheckpointSpec:
     name: str
     path: str
-    requires_merge: bool
+    is_base: bool = False
 
 
 def _list_lora_checkpoints(directory: str) -> List[str]:
-    """Return checkpoint subdirectories sorted by the numeric step."""
-
     if not os.path.isdir(directory):
         return []
     pattern = re.compile(r"checkpoint-(\d+)")
@@ -61,141 +57,56 @@ def _save_results(path: str, results: Dict[str, Dict]) -> None:
         json.dump(results, f, indent=2)
 
 
-def _merge_lora(base_model: str, lora_path: str, merged_dir: str, root: str) -> None:
-    if os.path.isdir(merged_dir):
-        shutil.rmtree(merged_dir)
-    _ensure_dir(merged_dir)
-    subprocess.run(
-        [
-            "python3",
-            os.path.join(root, "scripts", "merge.py"),
-            base_model,
-            lora_path,
-            merged_dir,
-        ],
-        check=True,
-        cwd=root,
-    )
-
-
-def _build_wandb_run_name(prefix: Optional[str], checkpoint_name: str) -> str:
+def _build_wandb_run_name(prefix: str | None, checkpoint_name: str) -> str:
     if prefix:
         return f"{prefix}-{checkpoint_name}"
     return checkpoint_name
 
 
-def _format_override(value) -> str:
-    if isinstance(value, (DictConfig, ListConfig)):
-        value = OmegaConf.to_container(value, resolve=True)
-    return json.dumps(value, ensure_ascii=False)
+def _to_container(section) -> Dict:
+    if section is None:
+        return {}
+    return OmegaConf.to_container(section, resolve=True)
 
 
-def _append_dict_overrides(
-    overrides: List[str],
-    prefix: str,
-    data: Dict,
-    *,
-    skip: Optional[set[str]] = None,
-) -> None:
-    skip = skip or set()
-    container = OmegaConf.to_container(data, resolve=True) if isinstance(data, DictConfig) else data
-    for key, value in (container or {}).items():
-        if key in skip:
-            continue
-        field = f"{prefix}.{key}" if prefix else key
-        if isinstance(value, dict):
-            _append_dict_overrides(overrides, field, value, skip=None)
-        else:
-            overrides.append(f"{field}={_format_override(value)}")
-
-
-def _append_value_override(overrides: List[str], field: str, value) -> None:
-    overrides.append(f"{field}={_format_override(value)}")
-
-
-def _collect_overrides(
-    cfg: DictConfig,
-    model_dir: str,
-    run_name: str,
-) -> List[str]:
-    overrides: List[str] = [
-        f"model.model_name={model_dir}",
-        f"wandb.run_name={run_name}",
-        f"wandb.project_name={cfg.wandb.project_name}",
-        f"wandb.enable={'true' if cfg.wandb.enable else 'false'}",
-        "hydra.run.dir=.",
-        "hydra.output_subdir=null",
-        "hydra.job.chdir=false",
-    ]
-    wandb_cfg = cfg.get("wandb")
-    if wandb_cfg:
-        if wandb_cfg.get("entity") is not None:
-            overrides.append(f"wandb.entity={_format_override(wandb_cfg.entity)}")
-        if wandb_cfg.get("group") is not None:
-            overrides.append(f"wandb.group={_format_override(wandb_cfg.group)}")
-
-    model_cfg = cfg.get("model")
-    if model_cfg:
-        _append_dict_overrides(overrides, "model", model_cfg, skip={"model_name"})
-
-    for key in ("datasets", "split", "num_samples", "max_prompt_length"):
-        value = cfg.get(key)
-        if value is not None:
-            _append_value_override(overrides, key, value)
-
-    for section in ("eval", "default_decode", "custom_decode", "prm"):
-        sect_cfg = cfg.get(section)
-        if sect_cfg is not None:
-            _append_dict_overrides(overrides, section, sect_cfg)
-
-    extra = cfg.get("evaluate_decode_overrides")
-    if extra:
-        overrides.extend(list(extra))
-    return overrides
-
-
-def _run_decode(
-    root: str,
-    overrides: List[str],
-) -> Tuple[Dict, str]:
-    cmd = ["python3", os.path.join(root, "evaluate-decode.py"), *overrides]
-    subprocess.run(cmd, check=True, cwd=root)
-    run_name = None
-    for override in overrides:
-        if override.startswith("wandb.run_name="):
-            run_name = override.split("=", 1)[1]
-            break
-    if not run_name:
-        raise RuntimeError("wandb.run_name override missing")
-    result_path = os.path.join(root, "results", "decode_compare", f"{run_name}.json")
-    if not os.path.exists(result_path):
-        raise FileNotFoundError(f"Expected results at {result_path}")
-    with open(result_path, "r") as f:
-        return json.load(f), result_path
+def _build_decode_cfg(cfg: DictConfig, run_name: str) -> DictConfig:
+    decode_dict: Dict[str, object] = {
+        "model": _to_container(cfg.model),
+        "datasets": list(cfg.datasets),
+        "split": cfg.get("split"),
+        "num_samples": cfg.get("num_samples"),
+        "max_prompt_length": cfg.get("max_prompt_length"),
+        "eval": _to_container(cfg.eval),
+        "default_decode": _to_container(cfg.default_decode),
+        "custom_decode": _to_container(cfg.custom_decode),
+        "prm": _to_container(cfg.prm),
+        "wandb": _to_container(cfg.wandb),
+    }
+    decode_dict["wandb"]["run_name"] = run_name
+    return OmegaConf.create(decode_dict)
 
 
 def _gather_checkpoints(cfg: DictConfig, root: str) -> List[CheckpointSpec]:
     checkpoints_root = os.path.join(root, cfg.checkpoints_dir, cfg.run_name)
-    checkpoints: List[CheckpointSpec] = []
+    specs: List[CheckpointSpec] = []
     if cfg.include_base:
-        checkpoints.append(
-            CheckpointSpec(name="base", path=cfg.base_model, requires_merge=False)
-        )
+        specs.append(CheckpointSpec(name="base", path=str(cfg.base_model), is_base=True))
     for name in _list_lora_checkpoints(checkpoints_root):
-        checkpoints.append(
+        specs.append(
             CheckpointSpec(
                 name=name,
                 path=os.path.join(checkpoints_root, name),
-                requires_merge=True,
+                is_base=False,
             )
         )
-    return checkpoints
+    return specs
 
 
 @hydra.main(version_base=None, config_path="config", config_name="decode_run_eval")
 def main(cfg: DictConfig) -> None:
     root = get_original_cwd()
     os.chdir(root)
+
     checkpoints = _gather_checkpoints(cfg, root)
     if not checkpoints:
         raise RuntimeError("No checkpoints found to evaluate.")
@@ -208,36 +119,56 @@ def main(cfg: DictConfig) -> None:
     if cfg.save_per_checkpoint:
         _ensure_dir(per_ckpt_dir)
 
-    for spec in checkpoints:
-        if cfg.skip_existing and spec.name in aggregated_results:
-            print(f"Skipping {spec.name}; results already exist.")
-            continue
+    decode_compare_dir = os.path.join(root, "results", "decode_compare")
+    _ensure_dir(decode_compare_dir)
 
-        print(f"Evaluating checkpoint: {spec.name}")
-        merged_dir: Optional[str] = None
-        model_dir = spec.path
+    model_cfg = cfg.model
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name=model_cfg.model_name,
+        max_seq_length=model_cfg.max_seq_length,
+        load_in_4bit=model_cfg.load_in_4bit,
+        fast_inference=model_cfg.fast_inference,
+        gpu_memory_utilization=model_cfg.gpu_memory_utilization,
+    )
 
-        if spec.requires_merge:
-            merged_dir = os.path.join(root, cfg.merged_root, f"{spec.name}_merged")
-            _merge_lora(cfg.base_model, spec.path, merged_dir, root)
-            model_dir = merged_dir
+    try:
+        for spec in checkpoints:
+            if cfg.skip_existing and spec.name in aggregated_results:
+                print(f"Skipping {spec.name}; results already exist.")
+                continue
 
-        run_name = _build_wandb_run_name(cfg.wandb.run_name, spec.name)
-        overrides = _collect_overrides(cfg, model_dir, run_name)
+            run_name = _build_wandb_run_name(cfg.wandb.run_name, spec.name)
+            decode_cfg = _build_decode_cfg(cfg, run_name)
 
+            lora_request = None
+            if not spec.is_base:
+                print(f"Loading LoRA adapter from {spec.path}")
+                lora_request = load_lora(model, spec.path, load_tensors=False)
+
+            results = run_decode(
+                decode_cfg,
+                model=model,
+                tokenizer=tokenizer,
+                lora_request=lora_request,
+            )
+
+            aggregated_results[spec.name] = results
+            _save_results(aggregated_path, aggregated_results)
+            print(f"Stored aggregated metrics for {spec.name} -> {aggregated_path}")
+
+            run_results_path = os.path.join(decode_compare_dir, f"{run_name}.json")
+            with open(run_results_path, "w") as f:
+                json.dump(results, f, indent=2)
+
+            if cfg.save_per_checkpoint:
+                destination = os.path.join(per_ckpt_dir, f"{spec.name}.json")
+                shutil.copyfile(run_results_path, destination)
+
+    finally:
         try:
-            results, source_path = _run_decode(root, overrides)
-        finally:
-            if merged_dir and os.path.isdir(merged_dir):
-                shutil.rmtree(merged_dir)
-
-        aggregated_results[spec.name] = results
-        _save_results(aggregated_path, aggregated_results)
-        print(f"Stored aggregated metrics for {spec.name} -> {aggregated_path}")
-
-        if cfg.save_per_checkpoint:
-            destination = os.path.join(per_ckpt_dir, f"{spec.name}.json")
-            shutil.copyfile(source_path, destination)
+            delete_vllm(model)
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

@@ -238,7 +238,16 @@ def _update_pass_metrics(correct_flags: list[bool], pass_metrics: list[PassMetri
         counts[metric.name] += 1
 
 
-def _evaluate_once_default(model, tokenizer, prompts, answers, cfg: DictConfig, progress_desc: str | None = None):
+def _evaluate_once_default(
+    model,
+    tokenizer,
+    prompts,
+    answers,
+    cfg: DictConfig,
+    *,
+    lora_request=None,
+    progress_desc: str | None = None,
+):
     """Default decoding. If cfg.eval.default_use_vllm is True, use Unsloth+vLLM
     fast_generate for better memory/throughput (like evaluate-run.py). Otherwise
     use vanilla HF generate.
@@ -280,7 +289,7 @@ def _evaluate_once_default(model, tokenizer, prompts, answers, cfg: DictConfig, 
                 outputs = model.fast_generate(
                     batch_prompts,
                     sampling_params=sampling_params,
-                    lora_request=None,
+                    lora_request=lora_request,
                     use_tqdm=False,
                 )
                 for k, output, gt in zip(range(i, j), outputs, answers[i:j]):
@@ -324,6 +333,8 @@ def _evaluate_once_default(model, tokenizer, prompts, answers, cfg: DictConfig, 
                         })
                 pbar.update(j - i)
     else:
+        if lora_request is not None:
+            raise ValueError("LoRA evaluation requires fast_inference/vLLM backend; disable lora or enable fast_inference.")
         # Vanilla HF generate path
         device = next(model.parameters()).device
         gen_cfg = _build_gen_config_from_section(tokenizer, cfg.default_decode, cfg.eval.max_new_tokens)
@@ -469,7 +480,17 @@ def _locate_vllm_backend(model) -> tuple[bool, object | None]:
     return False, None
 
 
-def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, logging_enabled: bool, progress_desc: str | None = None):
+def _evaluate_once_custom(
+    model,
+    tokenizer,
+    prompts,
+    answers,
+    cfg: DictConfig,
+    logging_enabled: bool,
+    *,
+    lora_request=None,
+    progress_desc: str | None = None,
+):
     _ensure_pad_token(tokenizer)
     use_vllm_cfg = bool(cfg.model.get("fast_inference", True))
     use_vllm_detected, llm = _locate_vllm_backend(model)
@@ -605,7 +626,11 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
                 for prompt in batch_prompts:
                     repeated_prompts.extend([prompt] * N)
 
-                outputs = smc_runner.generate(repeated_prompts, batch_prompts)
+                outputs = smc_runner.generate(
+                    repeated_prompts,
+                    batch_prompts,
+                    lora_request=lora_request,
+                )
                 group_sizes: List[int]
                 completion_ids_list: List[List[int]]
                 extras: Optional[Dict[str, Any]] = None
@@ -709,6 +734,9 @@ def _evaluate_once_custom(model, tokenizer, prompts, answers, cfg: DictConfig, l
             examples,
             avg_pass_at_k,
         )
+
+    if lora_request is not None:
+        raise ValueError("LoRA evaluation requires fast_inference/vLLM backend; disable lora or enable fast_inference.")
 
     device = next(model.parameters()).device
 
@@ -927,7 +955,12 @@ def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wand
     for t in range(cfg.eval.repeat_cnt):
         if run_default:
             da, df, db, dl, dr_a, dr_f, dr_b, de, dp = _evaluate_once_default(
-                model, tokenizer, prompts, answers, cfg,
+                model,
+                tokenizer,
+                prompts,
+                answers,
+                cfg,
+                lora_request=lora_request,
                 progress_desc=f"{dataset_name} | default | rep {t+1}/{cfg.eval.repeat_cnt}"
             )
             default_ans.append(da); default_for.append(df); default_both.append(db); default_len.append(dl)
@@ -937,8 +970,13 @@ def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wand
                 default_pass_at_k[name].append(dp.get(name, 0.0))
         if run_custom:
             ca, cf, cb, cl, cr_a, cr_f, cr_b, ce, cp = _evaluate_once_custom(
-                model, tokenizer, prompts, answers, cfg,
+                model,
+                tokenizer,
+                prompts,
+                answers,
+                cfg,
                 logging_enabled=cfg.wandb.enable,
+                lora_request=lora_request,
                 progress_desc=f"{dataset_name} | custom | rep {t+1}/{cfg.eval.repeat_cnt}"
             )
             custom_ans.append(ca); custom_for.append(cf); custom_both.append(cb); custom_len.append(cl)
@@ -976,13 +1014,7 @@ def _evaluate_dataset(model, tokenizer, dataset_name: str, cfg: DictConfig, wand
     return results
 
 
-@hydra.main(version_base=None, config_path="config", config_name="decode_eval")
-def main(cfg: DictConfig) -> None:
-    # For dataset tokenizer-dependent filtering
-    tokenizer_source = cfg.model.get("tokenizer_name", cfg.model.model_name)
-    set_tokenizer_name(tokenizer_source)
-
-    # Prepare dated log directory and placeholder log file for this run.
+def _ensure_log_placeholder() -> None:
     today = datetime.now().strftime("%Y-%m-%d")
     log_dir = os.path.join("outputs", today)
     os.makedirs(log_dir, exist_ok=True)
@@ -991,73 +1023,114 @@ def main(cfg: DictConfig) -> None:
         with open(log_path, "w"):
             pass
 
-    # Load model and tokenizer via Unsloth, but disable fast_inference for HF generate
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=cfg.model.model_name,
-        max_seq_length=cfg.model.max_seq_length,
-        load_in_4bit=cfg.model.load_in_4bit,
-        fast_inference=cfg.model.fast_inference,
-        gpu_memory_utilization=cfg.model.gpu_memory_utilization,
-    )
 
-    # W&B init
+def _log_wandb_summary(results: Dict[str, Dict[str, Any]], wandb_run) -> None:
+    if wandb_run is None:
+        return
+
+    summary: Dict[str, float] = {}
+    for dataset_name, res in results.items():
+        ans_vals, for_vals, both_vals, len_vals = [], [], [], []
+        ans_frac_vals, for_frac_vals, both_frac_vals = [], [], []
+        pass_vals: dict[str, List[float]] = {}
+        for mode_data in res.values():
+            ans_vals.extend(mode_data.get("ans_acc", []))
+            for_vals.extend(mode_data.get("for_acc", []))
+            both_vals.extend(mode_data.get("both_acc", []))
+            len_vals.extend(mode_data.get("lengths", []))
+            ans_frac_vals.extend(mode_data.get("ans_frac", []))
+            for_frac_vals.extend(mode_data.get("for_frac", []))
+            both_frac_vals.extend(mode_data.get("both_frac", []))
+            for name, vals in (mode_data.get("pass_at_k", {}) or {}).items():
+                pass_vals.setdefault(name, []).extend(vals)
+
+        def _mean(values: List[float]) -> float:
+            return float(sum(values) / len(values)) if values else 0.0
+
+        summary[f"{dataset_name}/ans_acc_mean"] = _mean(ans_vals)
+        summary[f"{dataset_name}/for_acc_mean"] = _mean(for_vals)
+        summary[f"{dataset_name}/both_acc_mean"] = _mean(both_vals)
+        summary[f"{dataset_name}/length_mean"] = _mean(len_vals)
+        summary[f"{dataset_name}/ans_frac_mean"] = _mean(ans_frac_vals)
+        summary[f"{dataset_name}/for_frac_mean"] = _mean(for_frac_vals)
+        summary[f"{dataset_name}/both_frac_mean"] = _mean(both_frac_vals)
+        for name, vals in pass_vals.items():
+            if vals:
+                summary[f"{dataset_name}/pass@{name}_mean"] = _mean(vals)
+
+    wandb_run.log(summary)
+
+
+def run_decode(
+    cfg: DictConfig,
+    model=None,
+    tokenizer=None,
+    *,
+    lora_request=None,
+    create_log_placeholder: bool = False,
+) -> Dict[str, Dict[str, Any]]:
+    tokenizer_source = cfg.model.get("tokenizer_name", cfg.model.model_name)
+    set_tokenizer_name(tokenizer_source)
+
+    if create_log_placeholder:
+        _ensure_log_placeholder()
+
+    own_model = model is None or tokenizer is None
+    if own_model:
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            model_name=cfg.model.model_name,
+            max_seq_length=cfg.model.max_seq_length,
+            load_in_4bit=cfg.model.load_in_4bit,
+            fast_inference=cfg.model.fast_inference,
+            gpu_memory_utilization=cfg.model.gpu_memory_utilization,
+        )
+
     wandb_run = None
     if cfg.wandb.enable:
         import wandb
-        wandb_run = wandb.init(
-            project=cfg.wandb.project_name,
-            name=cfg.wandb.run_name,
-            config=OmegaConf.to_container(cfg, resolve=True),
-        )
 
-    results = {}
+        wandb_kwargs = {
+            "project": cfg.wandb.project_name,
+            "name": cfg.wandb.run_name,
+            "config": OmegaConf.to_container(cfg, resolve=True),
+        }
+        if cfg.wandb.get("entity") is not None:
+            wandb_kwargs["entity"] = cfg.wandb.entity
+        if cfg.wandb.get("group") is not None:
+            wandb_kwargs["group"] = cfg.wandb.group
+
+        wandb_run = wandb.init(**wandb_kwargs)
+
+    results: Dict[str, Dict[str, Any]] = {}
     for dataset_name in cfg.datasets:
         print(f"Evaluating dataset: {dataset_name}")
-        results[dataset_name] = _evaluate_dataset(model, tokenizer, dataset_name, cfg, wandb_run)
+        results[dataset_name] = _evaluate_dataset(
+            model,
+            tokenizer,
+            dataset_name,
+            cfg,
+            wandb_run,
+            lora_request=lora_request,
+        )
 
-    # Persist results under results/decode_compare/<run_name>.json
+    _log_wandb_summary(results, wandb_run)
+
+    if wandb_run is not None:
+        wandb_run.finish()
+
+    return results
+
+
+@hydra.main(version_base=None, config_path="config", config_name="decode_eval")
+def main(cfg: DictConfig) -> None:
+    results = run_decode(cfg, create_log_placeholder=True)
+
     results_dir = os.path.join("results", "decode_compare")
     os.makedirs(results_dir, exist_ok=True)
     out_path = os.path.join(results_dir, f"{cfg.wandb.run_name}.json")
     with open(out_path, "w") as f:
         json.dump(results, f, indent=2)
     print(f"Saved results to {out_path}")
-
-    if wandb_run is not None:
-        # Log only final per-dataset mean metrics, unified across default/custom
-        summary = {}
-        for d, res in results.items():
-            # Concatenate across available modes (default/custom) for a unified mean
-            ans_vals, for_vals, both_vals, len_vals = [], [], [], []
-            ans_frac_vals, for_frac_vals, both_frac_vals = [], [], []
-            pass_vals: dict[str, list[float]] = {}
-            for mode_data in res.values():
-                ans_vals.extend(mode_data.get("ans_acc", []))
-                for_vals.extend(mode_data.get("for_acc", []))
-                both_vals.extend(mode_data.get("both_acc", []))
-                len_vals.extend(mode_data.get("lengths", []))
-                ans_frac_vals.extend(mode_data.get("ans_frac", []))
-                for_frac_vals.extend(mode_data.get("for_frac", []))
-                both_frac_vals.extend(mode_data.get("both_frac", []))
-                for name, vals in (mode_data.get("pass_at_k", {}) or {}).items():
-                    pass_vals.setdefault(name, []).extend(vals)
-
-            def _mean(lst):
-                return float(sum(lst) / len(lst)) if len(lst) > 0 else 0.0
-
-            summary[f"{d}/ans_acc_mean"] = _mean(ans_vals)
-            summary[f"{d}/for_acc_mean"] = _mean(for_vals)
-            summary[f"{d}/both_acc_mean"] = _mean(both_vals)
-            summary[f"{d}/length_mean"] = _mean(len_vals)
-            summary[f"{d}/ans_frac_mean"] = _mean(ans_frac_vals)
-            summary[f"{d}/for_frac_mean"] = _mean(for_frac_vals)
-            summary[f"{d}/both_frac_mean"] = _mean(both_frac_vals)
-            for name, vals in pass_vals.items():
-                if vals:
-                    summary[f"{d}/pass@{name}_mean"] = _mean(vals)
-
-        wandb_run.log(summary)
-        wandb_run.finish()
 
 
 if __name__ == "__main__":

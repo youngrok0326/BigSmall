@@ -606,6 +606,8 @@ class SMCVLLM:
         self,
         prompts_text: List[str],
         original_prompts: List[Any],
+        *,
+        lora_request: Optional[Any] = None,
     ) -> Union[List[List[int]], Dict[str, Any]]:
         self._call_index += 1
         global_call_step = self._call_index
@@ -649,7 +651,12 @@ class SMCVLLM:
 
             if not batch_inputs:
                 break
-            outs = self.llm.generate(batch_inputs, sampling_params=sampling_params, use_tqdm=False)
+            outs = self.llm.generate(
+                batch_inputs,
+                sampling_params=sampling_params,
+                use_tqdm=False,
+                lora_request=lora_request,
+            )
             prm_requests: Dict[int, List[Tuple[int, str]]] = defaultdict(list) if self._use_prm else {}
             step_eos_counter: Optional[List[int]] = [0 for _ in range(G)] if self.log_wandb else None
 

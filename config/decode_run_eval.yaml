@@ -5,12 +5,10 @@ base_model: "Qwen/Qwen2.5-0.5B"
 
 run_name: "Original_BASE_0.5B_512_N8_D8"
 checkpoints_dir: "checkpoints"
-merged_root: "merged_models"
 results_root: "results/decode_run"
 include_base: false
 skip_existing: true
 save_per_checkpoint: true
-evaluate_decode_overrides: []
 
 model:
   model_name: ${base_model}
