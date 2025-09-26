@@ -29,8 +29,8 @@ max_prompt_length: 512
 eval:
   repeat_cnt: 1
   sample_cnt: 5
-  batch_size_groups: 512
-  num_generations: 64
+  batch_size_groups: 32
+  num_generations: 8
   max_new_tokens: 512
   pass_k: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
   run_default: false
