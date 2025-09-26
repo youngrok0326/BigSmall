@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple
 
 import hydra
 from hydra.utils import get_original_cwd
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 
 @dataclass
@@ -84,6 +84,33 @@ def _build_wandb_run_name(prefix: Optional[str], checkpoint_name: str) -> str:
     return checkpoint_name
 
 
+def _format_override(value) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _append_dict_overrides(
+    overrides: List[str],
+    prefix: str,
+    data: Dict,
+    *,
+    skip: Optional[set[str]] = None,
+) -> None:
+    skip = skip or set()
+    container = OmegaConf.to_container(data, resolve=True) if isinstance(data, DictConfig) else data
+    for key, value in (container or {}).items():
+        if key in skip:
+            continue
+        field = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            _append_dict_overrides(overrides, field, value, skip=None)
+        else:
+            overrides.append(f"{field}={_format_override(value)}")
+
+
+def _append_value_override(overrides: List[str], field: str, value) -> None:
+    overrides.append(f"{field}={_format_override(value)}")
+
+
 def _collect_overrides(
     cfg: DictConfig,
     model_dir: str,
@@ -98,10 +125,27 @@ def _collect_overrides(
         "hydra.output_subdir=null",
         "hydra.job.chdir=false",
     ]
-    if cfg.wandb.get("entity"):
-        overrides.append(f"wandb.entity={cfg.wandb.entity}")
-    if cfg.wandb.get("group"):
-        overrides.append(f"wandb.group={cfg.wandb.group}")
+    wandb_cfg = cfg.get("wandb")
+    if wandb_cfg:
+        if wandb_cfg.get("entity") is not None:
+            overrides.append(f"wandb.entity={_format_override(wandb_cfg.entity)}")
+        if wandb_cfg.get("group") is not None:
+            overrides.append(f"wandb.group={_format_override(wandb_cfg.group)}")
+
+    model_cfg = cfg.get("model")
+    if model_cfg:
+        _append_dict_overrides(overrides, "model", model_cfg, skip={"model_name"})
+
+    for key in ("datasets", "split", "num_samples", "max_prompt_length"):
+        value = cfg.get(key)
+        if value is not None:
+            _append_value_override(overrides, key, value)
+
+    for section in ("eval", "default_decode", "custom_decode", "prm"):
+        sect_cfg = cfg.get(section)
+        if sect_cfg is not None:
+            _append_dict_overrides(overrides, section, sect_cfg)
+
     extra = cfg.get("evaluate_decode_overrides")
     if extra:
         overrides.extend(list(extra))
