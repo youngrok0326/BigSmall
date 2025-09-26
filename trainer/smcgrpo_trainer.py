@@ -2135,12 +2135,40 @@ class GRPOTrainer(Trainer):
             truncated_completions = lengths_for_mask >= max_length_cap
             completion_mask = completion_mask * (~truncated_completions).unsqueeze(1).int()
 
-        # Align completion tensors to the maximum generated length to avoid gather mismatches downstream.
+        # Determine the model's maximum supported sequence length (prompt + completion).
+        model_max_length = (
+            getattr(self.model.config, "max_position_embeddings", None)
+            or getattr(self.model.config, "max_sequence_length", None)
+            or getattr(self.processing_class, "model_max_length", None)
+            or getattr(self.processing_class, "max_length", None)
+        )
+        if model_max_length is not None:
+            model_max_length = int(model_max_length)
+            max_prompt_allowed = max(model_max_length - 1, 1)
+            if prompt_ids.size(1) > max_prompt_allowed:
+                trim_prompt = prompt_ids.size(1) - max_prompt_allowed
+                prompt_ids = prompt_ids[:, trim_prompt:].contiguous()
+                prompt_mask = prompt_mask[:, trim_prompt:].contiguous()
+                if "input_ids" in prompt_inputs:
+                    prompt_inputs["input_ids"] = prompt_ids
+                    prompt_inputs["attention_mask"] = prompt_mask
+
+        # Align completion tensors to the maximum generated length and respect model constraints to avoid gather
+        # mismatches downstream.
         effective_keep = int(completion_mask.sum(dim=1).max().item())
         effective_keep = max(effective_keep, 1)
+        if model_max_length is not None:
+            max_completion_allowed = max(model_max_length - prompt_ids.size(1), 1)
+            effective_keep = min(effective_keep, max_completion_allowed)
+
         if completion_ids.size(1) != effective_keep:
             completion_ids = completion_ids[:, :effective_keep].contiguous()
+        if completion_mask.size(1) != effective_keep:
             completion_mask = completion_mask[:, :effective_keep].contiguous()
+
+        if raw_lengths is not None:
+            raw_lengths = raw_lengths.clamp_max(effective_keep)
+
         completion_lengths = completion_lengths.clamp_max(effective_keep)
 
         # Rebuild concatenated ids/masks after potential trimming so shapes stay consistent.
