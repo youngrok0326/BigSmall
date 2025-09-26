@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple
 
 import hydra
 from hydra.utils import get_original_cwd
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, ListConfig, OmegaConf
 
 
 @dataclass
@@ -85,6 +85,8 @@ def _build_wandb_run_name(prefix: Optional[str], checkpoint_name: str) -> str:
 
 
 def _format_override(value) -> str:
+    if isinstance(value, (DictConfig, ListConfig)):
+        value = OmegaConf.to_container(value, resolve=True)
     return json.dumps(value, ensure_ascii=False)
 
 
