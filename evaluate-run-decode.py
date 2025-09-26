@@ -1,5 +1,6 @@
 """Run custom decoding for every LoRA checkpoint without reloading the base model."""
 
+import importlib.util
 import json
 import os
 import re
@@ -11,7 +12,6 @@ import hydra
 from hydra.utils import get_original_cwd
 from omegaconf import DictConfig, OmegaConf
 
-from evaluate_decode import run_decode
 from unsloth import FastLanguageModel
 from unsloth_zoo.vllm_utils import load_lora, delete_vllm
 
@@ -102,10 +102,26 @@ def _gather_checkpoints(cfg: DictConfig, root: str) -> List[CheckpointSpec]:
     return specs
 
 
+def _load_run_decode(root: str):
+    module_path = os.path.join(root, "evaluate-decode.py")
+    if not os.path.exists(module_path):
+        raise FileNotFoundError(f"Cannot find evaluate-decode.py at {module_path}")
+    spec = importlib.util.spec_from_file_location("evaluate_decode_module", module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    run_decode = getattr(module, "run_decode", None)
+    if run_decode is None:
+        raise AttributeError("evaluate-decode.py does not define run_decode")
+    return run_decode
+
+
 @hydra.main(version_base=None, config_path="config", config_name="decode_run_eval")
 def main(cfg: DictConfig) -> None:
     root = get_original_cwd()
     os.chdir(root)
+
+    run_decode = _load_run_decode(root)
 
     checkpoints = _gather_checkpoints(cfg, root)
     if not checkpoints:
