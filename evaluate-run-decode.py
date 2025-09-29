@@ -6,7 +6,7 @@ import os
 import re
 import shutil
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import hydra
 from hydra.utils import get_original_cwd
@@ -102,6 +102,57 @@ def _gather_checkpoints(cfg: DictConfig, root: str) -> List[CheckpointSpec]:
     return specs
 
 
+def _checkpoint_step(name: str) -> int:
+    match = re.search(r"(\d+)", name)
+    return int(match.group(1)) if match else 0
+
+
+def _summarize_results(results: Dict[str, Dict[str, Dict]], prefix: str | None = None) -> Dict[str, float]:
+    summary: Dict[str, float] = {}
+
+    for dataset_name, res in results.items():
+        ans_vals: List[float] = []
+        for_vals: List[float] = []
+        both_vals: List[float] = []
+        len_vals: List[float] = []
+        ans_frac_vals: List[float] = []
+        for_frac_vals: List[float] = []
+        both_frac_vals: List[float] = []
+        pass_vals: Dict[str, List[float]] = {}
+
+        for mode_data in res.values():
+            ans_vals.extend(mode_data.get("ans_acc", []))
+            for_vals.extend(mode_data.get("for_acc", []))
+            both_vals.extend(mode_data.get("both_acc", []))
+            len_vals.extend(mode_data.get("lengths", []))
+            ans_frac_vals.extend(mode_data.get("ans_frac", []))
+            for_frac_vals.extend(mode_data.get("for_frac", []))
+            both_frac_vals.extend(mode_data.get("both_frac", []))
+            for name, values in (mode_data.get("pass_at_k", {}) or {}).items():
+                pass_vals.setdefault(name, []).extend(values)
+
+        base_key = f"{dataset_name}/"
+        if prefix:
+            base_key = f"{prefix}/{base_key}"
+
+        def _mean(seq: List[float]) -> float:
+            return float(sum(seq) / len(seq)) if seq else 0.0
+
+        summary[f"{base_key}ans_acc_mean"] = _mean(ans_vals)
+        summary[f"{base_key}for_acc_mean"] = _mean(for_vals)
+        summary[f"{base_key}both_acc_mean"] = _mean(both_vals)
+        summary[f"{base_key}length_mean"] = _mean(len_vals)
+        summary[f"{base_key}ans_frac_mean"] = _mean(ans_frac_vals)
+        summary[f"{base_key}for_frac_mean"] = _mean(for_frac_vals)
+        summary[f"{base_key}both_frac_mean"] = _mean(both_frac_vals)
+
+        for name, values in pass_vals.items():
+            if values:
+                summary[f"{base_key}pass@{name}_mean"] = _mean(values)
+
+    return summary
+
+
 def _load_run_decode(root: str):
     module_path = os.path.join(root, "evaluate-decode.py")
     if not os.path.exists(module_path):
@@ -171,6 +222,9 @@ def main(cfg: DictConfig) -> None:
 
             run_name = _build_wandb_run_name(cfg.wandb.run_name, spec.name)
             decode_cfg = _build_decode_cfg(cfg, run_name)
+            # Prevent nested W&B runs; outer script handles logging.
+            if "wandb" in decode_cfg and decode_cfg.wandb is not None:
+                decode_cfg.wandb.enable = False
 
             lora_request = None
             if not spec.is_base:
@@ -182,13 +236,17 @@ def main(cfg: DictConfig) -> None:
                 model=model,
                 tokenizer=tokenizer,
                 lora_request=lora_request,
-                wandb_run=wandb_run,
-                summary_prefix=spec.name,
+                wandb_run=None,
             )
 
             aggregated_results[spec.name] = results
             _save_results(aggregated_path, aggregated_results)
             print(f"Stored aggregated metrics for {spec.name} -> {aggregated_path}")
+
+            if wandb_run is not None:
+                metrics = _summarize_results(results, prefix=None)
+                step = _checkpoint_step(spec.name)
+                wandb_run.log(metrics, step=step)
 
             run_results_path = os.path.join(decode_compare_dir, f"{run_name}.json")
             with open(run_results_path, "w") as f:
