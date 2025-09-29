@@ -138,6 +138,22 @@ def main(cfg: DictConfig) -> None:
     decode_compare_dir = os.path.join(root, "results", "decode_compare")
     _ensure_dir(decode_compare_dir)
 
+    wandb_run = None
+    if cfg.wandb.enable:
+        import wandb
+
+        wandb_kwargs = {
+            "project": cfg.wandb.project_name,
+            "name": cfg.wandb.run_name,
+            "config": OmegaConf.to_container(cfg, resolve=True),
+        }
+        if cfg.wandb.get("entity") is not None:
+            wandb_kwargs["entity"] = cfg.wandb.entity
+        if cfg.wandb.get("group") is not None:
+            wandb_kwargs["group"] = cfg.wandb.group
+
+        wandb_run = wandb.init(**wandb_kwargs)
+
     model_cfg = cfg.model
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=model_cfg.model_name,
@@ -166,6 +182,8 @@ def main(cfg: DictConfig) -> None:
                 model=model,
                 tokenizer=tokenizer,
                 lora_request=lora_request,
+                wandb_run=wandb_run,
+                summary_prefix=spec.name,
             )
 
             aggregated_results[spec.name] = results
@@ -185,6 +203,11 @@ def main(cfg: DictConfig) -> None:
             delete_vllm(model)
         except Exception:
             pass
+        if wandb_run is not None:
+            try:
+                wandb_run.finish()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":

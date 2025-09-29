@@ -17,7 +17,6 @@ import logging
 logging.getLogger("vllm").setLevel(logging.WARNING)
 import json
 import math
-from datetime import datetime
 from dataclasses import dataclass
 from math import comb
 from typing import Any, Dict, List, Optional
@@ -50,12 +49,8 @@ import torch
 from unsloth import FastLanguageModel
 from transformers import GenerationConfig
 
-from utils.data import (
-    answer_correct,
-    format_correct,
-    get_questions,
-    set_tokenizer_name,
-)
+from utils.data import answer_correct, format_correct, get_questions, set_tokenizer_name
+from utils.logging_utils import setup_file_logging
 
 
 @dataclass(frozen=True)
@@ -1022,17 +1017,12 @@ def _evaluate_dataset(
     return results
 
 
-def _ensure_log_placeholder() -> None:
-    today = datetime.now().strftime("%Y-%m-%d")
-    log_dir = os.path.join("outputs", today)
-    os.makedirs(log_dir, exist_ok=True)
-    log_path = os.path.join(log_dir, "evaluate-decode.log")
-    if not os.path.exists(log_path):
-        with open(log_path, "w"):
-            pass
-
-
-def _log_wandb_summary(results: Dict[str, Dict[str, Any]], wandb_run) -> None:
+def _log_wandb_summary(
+    results: Dict[str, Dict[str, Any]],
+    wandb_run,
+    *,
+    prefix: str = "",
+) -> None:
     if wandb_run is None:
         return
 
@@ -1055,16 +1045,20 @@ def _log_wandb_summary(results: Dict[str, Dict[str, Any]], wandb_run) -> None:
         def _mean(values: List[float]) -> float:
             return float(sum(values) / len(values)) if values else 0.0
 
-        summary[f"{dataset_name}/ans_acc_mean"] = _mean(ans_vals)
-        summary[f"{dataset_name}/for_acc_mean"] = _mean(for_vals)
-        summary[f"{dataset_name}/both_acc_mean"] = _mean(both_vals)
-        summary[f"{dataset_name}/length_mean"] = _mean(len_vals)
-        summary[f"{dataset_name}/ans_frac_mean"] = _mean(ans_frac_vals)
-        summary[f"{dataset_name}/for_frac_mean"] = _mean(for_frac_vals)
-        summary[f"{dataset_name}/both_frac_mean"] = _mean(both_frac_vals)
+        base = f"{dataset_name}/"
+        if prefix:
+            base = f"{prefix}/{base}"
+
+        summary[f"{base}ans_acc_mean"] = _mean(ans_vals)
+        summary[f"{base}for_acc_mean"] = _mean(for_vals)
+        summary[f"{base}both_acc_mean"] = _mean(both_vals)
+        summary[f"{base}length_mean"] = _mean(len_vals)
+        summary[f"{base}ans_frac_mean"] = _mean(ans_frac_vals)
+        summary[f"{base}for_frac_mean"] = _mean(for_frac_vals)
+        summary[f"{base}both_frac_mean"] = _mean(both_frac_vals)
         for name, vals in pass_vals.items():
             if vals:
-                summary[f"{dataset_name}/pass@{name}_mean"] = _mean(vals)
+                summary[f"{base}pass@{name}_mean"] = _mean(vals)
 
     wandb_run.log(summary)
 
@@ -1076,12 +1070,15 @@ def run_decode(
     *,
     lora_request=None,
     create_log_placeholder: bool = False,
+    wandb_run=None,
+    summary_prefix: str = "",
 ) -> Dict[str, Dict[str, Any]]:
+    log_path = setup_file_logging("evaluate-decode.log")
+    if create_log_placeholder:
+        logging.getLogger(__name__).debug("Log file ensured at %s", log_path)
+
     tokenizer_source = cfg.model.get("tokenizer_name", cfg.model.model_name)
     set_tokenizer_name(tokenizer_source)
-
-    if create_log_placeholder:
-        _ensure_log_placeholder()
 
     own_model = model is None or tokenizer is None
     if own_model:
@@ -1093,8 +1090,8 @@ def run_decode(
             gpu_memory_utilization=cfg.model.gpu_memory_utilization,
         )
 
-    wandb_run = None
-    if cfg.wandb.enable:
+    external_wandb = wandb_run is not None
+    if cfg.wandb.enable and wandb_run is None:
         import wandb
 
         wandb_kwargs = {
@@ -1108,6 +1105,8 @@ def run_decode(
             wandb_kwargs["group"] = cfg.wandb.group
 
         wandb_run = wandb.init(**wandb_kwargs)
+    elif cfg.wandb.enable and wandb_run is not None:
+        import wandb  # ensure module present for logging
 
     results: Dict[str, Dict[str, Any]] = {}
     for dataset_name in cfg.datasets:
@@ -1121,9 +1120,9 @@ def run_decode(
             lora_request=lora_request,
         )
 
-    _log_wandb_summary(results, wandb_run)
+    _log_wandb_summary(results, wandb_run, prefix=summary_prefix)
 
-    if wandb_run is not None:
+    if wandb_run is not None and not external_wandb:
         wandb_run.finish()
 
     return results

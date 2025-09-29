@@ -14,9 +14,13 @@ logging.getLogger("vllm").setLevel(logging.WARNING)
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
+from utils.logging_utils import setup_file_logging
+
 
 @hydra.main(version_base=None, config_path="config", config_name="train")
 def main(cfg: DictConfig) -> None:
+    setup_file_logging("train.log")
+
     from utils.patcher import apply_patch
     apply_patch(cfg.rl.algorithm)
     from utils.data import set_tokenizer_name
