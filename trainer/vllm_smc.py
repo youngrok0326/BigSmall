@@ -346,6 +346,20 @@ class SMCVLLM:
         self.prm = prm
         self._use_prm = prm is not None
         self.random_sampling = bool(random_sampling)
+        if isinstance(self.sg.step_token, str) and self.sg.step_token:
+            encoded_step = self.tok(
+                self.sg.step_token,
+                add_special_tokens=False,
+            )
+            step_ids = getattr(encoded_step, "input_ids", None)
+
+            if step_ids is None and isinstance(encoded_step, dict):
+                step_ids = encoded_step.get("input_ids")
+            if isinstance(step_ids, list) and step_ids and isinstance(step_ids[0], list):
+                step_ids = step_ids[0]
+            self._step_token_length = len(step_ids or [])
+        else:
+            self._step_token_length = 0
 
         scoring = str(scoring).lower()
         confidence_group = str(confidence_group).lower()
@@ -872,7 +886,11 @@ class SMCVLLM:
             if step_eos_counter is not None and stop_due_to_eos:
                 step_eos_counter[group_idx] += 1
         else:
-            particle.prompt_text = self.sg.ensure_step_suffix(particle.prompt_text)
+            previous_prompt = particle.prompt_text
+            updated_prompt = self.sg.ensure_step_suffix(previous_prompt)
+            if updated_prompt != previous_prompt and self._step_token_length:
+                particle.total_new += self._step_token_length
+            particle.prompt_text = updated_prompt
 
     def _apply_prm_scores(
         self,
