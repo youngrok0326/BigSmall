@@ -1,6 +1,6 @@
 model:
   model_name: Qwen/Qwen2.5-0.5B
-  gpu_memory_utilization: 0.8
+  gpu_memory_utilization: 0.5
   max_seq_length: 1024
   lora_rank: 64
   load_in_4bit: true
@@ -17,9 +17,9 @@ model:
 wandb:
   enable: false
   project_name: SMCGRPO_MAIN_BASE
-  run_name: Original_BASE_0.5B_512_N8_D8
+  run_name: debug
 rl:
-  algorithm: GRPO
+  algorithm: SMCGRPO
   dataset: math
   max_prompt_length: 512
   max_completion_length: 512
@@ -36,7 +36,7 @@ rl:
   delta: null
   loss_type: grpo
   mask_truncated_completions: null
-  resume_from_checkpoint: null
+  resume_from_checkpoint: true
 optim:
   learning_rate: 5.0e-06
   lr_scheduler_type: constant
@@ -51,7 +51,7 @@ optim:
   gradient_accumulation_steps: 1
   logging_steps: 1
 smc:
-  use_smc: false
+  use_smc: true
   step_token: '
 
 

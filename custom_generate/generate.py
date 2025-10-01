@@ -39,7 +39,7 @@ def generate(
         generation_config.max_length = generation_config.max_new_tokens + prompt_len
     if stopping_criteria is None: stopping_criteria = StoppingCriteriaList()
     if logits_processor is None: logits_processor = LogitsProcessorList()
-    breakpoint()
+  
     model._prepare_special_tokens(generation_config)
     stopping_criteria = model._get_stopping_criteria(
         generation_config=generation_config, stopping_criteria=stopping_criteria, tokenizer=tokenizer
