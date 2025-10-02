@@ -719,7 +719,7 @@ class SMCVLLM:
                 break
         encoded_final = [list(p.completion_token_ids) for p in particles]
 
-        if self.log_wandb and global_call_step % 1 == 0:
+        if self.log_wandb and global_call_step % 100 == 0:
             self._log_resampling_table(
                 global_call_step,
                 per_step_not_selected,
@@ -784,7 +784,7 @@ class SMCVLLM:
             encoded_saved = [[] for _ in range(G)]
             saved_confidences_by_group = [[] for _ in range(G)]
 
-        if self.log_wandb and global_call_step % 1 == 0:
+        if self.log_wandb and global_call_step % 100 == 0:
             try:
                 import wandb  # type: ignore
             except ImportError:
