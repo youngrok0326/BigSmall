@@ -664,10 +664,10 @@ class SMCVLLM:
             for idx in range(total)
         ]
         collect_extras = self.return_all or self.return_eos
-        saved_groups: Optional[List[List[Tuple[int, List[int], float]]]] = (
+        saved_groups: Optional[List[List[Tuple[int, List[int], str, float]]]] = (
             [[] for _ in range(G)] if self.return_all else None
         )
-        terminated_records: Optional[List[List[Tuple[int, int, List[int], float]]]] = (
+        terminated_records: Optional[List[List[Tuple[int, int, List[int], str, float]]]] = (
             [[] for _ in range(G)] if collect_extras else None
         )
 
@@ -719,7 +719,7 @@ class SMCVLLM:
                 break
         encoded_final = [list(p.completion_token_ids) for p in particles]
 
-        if self.log_wandb:
+        if self.log_wandb and global_call_step % 100 == 0:
             self._log_resampling_table(
                 global_call_step,
                 per_step_not_selected,
@@ -739,16 +739,18 @@ class SMCVLLM:
             )
 
         extras_tokens_by_group: List[List[List[int]]] = [[] for _ in range(G)]
+        extras_text_by_group: List[List[str]] = [[] for _ in range(G)]
         extras_conf_by_group: List[List[float]] = [[] for _ in range(G)]
 
         if terminated_records is not None:
             final_particle_ids = {id(p) for p in particles}
 
             for g, records in enumerate(terminated_records):
-                for particle_id, _, token_ids, conf in records:
+                for particle_id, _, token_ids, text, conf in records:
                     if particle_id in final_particle_ids:
                         continue
                     extras_tokens_by_group[g].append(list(token_ids))
+                    extras_text_by_group[g].append(str(text))
                     extras_conf_by_group[g].append(float(conf))
 
         extras_encoded_by_group: List[List[List[int]]] = [[] for _ in range(G)]
@@ -759,16 +761,21 @@ class SMCVLLM:
 
         completions_by_group: List[List[List[int]]] = []
         completion_confidences_by_group: List[List[float]] = []
+        completions_text_by_group: List[List[str]] = []
 
         for g in range(G):
             base = list(primary_encoded_by_group[g])
             base_conf = list(primary_conf_by_group[g])
+            start = g * self.N
+            base_text = ["".join(particles[start + idx].completion_chunks) for idx in range(self.N)]
 
             if extras_encoded_by_group[g]:
                 base.extend(extras_encoded_by_group[g])
                 base_conf.extend(extras_conf_by_group[g])
+                base_text.extend(extras_text_by_group[g])
             completions_by_group.append(base)
             completion_confidences_by_group.append(base_conf)
+            completions_text_by_group.append(base_text)
 
         group_sizes = [len(group) for group in completions_by_group]
         if saved_groups is not None:
@@ -776,6 +783,26 @@ class SMCVLLM:
         else:
             encoded_saved = [[] for _ in range(G)]
             saved_confidences_by_group = [[] for _ in range(G)]
+
+        if self.log_wandb and global_call_step % 100 == 0:
+            try:
+                import wandb  # type: ignore
+            except ImportError:
+                pass
+            else:
+                if getattr(wandb, "run", None) is not None:
+                    columns = [
+                        "global_step",
+                        "group_id",
+                        "completion_idx",
+                        "text",
+                    ]
+                    table = wandb.Table(columns=columns)
+
+                    for group_idx, texts in enumerate(completions_text_by_group):
+                        for completion_idx, text in enumerate(texts):
+                            table.add_data(global_call_step, group_idx, completion_idx, text)
+                    wandb.log({"smc/completions": table}, commit=False)
 
         return {
             "group_sizes": group_sizes,
@@ -825,7 +852,7 @@ class SMCVLLM:
         particle: SMCParticle,
         output: Any,
         prm_requests: Dict[int, List[Tuple[int, str]]],
-        terminated_records: Optional[List[List[Tuple[int, int, str, float]]]],
+        terminated_records: Optional[List[List[Tuple[int, int, List[int], str, float]]]],
         step_eos_counter: Optional[List[int]],
     ) -> None:
         if not getattr(output, "outputs", None):
@@ -880,11 +907,13 @@ class SMCVLLM:
             if self._use_prm:
                 prm_requests[group_idx].append((particle_idx, "".join(particle.completion_chunks)))
             if terminated_records is not None:
+                completion_text = "".join(particle.completion_chunks)
                 terminated_records[group_idx].append(
                     (
                         id(particle),
                         int(step_idx),
                         list(particle.completion_token_ids),
+                        completion_text,
                         float(particle.current_conf_value),
                     )
                 )
@@ -958,7 +987,7 @@ class SMCVLLM:
         particles: List[SMCParticle],
         groups: int,
         step_idx: int,
-        saved_groups: Optional[List[List[Tuple[int, List[int], float]]]],
+        saved_groups: Optional[List[List[Tuple[int, List[int], str, float]]]],
     ) -> Tuple[List[int], List[float]]:
         not_selected_counts: List[int] = [0 for _ in range(groups)]
         weight_stds: List[float] = [0.0 for _ in range(groups)]
@@ -1017,8 +1046,14 @@ class SMCVLLM:
             if saved_groups is not None:
                 for local_idx in not_sampled:
                     src = particles[start + local_idx]
+                    completion_text = "".join(src.completion_chunks)
                     saved_groups[g].append(
-                        (step_idx, list(src.completion_token_ids), float(src.current_conf_value))
+                        (
+                            step_idx,
+                            list(src.completion_token_ids),
+                            completion_text,
+                            float(src.current_conf_value),
+                        )
                     )
             cloned = [self._clone_particle(particles[start + parent]) for parent in parents]
 
@@ -1049,7 +1084,7 @@ class SMCVLLM:
         )
 
     def _encode_saved_groups(
-        self, saved_groups: List[List[Tuple[int, List[int], float]]]
+        self, saved_groups: List[List[Tuple[int, List[int], str, float]]]
     ) -> Tuple[List[List[Tuple[int, List[int]]]], List[List[float]]]:
         encoded: List[List[Tuple[int, List[int]]]] = []
         confidences: List[List[float]] = []
@@ -1059,9 +1094,8 @@ class SMCVLLM:
                 encoded.append([])
                 confidences.append([])
                 continue
-            steps, token_lists, confs = zip(*group)
-            encoded.append([(step, list(ids)) for step, ids in zip(steps, token_lists)])
-            confidences.append([float(conf) for conf in confs])
+            encoded.append([(step, list(ids)) for step, ids, _, _ in group])
+            confidences.append([float(conf) for _, _, _, conf in group])
         return encoded, confidences
 
     def _log_resampling_table(
