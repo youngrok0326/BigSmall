@@ -77,7 +77,7 @@ wandb:
 
 hydra:
   run:
-    dir: .
+    dir: outputs
   output_subdir: null
   job:
     chdir: false

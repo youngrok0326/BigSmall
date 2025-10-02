@@ -10,3 +10,10 @@ max_tokens: 512
 batch_size: 512
 sample_cnt: 5
 repeat_cnt: 1
+
+hydra:
+  run:
+    dir: outputs
+  output_subdir: null
+  job:
+    chdir: false
