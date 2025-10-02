@@ -1970,6 +1970,8 @@ class GRPOTrainer(Trainer):
                 self._last_loaded_step = self.state.global_step
 
             smc_runner = self._ensure_smc_vllm()
+            if hasattr(smc_runner, "_call_index"):
+                smc_runner._call_index = max(int(self.state.global_step) - 1, 0)
             payload = smc_runner.generate(prompts_text, list(prompts_text))
 
             if _smc_is_bundle(payload):
