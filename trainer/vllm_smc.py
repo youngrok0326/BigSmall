@@ -98,6 +98,8 @@ class SMCParticle:
     prompt_text: str
     completion_chunks: List[str]
     total_new: int
+    base_prompt_token_len: int
+    prompt_token_len: int
     token_tracker: TokenConfidenceTracker
     step_count: int
     running_sum: float
@@ -632,12 +634,24 @@ class SMCVLLM:
             raise ValueError(f"SMC expects G*N items (N={self.N}). Got total={total}.")
         G = total // self.N
         headers = self._resolve_headers(prompts_text, original_prompts, G)
+        header_token_lens: List[int] = []
+
+        if headers:
+            header_token_ids = encode_batch(self.tok, list(headers))  # type: ignore[arg-type]
+            header_token_lens = [len(ids) for ids in header_token_ids]
+
         particles: List[SMCParticle] = [
             SMCParticle(
                 is_stopped=False,
                 prompt_text=headers[idx // self.N],
                 completion_chunks=[],
                 total_new=0,
+                base_prompt_token_len=(
+                    header_token_lens[idx // self.N] if idx // self.N < len(header_token_lens) else 0
+                ),
+                prompt_token_len=(
+                    header_token_lens[idx // self.N] if idx // self.N < len(header_token_lens) else 0
+                ),
                 token_tracker=TokenConfidenceTracker(self._group_mode, self.window_size),
                 step_count=0,
                 running_sum=0.0,
@@ -775,7 +789,8 @@ class SMCVLLM:
         remaining: Optional[int] = None
 
         if self.max_new_tokens > 0:
-            remaining = self.max_new_tokens - particle.total_new
+            generated_tokens = max(particle.prompt_token_len - particle.base_prompt_token_len, 0)
+            remaining = self.max_new_tokens - generated_tokens
 
             if remaining <= 0:
                 return None
@@ -919,6 +934,8 @@ class SMCVLLM:
         else:
             particle.completion_token_ids = []
         particle.total_new = len(particle.completion_token_ids)
+        full_prompt_ids = encode_batch(self.tok, [particle.prompt_text])[0]
+        particle.prompt_token_len = len(full_prompt_ids)
 
     def _build_particle_weights(self, particles: List[SMCParticle]) -> torch.Tensor:
         if self._use_prm:
@@ -1018,6 +1035,8 @@ class SMCVLLM:
             prompt_text=src.prompt_text,
             completion_chunks=list(src.completion_chunks),
             total_new=int(src.total_new),
+            base_prompt_token_len=int(src.base_prompt_token_len),
+            prompt_token_len=int(src.prompt_token_len),
             token_tracker=src.token_tracker.clone(),
             step_count=int(src.step_count),
             running_sum=float(src.running_sum),
