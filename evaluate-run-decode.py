@@ -6,14 +6,17 @@ import os
 import re
 import shutil
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import hydra
 from hydra.utils import get_original_cwd
 from omegaconf import DictConfig, OmegaConf
 
 from unsloth import FastLanguageModel
-from unsloth_zoo.vllm_utils import load_lora, delete_vllm
+from unsloth_zoo.vllm_utils import delete_vllm
+from peft import PeftConfig
+from peft.utils.save_and_load import load_peft_weights, set_peft_model_state_dict
+from unsloth_zoo.vllm_utils import load_lora_directly, prepare_vllm_lora_loading
 
 
 @dataclass
@@ -21,6 +24,39 @@ class CheckpointSpec:
     name: str
     path: str
     is_base: bool = False
+
+
+def _prepare_lora_host(model, adapter_path: str):
+    """Attach LoRA modules to the FastLanguageModel instance if needed."""
+
+    if getattr(model, "_lora_shell_initialized", False):
+        return model, PeftConfig.from_pretrained(adapter_path)
+
+    peft_cfg = PeftConfig.from_pretrained(adapter_path)
+    model = FastLanguageModel.get_peft_model(
+        model,
+        r=peft_cfg.r,
+        lora_alpha=peft_cfg.lora_alpha,
+        target_modules=list(peft_cfg.target_modules),
+        lora_dropout=getattr(peft_cfg, "lora_dropout", 0.0),
+        use_gradient_checkpointing="unsloth",
+        random_state=getattr(peft_cfg, "random_state", 3407),
+    )
+    prepare_vllm_lora_loading(model)
+    model._lora_shell_initialized = True
+    return model, peft_cfg
+
+
+def _load_lora_into_vllm(model, adapter_path: str, device: Optional[str] = None) -> None:
+    """Load LoRA weights and mirror them into the colocated vLLM engine."""
+
+    weights = load_peft_weights(adapter_path, device=device)
+    set_peft_model_state_dict(model, weights, adapter_name="default")
+    del weights
+    model.set_adapter("default")
+    load_lora_directly(model)
+    if hasattr(model, "vllm_engine"):
+        model.vllm_engine.reset_prefix_cache()
 
 
 def _list_lora_checkpoints(directory: str) -> List[str]:
@@ -229,7 +265,8 @@ def main(cfg: DictConfig) -> None:
             lora_request = None
             if not spec.is_base:
                 print(f"Loading LoRA adapter from {spec.path}")
-                lora_request = load_lora(model, spec.path, load_tensors=False)
+                model, _ = _prepare_lora_host(model, spec.path)
+                _load_lora_into_vllm(model, spec.path)
 
             results = run_decode(
                 decode_cfg,
