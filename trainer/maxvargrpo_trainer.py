@@ -42,7 +42,12 @@ from trl.data_utils import apply_chat_template, is_conversational, maybe_apply_c
 from trl.import_utils import is_vllm_available
 from trl.models import create_reference_model, prepare_deepspeed, unwrap_model_for_generation
 from trl.trainer.callbacks import SyncRefModelCallback
-from .maxvargrpo_config import MaxVarGRPOConfig
+try:
+    from .maxvargrpo_config import MaxVarGRPOConfig
+except ImportError:
+    # When patched into the TRL package this module is renamed to `grpo_trainer`,
+    # so we fall back to the bundled `grpo_config` module there.
+    from .grpo_config import MaxVarGRPOConfig
 from trl.trainer.utils import generate_model_card, get_comet_experiment_url, pad
 
 
@@ -672,3 +677,8 @@ class MaxVarGRPOTrainer(Trainer):
         )
 
         model_card.save(os.path.join(self.args.output_dir, "README.md"))
+
+
+# Provide the original TRL symbol for compatibility when this module is patched
+# over `trl.trainer.grpo_trainer`.
+GRPOTrainer = MaxVarGRPOTrainer

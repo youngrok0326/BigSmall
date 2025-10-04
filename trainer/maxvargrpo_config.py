@@ -246,3 +246,8 @@ class MaxVarGRPOConfig(TrainingArguments):
         default_factory=dict,
         metadata={"help": "Additional keyword arguments not explicitly defined in the configuration."}
     )
+
+
+# Provide the original TRL symbol for compatibility when this module is patched
+# over `trl.trainer.grpo_config`.
+GRPOConfig = MaxVarGRPOConfig
