@@ -849,12 +849,18 @@ class SMCVLLM:
         for idx, particle in enumerate(particles):
             if particle.is_stopped:
                 continue
+            ensured_prompt = self.sg.ensure_step_suffix(particle.prompt_text)
+
+            if ensured_prompt != particle.prompt_text:
+                particle.prompt_text = ensured_prompt
+                # Step suffix contributes to the vLLM context, so refresh token accounting immediately.
+                self._sync_particle_tokens(particle)
             budget = self._next_token_budget(particle)
 
             if budget is None or budget <= 0:
                 particle.is_stopped = True
                 continue
-            batch_inputs.append(self.sg.ensure_step_suffix(particle.prompt_text))
+            batch_inputs.append(particle.prompt_text)
             idx_map.append(idx)
             sampling_params.append(self._build_sampling_params(int(budget)))
         return batch_inputs, idx_map, sampling_params
@@ -937,6 +943,9 @@ class SMCVLLM:
             previous_prompt = particle.prompt_text
             updated_prompt = self.sg.ensure_step_suffix(previous_prompt)
             particle.prompt_text = updated_prompt
+
+            if updated_prompt != previous_prompt:
+                self._sync_particle_tokens(particle)
 
     def _apply_prm_scores(
         self,
