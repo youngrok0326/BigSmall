@@ -11,11 +11,11 @@ from transformers import TrainingArguments
 
 
 @dataclass
-class MaxRewardGRPOConfig(TrainingArguments):
+class MaxVarGRPOConfig(TrainingArguments):
     r"""
-    Configuration class for the [`MaxRewardGRPOTrainer`].
+    Configuration class for the [`MaxVarGRPOTrainer`].
 
-    Only the parameters specific to MaxRewardGRPO training are listed here. For details on other parameters, refer to the
+    Only the parameters specific to MaxVarGRPO training are listed here. For details on other parameters, refer to the
     [`~transformers.TrainingArguments`] documentation.
 
     Using [`~transformers.HfArgumentParser`] we can turn this class into
@@ -27,7 +27,7 @@ class MaxRewardGRPOConfig(TrainingArguments):
 
         model_init_kwargs (`dict[str, Any]` or `None`, *optional*, defaults to `None`):
             Keyword arguments for [`~transformers.AutoModelForCausalLM.from_pretrained`], used when the `model`
-            argument of the [`MaxRewardGRPOTrainer`] is provided as a string.
+            argument of the [`MaxVarGRPOTrainer`] is provided as a string.
 
         > Parameters that control the data preprocessing
 
@@ -102,12 +102,12 @@ class MaxRewardGRPOConfig(TrainingArguments):
         default=None,
         metadata={
             "help": "Keyword arguments for `transformers.AutoModelForCausalLM.from_pretrained`, used when the `model` "
-            "argument of the `MaxRewardGRPOTrainer` is provided as a string."
+            "argument of the `MaxVarGRPOTrainer` is provided as a string."
         },
     )
 
     # Parameters that control the data preprocessing
-    # The default value remove_unused_columns is overwritten from the parent class, because in MaxRewardGRPO we usually rely on
+    # The default value remove_unused_columns is overwritten from the parent class, because in MaxVarGRPO we usually rely on
     # additional columns to compute the reward
     remove_unused_columns: Optional[bool] = field(
         default=False,
