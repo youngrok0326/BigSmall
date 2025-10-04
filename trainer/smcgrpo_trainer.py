@@ -1820,6 +1820,10 @@ class GRPOTrainer(Trainer):
             self._smc_prm = None
             self._smc_prm_signature = None
 
+        model_limit = None
+        if self.max_prompt_length is not None and self.max_completion_length is not None:
+            model_limit = int(self.max_prompt_length) + int(self.max_completion_length)
+
         signature = (
             step_token,
             stop_token,
@@ -1844,6 +1848,7 @@ class GRPOTrainer(Trainer):
             0.0 if self.min_p is None else self.min_p,
             self.repetition_penalty,
             int(self.max_completion_length),
+            None if model_limit is None else int(model_limit),
             id(self.llm),
             prm_signature,
             log_wandb,
@@ -1857,7 +1862,7 @@ class GRPOTrainer(Trainer):
                 stop_token=stop_token,
                 include_stop_str_in_output=include_stop,
             )
-            
+
             self._smc_vllm = SMCVLLM(
                 llm=self.llm,
                 tokenizer=self.processing_class,
@@ -1872,6 +1877,7 @@ class GRPOTrainer(Trainer):
                 smc_topk=smc_topk,
                 window_size=conf_window,
                 max_new_tokens=int(self.max_completion_length),
+                max_model_len=model_limit,
                 scoring=conf_scoring,
                 confidence_group=conf_group,
                 confidence_aggregation=conf_aggregation,

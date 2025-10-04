@@ -1,11 +1,13 @@
 """Run custom decoding for every LoRA checkpoint without reloading the base model."""
 
+import contextlib
 import importlib.util
 import json
 import os
 import re
 import shutil
 from dataclasses import dataclass
+from types import MethodType
 from typing import Dict, List, Optional, Tuple
 
 import hydra
@@ -15,8 +17,7 @@ from omegaconf import DictConfig, OmegaConf
 from unsloth import FastLanguageModel
 from unsloth_zoo.vllm_utils import delete_vllm
 from peft import PeftConfig
-from peft.utils.save_and_load import load_peft_weights, set_peft_model_state_dict
-from unsloth_zoo.vllm_utils import load_lora_directly, prepare_vllm_lora_loading
+from unsloth_zoo.vllm_utils import prepare_vllm_lora_loading, load_lora as unsloth_load_lora
 
 
 @dataclass
@@ -47,16 +48,35 @@ def _prepare_lora_host(model, adapter_path: str):
     return model, peft_cfg
 
 
-def _load_lora_into_vllm(model, adapter_path: str, device: Optional[str] = None) -> None:
-    """Load LoRA weights and mirror them into the colocated vLLM engine."""
+def _ensure_model_load_lora(model):
+    if hasattr(model, "load_lora"):
+        return model
 
-    weights = load_peft_weights(adapter_path, device=device)
-    set_peft_model_state_dict(model, weights, adapter_name="default")
-    del weights
-    model.set_adapter("default")
-    load_lora_directly(model)
-    if hasattr(model, "vllm_engine"):
-        model.vllm_engine.reset_prefix_cache()
+    def _load_lora(self, adapter_path: str, *, load_tensors: bool = False):
+        return unsloth_load_lora(self, adapter_path, load_tensors=load_tensors)
+
+    model.load_lora = MethodType(_load_lora, model)
+    return model
+
+
+def _clear_lora_from_engine(model, lora_request) -> None:
+    if lora_request is None or not hasattr(model, "vllm_engine"):
+        return
+
+    engine = model.vllm_engine
+    inner = getattr(engine, "llm_engine", None)
+    removed = False
+    for candidate in (engine, inner):
+        if candidate is None:
+            continue
+        remove = getattr(candidate, "remove_lora", None)
+        if remove and not removed:
+            with contextlib.suppress(Exception):
+                remove(lora_request.lora_int_id)
+            removed = True
+        with contextlib.suppress(Exception):
+            if hasattr(candidate, "reset_prefix_cache"):
+                candidate.reset_prefix_cache()
 
 
 def _list_lora_checkpoints(directory: str) -> List[str]:
@@ -266,7 +286,8 @@ def main(cfg: DictConfig) -> None:
             if not spec.is_base:
                 print(f"Loading LoRA adapter from {spec.path}")
                 model, _ = _prepare_lora_host(model, spec.path)
-                _load_lora_into_vllm(model, spec.path)
+                model = _ensure_model_load_lora(model)
+                lora_request = model.load_lora(spec.path)
 
             results = run_decode(
                 decode_cfg,
@@ -292,6 +313,9 @@ def main(cfg: DictConfig) -> None:
             if cfg.save_per_checkpoint:
                 destination = os.path.join(per_ckpt_dir, f"{spec.name}.json")
                 shutil.copyfile(run_results_path, destination)
+
+            if lora_request is not None:
+                _clear_lora_from_engine(model, lora_request)
 
     finally:
         try:

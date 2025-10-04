@@ -318,6 +318,7 @@ class SMCVLLM:
         confidence_eta: float,
         cdf_alpha: float = 0.25,
         max_new_tokens: int,
+        max_model_len: Optional[int] = None,
         scoring: str = "entropy",
         confidence_group: str = "mean",
         confidence_aggregation: str = "last",
@@ -342,6 +343,7 @@ class SMCVLLM:
         self.confidence_eta = float(confidence_eta)
         self.cdf_alpha = max(float(cdf_alpha), 1e-8)
         self.max_new_tokens = int(max_new_tokens)
+        self.max_model_len = int(max_model_len) if max_model_len is not None else None
         self.return_all = bool(return_all)
         self.return_eos = bool(return_eos)
         self.log_wandb = bool(wandb_logging)
@@ -814,6 +816,13 @@ class SMCVLLM:
 
     def _next_token_budget(self, particle: SMCParticle) -> Optional[int]:
         remaining: Optional[int] = None
+        model_remaining: Optional[int] = None
+
+        if self.max_model_len is not None:
+            model_remaining = self.max_model_len - particle.prompt_token_len
+
+            if model_remaining <= 0:
+                return None
 
         if self.max_new_tokens > 0:
             generated_tokens = max(particle.prompt_token_len - particle.base_prompt_token_len, 0)
@@ -822,6 +831,11 @@ class SMCVLLM:
             if remaining <= 0:
                 return None
         step_limit = self.sg.tokens_per_step
+
+        if remaining is not None and model_remaining is not None:
+            remaining = min(remaining, model_remaining)
+        elif remaining is None and model_remaining is not None:
+            remaining = model_remaining
 
         if step_limit is not None:
             return min(step_limit, remaining) if remaining is not None else step_limit

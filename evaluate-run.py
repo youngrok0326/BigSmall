@@ -4,15 +4,16 @@ To evaluate the performance of a run by testing all LoRA checkpoints.
 Developed by: Yixuan Even Xu in 2025
 """
 
+import contextlib
 import json
 import os
 import re
+from types import MethodType
 from typing import Optional, Tuple
 
 import hydra
 from omegaconf import DictConfig
 from peft import PeftConfig
-from peft.utils.save_and_load import load_peft_weights, set_peft_model_state_dict
 
 from utils.eval import test
 
@@ -52,20 +53,26 @@ def _prepare_lora_host(model, adapter_path: str) -> Tuple[object, PeftConfig]:
     return model, peft_cfg
 
 
-def _load_lora_into_vllm(model, adapter_path: str, device: Optional[str] = None) -> None:
-    """Load LoRA weights from disk into the model and mirror them to vLLM."""
+def _ensure_model_load_lora(model) -> object:
+    """Patch FastLanguageModel with load_lora helper if missing."""
 
-    weights = load_peft_weights(adapter_path, device=device)
-    set_peft_model_state_dict(model, weights, adapter_name="default")
-    del weights
-    model.set_adapter("default")
+    if hasattr(model, "load_lora"):
+        return model
 
-    from unsloth_zoo.vllm_utils import load_lora_directly
+    from unsloth_zoo.vllm_utils import load_lora as unsloth_load_lora
 
-    load_lora_directly(model)
+    def _load_lora(self, adapter_path: str, *, load_tensors: bool = False):
+        return unsloth_load_lora(self, adapter_path, load_tensors=load_tensors)
 
-    if hasattr(model, "vllm_engine"):
-        model.vllm_engine.reset_prefix_cache()
+    model.load_lora = MethodType(_load_lora, model)
+    return model
+
+
+def _materialize_lora_request(model, adapter_path: str):
+    """Return a LoRARequest compatible with model.fast_generate."""
+
+    model = _ensure_model_load_lora(model)
+    return model.load_lora(adapter_path)
 
 @hydra.main(version_base=None, config_path="config", config_name="test")
 def main(cfg: DictConfig) -> None:
@@ -100,7 +107,7 @@ def main(cfg: DictConfig) -> None:
             print(f"Evaluating with LoRA adapter: {lora_name}")
 
             model, _ = _prepare_lora_host(model, path_name)
-            _load_lora_into_vllm(model, path_name)
+            lora_request = _materialize_lora_request(model, path_name)
 
             ckpt_res = results.get(lora_name, {})
             for dataset_name in cfg.datasets:
@@ -108,11 +115,24 @@ def main(cfg: DictConfig) -> None:
                 dataset_testing = get_questions(dataset_name, split="test")
 
                 prev = ckpt_res.get(dataset_name)
-                ckpt_res[dataset_name] = test(cfg, model, dataset_testing, prev, lora_request=None)
+                ckpt_res[dataset_name] = test(cfg, model, dataset_testing, prev, lora_request=lora_request)
 
             results[lora_name] = ckpt_res
             with open(f"results/{cfg.run_name}.json", "w") as f:
                 json.dump(results, f, indent=4)
+
+            if hasattr(model, "vllm_engine"):
+                engine = model.vllm_engine
+                remove = getattr(engine, "remove_lora", None)
+                if remove is None:
+                    engine = getattr(engine, "llm_engine", None)
+                    remove = getattr(engine, "remove_lora", None)
+                if remove is not None:
+                    with contextlib.suppress(Exception):
+                        remove(lora_request.lora_int_id)
+                with contextlib.suppress(Exception):
+                    if hasattr(engine, "reset_prefix_cache"):
+                        engine.reset_prefix_cache()
     finally:
         # Ensure the vLLM engine is destroyed only once at the end
         try:
