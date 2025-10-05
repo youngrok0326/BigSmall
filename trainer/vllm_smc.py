@@ -8,6 +8,8 @@ from typing import Any, Deque, Dict, Iterable, List, Mapping, Optional, Tuple, U
 
 import torch
 
+from trl.extras.profiling import profiling_context
+
 from trainer.utils import (
     apply_prm_env_flags,
     encode_batch,
@@ -682,12 +684,13 @@ class SMCVLLM:
 
             if not batch_inputs:
                 break
-            outs = self.llm.generate(
-                batch_inputs,
-                sampling_params=sampling_params,
-                use_tqdm=False,
-                lora_request=lora_request,
-            )
+            with profiling_context(self, "vLLM.generate"):
+                outs = self.llm.generate(
+                    batch_inputs,
+                    sampling_params=sampling_params,
+                    use_tqdm=False,
+                    lora_request=lora_request,
+                )
             prm_requests: Dict[int, List[Tuple[int, str]]] = defaultdict(list) if self._use_prm else {}
             step_eos_counter: Optional[List[int]] = [0 for _ in range(G)] if self.log_wandb else None
 
