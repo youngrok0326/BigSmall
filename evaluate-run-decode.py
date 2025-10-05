@@ -1,23 +1,24 @@
 """Run custom decoding for every LoRA checkpoint without reloading the base model."""
 
-import contextlib
 import importlib.util
 import json
 import os
 import re
 import shutil
 from dataclasses import dataclass
-from types import MethodType
 from typing import Dict, List, Optional, Tuple
 
 import hydra
 from hydra.utils import get_original_cwd
 from omegaconf import DictConfig, OmegaConf
 
-from unsloth import FastLanguageModel
 from unsloth_zoo.vllm_utils import delete_vllm
-from peft import PeftConfig
-from unsloth_zoo.vllm_utils import prepare_vllm_lora_loading, load_lora as unsloth_load_lora
+from utils.eval import (
+    ensure_shared_model,
+    load_lora_request,
+    resolve_base_model_path,
+    unload_lora_request,
+)
 
 
 @dataclass
@@ -25,60 +26,6 @@ class CheckpointSpec:
     name: str
     path: str
     is_base: bool = False
-
-
-def _prepare_lora_host(model, adapter_path: str):
-    """Attach LoRA modules to the FastLanguageModel instance if needed."""
-
-    if getattr(model, "_lora_shell_initialized", False):
-        return model, PeftConfig.from_pretrained(adapter_path)
-
-    peft_cfg = PeftConfig.from_pretrained(adapter_path)
-    model = FastLanguageModel.get_peft_model(
-        model,
-        r=peft_cfg.r,
-        lora_alpha=peft_cfg.lora_alpha,
-        target_modules=list(peft_cfg.target_modules),
-        lora_dropout=getattr(peft_cfg, "lora_dropout", 0.0),
-        use_gradient_checkpointing="unsloth",
-        random_state=getattr(peft_cfg, "random_state", 3407),
-    )
-    prepare_vllm_lora_loading(model)
-    model._lora_shell_initialized = True
-    return model, peft_cfg
-
-
-def _ensure_model_load_lora(model):
-    if hasattr(model, "load_lora"):
-        return model
-
-    def _load_lora(self, adapter_path: str, *, load_tensors: bool = False):
-        return unsloth_load_lora(self, adapter_path, load_tensors=load_tensors)
-
-    model.load_lora = MethodType(_load_lora, model)
-    return model
-
-
-def _clear_lora_from_engine(model, lora_request) -> None:
-    if lora_request is None or not hasattr(model, "vllm_engine"):
-        return
-
-    engine = model.vllm_engine
-    inner = getattr(engine, "llm_engine", None)
-    removed = False
-    for candidate in (engine, inner):
-        if candidate is None:
-            continue
-        remove = getattr(candidate, "remove_lora", None)
-        if remove and not removed:
-            with contextlib.suppress(Exception):
-                remove(lora_request.lora_int_id)
-            removed = True
-        with contextlib.suppress(Exception):
-            if hasattr(candidate, "reset_prefix_cache"):
-                candidate.reset_prefix_cache()
-
-
 def _list_lora_checkpoints(directory: str) -> List[str]:
     if not os.path.isdir(directory):
         return []
@@ -261,14 +208,8 @@ def main(cfg: DictConfig) -> None:
 
         wandb_run = wandb.init(**wandb_kwargs)
 
-    model_cfg = cfg.model
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=model_cfg.model_name,
-        max_seq_length=model_cfg.max_seq_length,
-        load_in_4bit=model_cfg.load_in_4bit,
-        fast_inference=model_cfg.fast_inference,
-        gpu_memory_utilization=model_cfg.gpu_memory_utilization,
-    )
+    model = None
+    tokenizer = None
 
     try:
         for spec in checkpoints:
@@ -276,50 +217,58 @@ def main(cfg: DictConfig) -> None:
                 print(f"Skipping {spec.name}; results already exist.")
                 continue
 
+            base_override = resolve_base_model_path(cfg.model.model_name, None if spec.is_base else spec.path)
+            model, tokenizer = ensure_shared_model(base_override, cfg.model)
+
             run_name = _build_wandb_run_name(cfg.wandb.run_name, spec.name)
             decode_cfg = _build_decode_cfg(cfg, run_name)
             # Prevent nested W&B runs; outer script handles logging.
             if "wandb" in decode_cfg and decode_cfg.wandb is not None:
                 decode_cfg.wandb.enable = False
 
+            if "model" in decode_cfg and decode_cfg.model is not None:
+                decode_cfg.model.model_name = base_override
+                if hasattr(decode_cfg.model, "tokenizer_name"):
+                    decode_cfg.model.tokenizer_name = base_override
+
             lora_request = None
-            if not spec.is_base:
-                print(f"Loading LoRA adapter from {spec.path}")
-                model, _ = _prepare_lora_host(model, spec.path)
-                model = _ensure_model_load_lora(model)
-                lora_request = model.load_lora(spec.path)
+            try:
+                if not spec.is_base:
+                    print(f"Loading LoRA adapter from {spec.path}")
+                    lora_request = load_lora_request(spec.path)
 
-            results = run_decode(
-                decode_cfg,
-                model=model,
-                tokenizer=tokenizer,
-                lora_request=lora_request,
-                wandb_run=None,
-            )
+                results = run_decode(
+                    decode_cfg,
+                    model=model,
+                    tokenizer=tokenizer,
+                    lora_request=lora_request,
+                    wandb_run=None,
+                )
 
-            aggregated_results[spec.name] = results
-            _save_results(aggregated_path, aggregated_results)
-            print(f"Stored aggregated metrics for {spec.name} -> {aggregated_path}")
+                aggregated_results[spec.name] = results
+                _save_results(aggregated_path, aggregated_results)
+                print(f"Stored aggregated metrics for {spec.name} -> {aggregated_path}")
 
-            if wandb_run is not None:
-                metrics = _summarize_results(results, prefix=None)
-                step = _checkpoint_step(spec.name)
-                wandb_run.log(metrics, step=step)
+                if wandb_run is not None:
+                    metrics = _summarize_results(results, prefix=None)
+                    step = _checkpoint_step(spec.name)
+                    wandb_run.log(metrics, step=step)
 
-            run_results_path = os.path.join(decode_compare_dir, f"{run_name}.json")
-            with open(run_results_path, "w") as f:
-                json.dump(results, f, indent=2)
+                run_results_path = os.path.join(decode_compare_dir, f"{run_name}.json")
+                with open(run_results_path, "w") as f:
+                    json.dump(results, f, indent=2)
 
-            if cfg.save_per_checkpoint:
-                destination = os.path.join(per_ckpt_dir, f"{spec.name}.json")
-                shutil.copyfile(run_results_path, destination)
-
-            if lora_request is not None:
-                _clear_lora_from_engine(model, lora_request)
+                if cfg.save_per_checkpoint:
+                    destination = os.path.join(per_ckpt_dir, f"{spec.name}.json")
+                    shutil.copyfile(run_results_path, destination)
+            finally:
+                if lora_request is not None:
+                    unload_lora_request(lora_request)
 
     finally:
         try:
-            delete_vllm(model)
+            if model is not None:
+                delete_vllm(model)
         except Exception:
             pass
         if wandb_run is not None:

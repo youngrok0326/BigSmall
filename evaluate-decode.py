@@ -568,6 +568,10 @@ def _evaluate_once_custom(
         repetition_penalty = float(custom_decode_cfg.get("repetition_penalty", 1.0))
         random_sampling = bool(custom_decode_cfg.get("random_sampling", False))
         max_new_tokens = int(cfg.eval.max_new_tokens)
+        max_prompt_length_cfg = int(getattr(cfg, "max_prompt_length", -1))
+        max_model_len = None
+        if max_prompt_length_cfg > 0 and max_new_tokens > 0:
+            max_model_len = max_prompt_length_cfg + max_new_tokens
 
         pad_token_id = tokenizer.pad_token_id
         if pad_token_id is None:
@@ -603,6 +607,7 @@ def _evaluate_once_custom(
             confidence_eta=conf_eta,
             cdf_alpha=cdf_alpha,
             max_new_tokens=max_new_tokens,
+            max_model_len=max_model_len,
             scoring=scoring,
             confidence_group=conf_group,
             confidence_aggregation=conf_aggregation,
