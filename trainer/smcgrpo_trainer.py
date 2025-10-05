@@ -1460,11 +1460,14 @@ class GRPOTrainer(Trainer):
         image_grid_thw=None,
         pixel_attention_mask=None,
         image_sizes=None,
-    ) -> dict[str, Optional[torch.Tensor]]:
-        """Compute log-probs and (optionally) entropies for each token."""
+    ) -> tuple[torch.Tensor, Optional[torch.Tensor], int]:
+        """Compute log-probs/entropies and return the effective completion length used."""
+
         batch_size = batch_size or input_ids.size(0)  # Chunk inputs into smaller batches to reduce memory peak
-        all_logps = []
-        all_entropies = []
+        all_logps: list[torch.Tensor] = []
+        all_entropies: list[torch.Tensor] = []
+        effective_keep = max(int(logits_to_keep), 1)
+
         for start in range(0, input_ids.size(0), batch_size):
             input_ids_batch = input_ids[start : start + batch_size]
             attention_mask_batch = attention_mask[start : start + batch_size]
@@ -1492,13 +1495,23 @@ class GRPOTrainer(Trainer):
             logits = model(**model_inputs).logits
             # Exclude the last value: it corresponds to the next token pred
             logits = logits[:, :-1, :]  # (B, L-1, H)
-            # Only keep the last logits_to_keep. For model that support logits_to_keep, this is a no-op.
-            logits = logits[:, -logits_to_keep:, :]  # (B, logits_to_keep, H)
+
+            chunk_keep = min(
+                logits_to_keep,
+                logits.size(1),
+                input_ids_batch.size(1),
+            )
+            chunk_keep = max(int(chunk_keep), 1)
+            effective_keep = min(effective_keep, chunk_keep)
+
+            # Only keep the last chunk_keep tokens. For models that support logits_to_keep, this is a no-op.
+            logits = logits[:, -chunk_keep:, :]  # (B, chunk_keep, H)
+
             # Divide logits by sampling temperature.
             # See https://huggingface.co/blog/the_n_implementation_details_of_rlhf_with_ppo#policy-training-implementation-details
             logits = logits / self.temperature
 
-            completion_ids = input_ids_batch[:, -logits_to_keep:]
+            completion_ids = input_ids_batch[:, -chunk_keep:]
             logps = selective_log_softmax(logits, completion_ids)  # compute logprobs
             all_logps.append(logps)
 
@@ -1507,9 +1520,14 @@ class GRPOTrainer(Trainer):
                     entropies = entropy_from_logits(logits)
                 all_entropies.append(entropies)
 
+        if effective_keep < logits_to_keep:
+            all_logps = [logp[:, -effective_keep:] for logp in all_logps]
+            if compute_entropy:
+                all_entropies = [entropy[:, -effective_keep:] for entropy in all_entropies]
+
         logps = torch.cat(all_logps, dim=0)
         entropies = torch.cat(all_entropies, dim=0) if compute_entropy else None
-        return logps, entropies
+        return logps, entropies, effective_keep
 
     def _fix_param_name_to_vllm(self, name, extra_prefixes: Optional[list[str]] = None):
         extra_prefixes = extra_prefixes or []
@@ -2187,6 +2205,27 @@ class GRPOTrainer(Trainer):
         logits_to_keep = completion_ids.size(1)  # we only need to compute the logits for the completion tokens
         batch_size = self.args.per_device_train_batch_size if mode == "train" else self.args.per_device_eval_batch_size
 
+        def _enforce_keep_len(new_keep: int) -> None:
+            nonlocal logits_to_keep, completion_ids, completion_mask, completion_lengths, completion_ids_list
+            nonlocal prompt_completion_ids, attention_mask, effective_keep, raw_lengths
+            new_keep = int(new_keep)
+            if new_keep <= 0 or new_keep >= logits_to_keep:
+                return
+
+            logits_to_keep = new_keep
+            effective_keep = new_keep
+            completion_ids = completion_ids[:, :new_keep].contiguous()
+            completion_mask = completion_mask[:, :new_keep].contiguous()
+
+            if raw_lengths is not None:
+                raw_lengths = raw_lengths.clamp_max(new_keep)
+
+            completion_lengths = completion_lengths.clamp_max(new_keep)
+            completion_ids_list = [seq[:new_keep] for seq in completion_ids_list]
+
+            prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
+            attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
+
         with torch.no_grad():
             # If the generation and optimization steps are misaligned—i.e., if generation does not occur at the end of
             # a full optimizer step (when gradient_accumulation_steps is not a multiple of generate_every)—then the
@@ -2195,7 +2234,7 @@ class GRPOTrainer(Trainer):
             # old_per_token_logps to None.
             generate_every = self.args.steps_per_generation * self.num_iterations  # generation frequency
             if self.args.gradient_accumulation_steps % generate_every != 0:
-                old_per_token_logps, _ = self._get_per_token_logps_and_entropies(
+                old_per_token_logps, _, keep_len = self._get_per_token_logps_and_entropies(
                     self.model,
                     prompt_completion_ids,
                     attention_mask,
@@ -2206,13 +2245,14 @@ class GRPOTrainer(Trainer):
                     pixel_attention_mask=prompt_inputs.get("pixel_attention_mask"),
                     image_sizes=prompt_inputs.get("image_sizes"),
                 )
+                _enforce_keep_len(keep_len)
             else:
                 old_per_token_logps = None
 
             # Compute the per-token log probabilities for the reference model
             if self.beta != 0.0:
                 if self.ref_model is not None:
-                    ref_per_token_logps, _ = self._get_per_token_logps_and_entropies(
+                    ref_per_token_logps, _, keep_len = self._get_per_token_logps_and_entropies(
                         self.ref_model,
                         prompt_completion_ids,
                         attention_mask,
@@ -2223,9 +2263,10 @@ class GRPOTrainer(Trainer):
                         pixel_attention_mask=prompt_inputs.get("pixel_attention_mask"),
                         image_sizes=prompt_inputs.get("image_sizes"),
                     )
+                    _enforce_keep_len(keep_len)
                 else:
                     with self.accelerator.unwrap_model(self.model).disable_adapter():
-                        ref_per_token_logps, _ = self._get_per_token_logps_and_entropies(
+                        ref_per_token_logps, _, keep_len = self._get_per_token_logps_and_entropies(
                             self.model,
                             prompt_completion_ids,
                             attention_mask,
@@ -2236,6 +2277,7 @@ class GRPOTrainer(Trainer):
                             pixel_attention_mask=prompt_inputs.get("pixel_attention_mask"),
                             image_sizes=prompt_inputs.get("image_sizes"),
                         )
+                        _enforce_keep_len(keep_len)
             else:
                 ref_per_token_logps = None
 
@@ -2676,7 +2718,7 @@ class GRPOTrainer(Trainer):
         logits_to_keep = completion_ids.size(1)  # we only need to compute the logits for the completion tokens
 
         # Compute the per_token_logps and the entropy at each position in the completion
-        per_token_logps, entropies = self._get_per_token_logps_and_entropies(
+        per_token_logps, entropies, _ = self._get_per_token_logps_and_entropies(
             model,
             input_ids,
             attention_mask,

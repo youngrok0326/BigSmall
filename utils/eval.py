@@ -301,7 +301,7 @@ def test_model(
 
     from utils.data import get_questions, set_tokenizer_name
 
-    set_tokenizer_name(base_model_for_eval)
+    set_tokenizer_name(cfg.base_model)
 
     lora_request = None
     if lora_name:
