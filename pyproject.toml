@@ -15,8 +15,3 @@ dependencies = [
     "vllm",
     "wandb",
 ]
-
-[tool.uv.workspace]
-members = [
-    "uv-test/uv-blackwell",
-]
