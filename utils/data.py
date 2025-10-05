@@ -24,7 +24,10 @@ _CONCLUSION_SUFFIX = re.compile(
     r"\s*\$?\s*\.\s*I hope it is correct\.",
     flags=re.IGNORECASE,
 )
-_STEP_HEADER_PATTERN = re.compile(r"^##\s*Step\s+(\d+)\s*:", flags=re.IGNORECASE | re.MULTILINE)
+_STEP_HEADER_PATTERN = re.compile(
+    r"(?:^|\n\n)##\s*Step\s+(\d+)\b",
+    flags=re.IGNORECASE,
+)
 
 
 def _system_chat_prompt(tokenizer: AutoTokenizer, question: str) -> str:
@@ -148,45 +151,35 @@ def answer_correct(text: str, answer: str) -> bool:
     return any(grade_answer(candidate, answer) for candidate in unique)
 
 
-def _has_step_structure(preamble: str) -> bool:
-    """Check if the reasoning preamble follows the instructed step format."""
 
-    if "##" not in preamble:
-        return False
+def _preamble_before_last_boxed(text: str) -> str:
+    """Return the prose preceding the final ``\boxed`` answer."""
+
+    marker = "\\boxed{"
+    idx = text.rfind(marker)
+    if idx == -1:
+        return text.strip()
+    return text[:idx].rstrip()
+
+
+def _has_step_structure(preamble: str) -> bool:
+    """Check for sequential ``## Step n`` headers introduced by double newlines."""
 
     matches = list(_STEP_HEADER_PATTERN.finditer(preamble))
-    if not matches:
+    if len(matches) < 2:
         return False
 
-    numbers: list[int] = []
-    for match in matches:
-        number = int(match.group(1))
-        numbers.append(number)
-
-        preceding = preamble[:match.start()]
-        if preceding:
-            if not preceding.rstrip(" ").endswith("\n\n"):
-                return False
-
+    numbers = [int(match.group(1)) for match in matches]
     expected = list(range(1, len(numbers) + 1))
     return numbers == expected
 
 
 def format_score(text: str) -> float:
-    """Return the format reward (max 0.1) for instruct-style generations."""
+    """Return the format reward (max 0.1) when a boxed answer is present."""
 
-    conclusion = _locate_conclusion(text)
-    if not conclusion or not conclusion[0].strip():
+    if not extract_last_boxed_answer(text):
         return 0.0
-
-    _, start_idx, end_idx = conclusion
-    if text[end_idx:].strip():
-        return 0.0
-
-    preamble = text[:start_idx].strip()
-    if _has_step_structure(preamble):
-        return 0.1
-    return 0.0
+    return 0.1
 
 
 def format_correct(text: str) -> bool:
@@ -329,24 +322,18 @@ def length_penalty_func(completion_mask, max_completion_length, **kwargs) -> lis
     return [-0.5 if l >= max_completion_length else 0.0 for l in completion_lengths]
 
 def instruct_structure_score(text: str) -> float:
-    """Granular bonus encouraging the instruct-style formatting details."""
+    """Granular bonus rewarding boxed answers and ``## Step n`` sections."""
 
     score = 0.0
-    conclusion = _locate_conclusion(text)
-    if not conclusion or not conclusion[0].strip():
+    if not extract_last_boxed_answer(text):
         return score
 
-    score += 0.05  # correct concluding sentence with boxed answer
-    _, start_idx, end_idx = conclusion
-
-    if not text[end_idx:].strip():
-        score += 0.025  # no stray text after the conclusion
-
-    preamble = text[:start_idx].strip()
+    score += 0.05
+    preamble = _preamble_before_last_boxed(text)
     if _has_step_structure(preamble):
-        score += 0.025
+        score += 0.05
 
-    return min(score, 0.1)
+    return score
 
 
 def xmlcount_reward_func(completions, answer, **kwargs) -> list[float]:
