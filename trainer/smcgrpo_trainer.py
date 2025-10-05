@@ -2246,6 +2246,8 @@ class GRPOTrainer(Trainer):
                     image_sizes=prompt_inputs.get("image_sizes"),
                 )
                 _enforce_keep_len(keep_len)
+                if old_per_token_logps.size(1) > logits_to_keep:
+                    old_per_token_logps = old_per_token_logps[:, -logits_to_keep:]
             else:
                 old_per_token_logps = None
 
@@ -2264,6 +2266,10 @@ class GRPOTrainer(Trainer):
                         image_sizes=prompt_inputs.get("image_sizes"),
                     )
                     _enforce_keep_len(keep_len)
+                    if old_per_token_logps is not None and old_per_token_logps.size(1) > logits_to_keep:
+                        old_per_token_logps = old_per_token_logps[:, -logits_to_keep:]
+                    if ref_per_token_logps.size(1) > logits_to_keep:
+                        ref_per_token_logps = ref_per_token_logps[:, -logits_to_keep:]
                 else:
                     with self.accelerator.unwrap_model(self.model).disable_adapter():
                         ref_per_token_logps, _, keep_len = self._get_per_token_logps_and_entropies(
@@ -2278,6 +2284,10 @@ class GRPOTrainer(Trainer):
                             image_sizes=prompt_inputs.get("image_sizes"),
                         )
                         _enforce_keep_len(keep_len)
+                        if old_per_token_logps is not None and old_per_token_logps.size(1) > logits_to_keep:
+                            old_per_token_logps = old_per_token_logps[:, -logits_to_keep:]
+                        if ref_per_token_logps.size(1) > logits_to_keep:
+                            ref_per_token_logps = ref_per_token_logps[:, -logits_to_keep:]
             else:
                 ref_per_token_logps = None
 
