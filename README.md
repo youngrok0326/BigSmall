@@ -24,3 +24,15 @@ Our implementation is based on [Unsloth](https://github.com/unslothai/unsloth).
   ``` bash
   uv run python3 evaluate-run.py
   ```
+
+- To evaluate the saved checkpoints combined with *Inference Scaling* of a single-GPU experiment run, edit `config/decode_run_eval.yaml`, and enter
+
+  ``` bash
+  uv run python3 evaluate-run-decode.py
+  ```
+
+- To evaluate the SMC with a base model run, edit `config/decode_eval.yaml`, and enter
+
+  ``` bash
+  uv run python3 evaluate-decode.py
+  ```
