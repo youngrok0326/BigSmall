@@ -124,6 +124,14 @@ class SMCParticle:
             self.running_min = min(self.running_min, value)
         self.last_step_conf = value
 
+
+@dataclass(slots=True)
+class _BaseConfidenceRequest:
+    particle_idx: int
+    prompt_text: str
+    start: int
+    end: int
+
 def _prm_worker_main(
     req_q: mp.Queue,
     resp_q: mp.Queue,
@@ -327,6 +335,7 @@ class SMCVLLM:
         wandb_logging: bool = False,
         prm: Optional[Any] = None,
         random_sampling: bool = False,
+        confidence_from_base: bool = False,
     ) -> None:
         self.llm = llm
         self.tok = tokenizer
@@ -338,7 +347,8 @@ class SMCVLLM:
         self.min_p = float(min_p)
         self.rep = float(repetition_penalty)
         self.sg = sg
-        self.smc_topk = int(smc_topk)
+        raw_topk = int(smc_topk)
+        self.smc_topk = raw_topk
         self.window_size = int(window_size)
         self.confidence_eta = float(confidence_eta)
         self.cdf_alpha = max(float(cdf_alpha), 1e-8)
@@ -351,6 +361,9 @@ class SMCVLLM:
         self.prm = prm
         self._use_prm = prm is not None
         self.random_sampling = bool(random_sampling)
+        self._confidence_from_base = bool(confidence_from_base) and not self._use_prm
+        self._confidence_enabled = not self._use_prm
+        self._base_prompt_logprob_k = max(raw_topk, 1)
         if isinstance(self.sg.step_token, str) and self.sg.step_token:
             encoded_step = self.tok(
                 self.sg.step_token,
@@ -390,7 +403,7 @@ class SMCVLLM:
                 if curr != -1 and curr < self.smc_topk:
                     mc.max_logprobs = int(self.smc_topk)
         stop_list = [self.sg.step_token] if self.sg.step_token is not None else None
-        self._request_logprobs = self.smc_topk > 0
+        self._request_logprobs = (self.smc_topk > 0) and not self._confidence_from_base and self._confidence_enabled
         self._sampling_kwargs = dict(
             n=1,
             temperature=self.temp,
@@ -406,6 +419,20 @@ class SMCVLLM:
     def _build_sampling_params(self, max_tokens: int) -> Any:
         from vllm import SamplingParams
         return SamplingParams(max_tokens=max_tokens, **self._sampling_kwargs)
+
+    def _build_base_conf_sampling_params(self) -> Any:
+        from vllm import SamplingParams
+        return SamplingParams(
+            max_tokens=0,
+            n=1,
+            temperature=1.0,
+            top_p=1.0,
+            top_k=-1,
+            min_p=0.0,
+            repetition_penalty=1.0,
+            detokenize=False,
+            prompt_logprobs=self._base_prompt_logprob_k,
+        )
 
     def _resolve_headers(
         self,
@@ -678,6 +705,8 @@ class SMCVLLM:
         per_step_eos: List[List[int]] = []
 
         for step_idx in range(self.sg.max_steps):
+            prev_completion_lens = [len(p.completion_token_ids) for p in particles]
+            base_conf_requests: Optional[List[_BaseConfidenceRequest]] = [] if self._confidence_from_base else None
             batch_inputs, idx_map, sampling_params = self._prepare_generation_batch(particles)
 
             if not batch_inputs:
@@ -698,10 +727,14 @@ class SMCVLLM:
                     particle_idx,
                     particles[particle_idx],
                     out,
+                    prev_completion_lens[particle_idx],
                     prm_requests,
                     terminated_records,
                     step_eos_counter,
+                    base_conf_requests,
                 )
+            if self._confidence_from_base and base_conf_requests:
+                self._update_confidence_from_base(base_conf_requests, particles)
             if self._use_prm and prm_requests:
                 self._apply_prm_scores(prm_requests, particles, headers, prompts_text, original_prompts)
             weights = self._build_particle_weights(particles)
@@ -871,9 +904,11 @@ class SMCVLLM:
         particle_idx: int,
         particle: SMCParticle,
         output: Any,
+        prev_completion_len: int,
         prm_requests: Dict[int, List[Tuple[int, str]]],
         terminated_records: Optional[List[List[Tuple[int, int, List[int], str, float]]]],
         step_eos_counter: Optional[List[int]],
+        base_conf_requests: Optional[List[_BaseConfidenceRequest]],
     ) -> None:
         if not getattr(output, "outputs", None):
             particle.is_stopped = True
@@ -902,6 +937,20 @@ class SMCVLLM:
                 step_conf = self._group_reducer_fn(token_group_values)
                 particle.update_step_stats(step_conf)
                 particle.current_conf_value = self._step_aggregator_fn(particle)
+        elif base_conf_requests is not None and self._confidence_from_base:
+            new_completion_len = len(particle.completion_token_ids)
+            if new_completion_len > prev_completion_len:
+                start_idx = particle.base_prompt_token_len + prev_completion_len
+                end_idx = particle.base_prompt_token_len + new_completion_len
+                if end_idx > start_idx:
+                    base_conf_requests.append(
+                        _BaseConfidenceRequest(
+                            particle_idx=particle_idx,
+                            prompt_text=particle.prompt_text,
+                            start=start_idx,
+                            end=end_idx,
+                        )
+                    )
         stop_reason = getattr(decoded, "stop_reason", None)
         finish_reason = getattr(decoded, "finish_reason", None)
         step_stop = (
@@ -978,6 +1027,48 @@ class SMCVLLM:
             else:
                 score_float = float(score_val)
             particles[particle_idx].prm_log_weights.append(self._inv_sigmoid(score_float))
+
+    def _update_confidence_from_base(
+        self,
+        requests: List[_BaseConfidenceRequest],
+        particles: List[SMCParticle],
+    ) -> None:
+        if not requests:
+            return
+        sampling_params = self._build_base_conf_sampling_params()
+        prompts = [req.prompt_text for req in requests]
+        outs = self.llm.generate(
+            prompts,
+            sampling_params=sampling_params,
+            use_tqdm=False,
+            lora_request=None,
+        )
+
+        for req, out in zip(requests, outs):
+            prompt_logprobs = getattr(out, "prompt_logprobs", None)
+
+            if not prompt_logprobs:
+                continue
+            total_entries = len(prompt_logprobs)
+            start = min(max(req.start, 0), total_entries)
+            end = min(max(req.end, start), total_entries)
+
+            if start >= end:
+                continue
+            segment = prompt_logprobs[start:end]
+            if not segment:
+                continue
+            particle = particles[req.particle_idx]
+            token_group_values = [
+                particle.token_tracker.update(self._token_conf_fn(entry))
+                for entry in segment
+                if entry is not None
+            ]
+
+            if token_group_values:
+                step_conf = self._group_reducer_fn(token_group_values)
+                particle.update_step_stats(step_conf)
+                particle.current_conf_value = self._step_aggregator_fn(particle)
 
     def _sync_particle_tokens(self, particle: SMCParticle) -> None:
         text = "".join(particle.completion_chunks)

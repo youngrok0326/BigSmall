@@ -66,6 +66,7 @@ smc:
   drop_reward_coef: 0.1 #TODO: no longer needed.
   return_all_limit_per_group: 128  # null keeps all extras; set int to cap per prompt group #TODO: no longer needed.
   confidence:
+    from_base_model: true
     scoring: "prob" #logprob, prob, cdf
     cdf_alpha: 0.25
     group: "geo" #geo

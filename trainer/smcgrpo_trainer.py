@@ -1792,6 +1792,7 @@ class GRPOTrainer(Trainer):
         conf_scoring = str(confidence_cfg.get("scoring", smc_cfg.get("scoring", "entropy")))
         conf_group = str(confidence_cfg.get("group", "mean"))
         conf_aggregation = str(confidence_cfg.get("aggregation", "last"))
+        conf_from_base = bool(confidence_cfg.get("from_base_model", False))
         return_all = bool(smc_cfg.get("return_all", False))
         return_eos = bool(smc_cfg.get("return_eos", False))
         self._smc_return_eos = return_eos
@@ -1906,6 +1907,7 @@ class GRPOTrainer(Trainer):
                 wandb_logging=log_wandb,
                 prm=prm_model,
                 random_sampling=random_sampling,
+                confidence_from_base=conf_from_base,
             )
             self._smc_vllm_signature = signature
 
