@@ -25,7 +25,7 @@ _CONCLUSION_SUFFIX = re.compile(
     flags=re.IGNORECASE,
 )
 _STEP_HEADER_PATTERN = re.compile(
-    r"(?:^|\n\n)##\s*Step\s+(\d+)\b",
+    r"(?:^|\n\n)[^\S\r\n]*[#*]*\s*Step[^0-9\r\n]*?(\d+)\b",
     flags=re.IGNORECASE,
 )
 
@@ -97,6 +97,61 @@ def _locate_conclusion(text: str) -> tuple[str, int, int] | None:
     return answer, prefix_match.start(), conclusion_end
 
 
+def _last_boxed_span(text: str) -> tuple[int, int] | None:
+    """Return the start/end indices of the last ``\boxed{...}`` block."""
+
+    marker = "\\boxed{"
+    start = text.rfind(marker)
+
+    if start == -1:
+        return None
+
+    _, closing_idx = _extract_balanced_braces(text, start + len(marker))
+
+    if closing_idx is None:
+        return None
+
+    return start, closing_idx
+
+
+def _step_matches_before(text: str, limit: int) -> list[re.Match]:
+    """Return step header matches that appear before ``limit``."""
+
+    if limit <= 0:
+        return []
+    preamble = text[:limit]
+    return list(_STEP_HEADER_PATTERN.finditer(preamble))
+
+
+def _step_sequence(numbers: list[int]) -> bool:
+    """Check that step numbers increase sequentially from 1."""
+
+    if not numbers:
+        return False
+    expected = list(range(1, len(numbers) + 1))
+    return numbers == expected
+
+
+def _step_segments_have_content(text: str, matches: list[re.Match], limit: int) -> bool:
+    """Ensure each step header is followed by non-empty prose before ``limit``."""
+
+    if not matches:
+        return False
+
+    for idx, match in enumerate(matches):
+        start = match.end()
+        end = matches[idx + 1].start() if idx + 1 < len(matches) else limit
+
+        if start >= end:
+            return False
+        segment = text[start:end]
+
+        if segment.strip() == "":
+            return False
+
+    return True
+
+
 def extract_last_integer(text: str) -> str:
     """Extract the last integer from the text for numeric fallback grading."""
 
@@ -152,34 +207,33 @@ def answer_correct(text: str, answer: str) -> bool:
 
 
 
-def _preamble_before_last_boxed(text: str) -> str:
-    """Return the prose preceding the final ``\boxed`` answer."""
+def format_score(text: str) -> float:
+    """Return the format reward (max 0.1) for well-structured completions."""
 
-    marker = "\\boxed{"
-    idx = text.rfind(marker)
-    if idx == -1:
-        return text.strip()
-    return text[:idx].rstrip()
+    boxed_span = _last_boxed_span(text)
 
+    if boxed_span is None:
+        return 0.0
 
-def _has_step_structure(preamble: str) -> bool:
-    """Check for sequential ``## Step n`` headers introduced by double newlines."""
+    boxed_start, boxed_end = boxed_span
+    matches = _step_matches_before(text, boxed_start)
 
-    matches = list(_STEP_HEADER_PATTERN.finditer(preamble))
-    if len(matches) < 2:
-        return False
+    if not matches:
+        return 0.0
 
     numbers = [int(match.group(1)) for match in matches]
-    expected = list(range(1, len(numbers) + 1))
-    return numbers == expected
 
-
-def format_score(text: str) -> float:
-    """Return the format reward (max 0.1) when a boxed answer is present."""
-
-    if not extract_last_boxed_answer(text):
+    if not _step_sequence(numbers) or len(numbers) > 3:
         return 0.0
-    return 0.1
+    if not _step_segments_have_content(text, matches, boxed_start):
+        return 0.0
+
+    conclusion = _locate_conclusion(text)
+    span_end = conclusion[2] if conclusion is not None else boxed_end
+    extra_len = len(text[span_end:].strip())
+    alpha = 5e-4
+    bonus = max(0.0, 1.0 - alpha * extra_len)
+    return 0.1 * bonus
 
 
 def format_correct(text: str) -> bool:
@@ -314,7 +368,7 @@ def correctness_reward_func(completions, answer, **kwargs) -> list[float]:
 def format_reward_func(completions, answer, **kwargs) -> list[float]:
     # Format reward, 0.1 for correct format
     responses = [completion for completion in completions]
-    return [0 if answer_correct(r, a) else format_score(r) for r, a in zip(responses, answer)]
+    return [0.0 if answer_correct(r, a) else format_score(r) for r, a in zip(responses, answer)]
 
 def length_penalty_func(completion_mask, max_completion_length, **kwargs) -> list[float]:
     # Length penalty, 0.5 for completion length >= max_completion_length
@@ -322,18 +376,29 @@ def length_penalty_func(completion_mask, max_completion_length, **kwargs) -> lis
     return [-0.5 if l >= max_completion_length else 0.0 for l in completion_lengths]
 
 def instruct_structure_score(text: str) -> float:
-    """Granular bonus rewarding boxed answers and ``## Step n`` sections."""
+    """Reward boxed answers and concise step-by-step structure (max 0.1)."""
 
-    score = 0.0
-    if not extract_last_boxed_answer(text):
+    boxed_span = _last_boxed_span(text)
+
+    if boxed_span is None:
+        return 0.0
+
+    boxed_start, _ = boxed_span
+    score = 0.05
+    matches = _step_matches_before(text, boxed_start)
+
+    if not matches:
         return score
 
-    score += 0.05
-    preamble = _preamble_before_last_boxed(text)
-    if _has_step_structure(preamble):
-        score += 0.05
+    numbers = [int(match.group(1)) for match in matches]
 
-    return score
+    if not _step_sequence(numbers) or len(numbers) > 3:
+        return score
+    if not _step_segments_have_content(text, matches, boxed_start):
+        return score
+
+    step_bonus = len(numbers) / 3.0
+    return score + 0.05 * step_bonus
 
 
 def xmlcount_reward_func(completions, answer, **kwargs) -> list[float]:

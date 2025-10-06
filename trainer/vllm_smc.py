@@ -658,7 +658,7 @@ class SMCVLLM:
         self._call_index += 1
         global_call_step = self._call_index
         total = len(prompts_text)
-
+        breakpoint()
         if total % self.N != 0:
             raise ValueError(f"SMC expects G*N items (N={self.N}). Got total={total}.")
         G = total // self.N

@@ -1,5 +1,5 @@
 model:
-  model_name: Qwen/Qwen2.5-0.5B
+  model_name: Qwen/Qwen2.5-3B
   gpu_memory_utilization: 0.5
   max_seq_length: 1024
   lora_rank: 64
@@ -16,14 +16,14 @@ model:
   random_state: 42
 wandb:
   enable: false
-  project_name: SMCGRPO_MAIN_BASE
-  run_name: debug
+  project_name: SMCGRPO_FINAL_BASE_CONFIDENCE
+  run_name: SMC_Self_3B-BASE_512_W512_N16_D8
 rl:
   algorithm: SMCGRPO
   dataset: math
   max_prompt_length: 512
   max_completion_length: 512
-  num_generations: 8
+  num_generations: 16
   num_generations_grad: 8
   max_steps: 8000
   save_strategy: steps
@@ -68,6 +68,7 @@ smc:
   drop_reward_coef: 0.1
   return_all_limit_per_group: 128
   confidence:
+    from_base_model: true
     scoring: prob
     cdf_alpha: 0.25
     group: geo
