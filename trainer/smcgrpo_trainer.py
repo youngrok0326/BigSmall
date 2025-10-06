@@ -2188,6 +2188,10 @@ class GRPOTrainer(Trainer):
             max_completion_allowed = max(model_max_length - prompt_ids.size(1), 1)
             effective_keep = min(effective_keep, max_completion_allowed)
 
+        if self.max_completion_length is not None:
+            # Guard against generation overshooting the configured cap; keep tensors mutually aligned.
+            effective_keep = min(effective_keep, max(int(self.max_completion_length), 1))
+
         if completion_ids.size(1) != effective_keep:
             completion_ids = completion_ids[:, :effective_keep].contiguous()
         if completion_mask.size(1) != effective_keep:
