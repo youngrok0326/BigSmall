@@ -943,14 +943,19 @@ class SMCVLLM:
                 start_idx = particle.base_prompt_token_len + prev_completion_len
                 end_idx = particle.base_prompt_token_len + new_completion_len
                 if end_idx > start_idx:
-                    base_conf_requests.append(
-                        _BaseConfidenceRequest(
-                            particle_idx=particle_idx,
-                            prompt_text=particle.prompt_text,
-                            start=start_idx,
-                            end=end_idx,
-                        )
+                    within_limit = (
+                        self.max_model_len is None or particle.prompt_token_len <= self.max_model_len
                     )
+
+                    if within_limit and not particle.is_stopped:
+                        base_conf_requests.append(
+                            _BaseConfidenceRequest(
+                                particle_idx=particle_idx,
+                                prompt_text=particle.prompt_text,
+                                start=start_idx,
+                                end=end_idx,
+                            )
+                        )
         stop_reason = getattr(decoded, "stop_reason", None)
         finish_reason = getattr(decoded, "finish_reason", None)
         step_stop = (
