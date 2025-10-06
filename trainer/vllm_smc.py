@@ -423,7 +423,7 @@ class SMCVLLM:
     def _build_base_conf_sampling_params(self) -> Any:
         from vllm import SamplingParams
         return SamplingParams(
-            max_tokens=0,
+            max_tokens=1,
             n=1,
             temperature=1.0,
             top_p=1.0,
