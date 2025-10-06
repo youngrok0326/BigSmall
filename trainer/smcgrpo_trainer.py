@@ -2132,15 +2132,10 @@ class GRPOTrainer(Trainer):
 
         # Mask everything after the first EOS token (note: vLLM strips the EOS token itself)
         is_eos = completion_ids == self.eos_token_id
-        if is_eos.size(1) == 0:
-            completion_mask = torch.zeros((is_eos.size(0), 0), dtype=torch.int, device=device)
-        else:
-            eos_idx = torch.full((is_eos.size(0),), is_eos.size(1), dtype=torch.long, device=device)
-            eos_any = is_eos.any(dim=1)
-            if eos_any.any():
-                eos_idx[eos_any] = is_eos.int().argmax(dim=1)[eos_any]
-            sequence_indices = torch.arange(is_eos.size(1), device=device).expand(is_eos.size(0), -1)
-            completion_mask = (sequence_indices <= eos_idx.unsqueeze(1)).int()
+        eos_idx = torch.full((is_eos.size(0),), is_eos.size(1), dtype=torch.long, device=device)
+        eos_idx[is_eos.any(dim=1)] = is_eos.int().argmax(dim=1)[is_eos.any(dim=1)]
+        sequence_indices = torch.arange(is_eos.size(1), device=device).expand(is_eos.size(0), -1)
+        completion_mask = (sequence_indices <= eos_idx.unsqueeze(1)).int()
 
         # Convert tensor to a list of lists of token IDs. This will be passed to the reward function, avoiding the need
         # to re-tokenize completions if the reward is computed from tokens.
