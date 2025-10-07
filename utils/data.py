@@ -44,14 +44,14 @@ def _system_chat_prompt(tokenizer: AutoTokenizer, question: str) -> str:
     )
 
     trimmed = chat_prompt.rstrip()
-    return f"{trimmed}\n\n## Step1:"
+    return f"{trimmed}\n\n## Step 1:"
 
 
 def _text_prompt(question: str) -> str:
     """Return a plain-text prompt containing the system guidance followed by the problem."""
 
     return (
-        f"{SYSTEM_PROMPT}\n\nProblem: {question}\n\nSolution:\n\n## Step1:"
+        f"{SYSTEM_PROMPT}\n\nProblem: {question}\n\nSolution:\n\n## Step 1:"
     )
 
 
