@@ -15,7 +15,7 @@ def set_tokenizer_name(name):
     global tokenizer_name
     tokenizer_name = name
 
-SYSTEM_PROMPT = "Solve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$.\n\nWhere [answer] is just the final number or expression that solves the problem."
+SYSTEM_PROMPT = "Solve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nAlways insert a blank line (two newline characters) before each Step header.\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$.\n\nWhere [answer] is just the final number or expression that solves the problem."
 
 _CONCLUSION_PREFIX = re.compile(
     r"Therefore,\s*the\s*final\s*answer\s*is:\s*(?:\$\s*)?\\boxed\{",
@@ -26,7 +26,7 @@ _CONCLUSION_SUFFIX = re.compile(
     flags=re.IGNORECASE,
 )
 _STEP_HEADER_PATTERN = re.compile(
-    r"(?:(?:^)|(?:\n\n))\s*(?:[#*]+\s*)?Step[^0-9\r\n]*?(\d+)\b",
+    r"(?:(?:^)|(?:\n\s*\n))\s*(?:[#*]+\s*)?Step[^0-9\r\n]*?(\d+)\b",
     flags=re.IGNORECASE,
 )
 
@@ -143,7 +143,7 @@ def _step_sequence(numbers: list[int]) -> bool:
 
 
 def _step_segments_have_content(text: str, matches: list[re.Match], limit: int) -> bool:
-    """Ensure each step header is followed by non-empty prose before ``limit``."""
+    """Ensure each step header is followed by meaningful prose before ``limit``."""
 
     if not matches:
         return False
@@ -154,7 +154,13 @@ def _step_segments_have_content(text: str, matches: list[re.Match], limit: int) 
 
         if start >= end:
             return False
-        if text[start:end].strip() == "":
+
+        segment = text[start:end].strip()
+
+        if len(segment) < 20:
+            return False
+
+        if not any(ch.isdigit() for ch in segment) and not any(op in segment for op in "=+−-*/^"):
             return False
 
     return True
@@ -394,29 +400,35 @@ def length_penalty_func(completion_mask, max_completion_length, **kwargs) -> lis
 
 
 def instruct_structure_score(text: str) -> float:
-    """Reward boxed answers and concise step-by-step structure (max 0.1)."""
+    """Reward meaningful steps (0.025) and add boxed bonus (0.025) when present."""
 
     boxed_span = _last_boxed_span(text)
-
-    if boxed_span is None:
-        return 0.0
-
-    boxed_start, _ = boxed_span
-    score = 0.05
+    boxed_start = boxed_span[0] if boxed_span is not None else len(text)
     matches = _step_matches_before(text, boxed_start)
 
+    step_score = _step_reward(text, matches, boxed_start) if matches else 0.0
+
+    if boxed_span is None:
+        return step_score
+
+    if step_score == 0.0:
+        return 0.025
+
+    return 0.025 + step_score
+
+
+def _step_reward(text: str, matches: list[re.Match], limit: int) -> float:
     if not matches:
-        return score
+        return 0.0
 
     numbers = [int(match.group(1)) for match in matches]
 
     if not _step_sequence(numbers) or len(numbers) > 3:
-        return score
-    if not _step_segments_have_content(text, matches, boxed_start):
-        return score
+        return 0.0
+    if not _step_segments_have_content(text, matches, limit):
+        return 0.0
 
-    step_bonus = len(numbers) / 3.0
-    return score + 0.05 * step_bonus
+    return (0.025 / 3.0) * min(len(numbers), 3)
 
 
 def xmlcount_reward_func(completions, answer, **kwargs) -> list[float]:
