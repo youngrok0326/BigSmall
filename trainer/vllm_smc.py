@@ -708,7 +708,7 @@ class SMCVLLM:
             prev_completion_lens = [len(p.completion_token_ids) for p in particles]
             base_conf_requests: Optional[List[_BaseConfidenceRequest]] = [] if self._confidence_from_base else None
             batch_inputs, idx_map, sampling_params = self._prepare_generation_batch(particles)
-            
+            breakpoint()
             if not batch_inputs:
                 break
             outs = self.llm.generate(
