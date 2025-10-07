@@ -1,7 +1,7 @@
 model:
   model_name: Qwen/Qwen2.5-1.5B
   gpu_memory_utilization: 0.5
-  max_seq_length: 2048
+  max_seq_length: 1024
   lora_rank: 64
   load_in_4bit: true
   fast_inference: true # use_vllm
