@@ -4,28 +4,29 @@ Implementation of data loading and processing functions for math datasets.
 """
 
 import re
-# from math_verify import parse, verify
-from .grader import grade_answer
-from datasets import load_dataset, Dataset, Features, Value, concatenate_datasets
+from typing import Iterable
+from datasets import Dataset, Value, Features, concatenate_datasets, load_dataset
 from transformers import AutoTokenizer
+
+from .grader import grade_answer
 
 # tokenizer_name = "Qwen/Qwen2.5-3B-Instruct"
 def set_tokenizer_name(name):
     global tokenizer_name
     tokenizer_name = name
 
-SYSTEM_PROMPT = "Solve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$. I hope it is correct.\n\nWhere [answer] is just the final number or expression that solves the problem."
+SYSTEM_PROMPT = "Solve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$.\n\nWhere [answer] is just the final number or expression that solves the problem."
 
 _CONCLUSION_PREFIX = re.compile(
     r"Therefore,\s*the\s*final\s*answer\s*is:\s*(?:\$\s*)?\\boxed\{",
     flags=re.IGNORECASE,
 )
 _CONCLUSION_SUFFIX = re.compile(
-    r"\s*\$?\s*\.\s*I hope it is correct\.",
+    r"\s*\$?\s*\.\s*",
     flags=re.IGNORECASE,
 )
 _STEP_HEADER_PATTERN = re.compile(
-    r"(?:^|\n\n)[^\S\r\n]*[#*]*\s*Step[^0-9\r\n]*?(\d+)\b",
+    r"(?:(?:^)|(?:\n\n))\s*(?:[#*]+\s*)?Step[^0-9\r\n]*?(\d+)\b",
     flags=re.IGNORECASE,
 )
 
@@ -35,8 +36,8 @@ def _system_chat_prompt(tokenizer: AutoTokenizer, question: str) -> str:
 
     return tokenizer.apply_chat_template(
         [
-            {'role': 'system', 'content': SYSTEM_PROMPT},
-            {'role': 'user', 'content': question},
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": question},
         ],
         tokenize=False,
         add_generation_prompt=True,
@@ -44,13 +45,7 @@ def _system_chat_prompt(tokenizer: AutoTokenizer, question: str) -> str:
 
 
 def _extract_balanced_braces(text: str, start_idx: int) -> tuple[str, int | None]:
-    """Return the content between balanced braces starting at ``start_idx``.
-
-    ``start_idx`` is expected to point to the first character *inside* the opening
-    brace. The function returns the extracted content and the index right after the
-    closing brace. If the braces are not balanced, ``(text[start_idx:], None)`` is
-    returned to signal failure.
-    """
+    """Return the content between balanced braces starting at ``start_idx``."""
 
     depth = 1
     cursor = start_idx
@@ -71,12 +66,7 @@ def _extract_balanced_braces(text: str, start_idx: int) -> tuple[str, int | None
 
 
 def _locate_conclusion(text: str) -> tuple[str, int, int] | None:
-    """Locate the instruct-style conclusion and extract the boxed answer.
-
-    Returns a tuple of ``(answer, start_idx, end_idx)`` when the conclusion fits the
-    expected "Therefore, the final answer is: $\boxed{...}$. I hope it is correct.".
-    ``end_idx`` points to the first character after the matched conclusion.
-    """
+    """Locate the instruct-style conclusion and extract the boxed answer."""
 
     matches = list(_CONCLUSION_PREFIX.finditer(text))
     if not matches:
@@ -120,7 +110,27 @@ def _step_matches_before(text: str, limit: int) -> list[re.Match]:
     if limit <= 0:
         return []
     preamble = text[:limit]
-    return list(_STEP_HEADER_PATTERN.finditer(preamble))
+    matches = list(_STEP_HEADER_PATTERN.finditer(preamble))
+    return [m for m in matches if _requires_blank_line(preamble, m.start())]
+
+
+def _requires_blank_line(text: str, pos: int) -> bool:
+    """Ensure each step header is preceded by a blank line."""
+
+    if pos <= 0:
+        return True
+    first_nl = text.rfind("\n", 0, pos)
+
+    if first_nl == -1:
+        return False
+    if text[first_nl + 1:pos].strip():
+        return False
+
+    second_nl = text.rfind("\n", 0, first_nl)
+
+    if second_nl == -1:
+        return False
+    return text[second_nl + 1:first_nl].strip() == ""
 
 
 def _step_sequence(numbers: list[int]) -> bool:
@@ -144,9 +154,7 @@ def _step_segments_have_content(text: str, matches: list[re.Match], limit: int) 
 
         if start >= end:
             return False
-        segment = text[start:end]
-
-        if segment.strip() == "":
+        if text[start:end].strip() == "":
             return False
 
     return True
@@ -187,12 +195,12 @@ def extract_instruct_answer(text: str) -> str:
 def answer_correct(text: str, answer: str) -> bool:
     """Determine whether ``text`` contains a mathematically correct answer."""
 
-    candidates = [
+    candidates: Iterable[str] = (
         extract_instruct_answer(text),
         extract_last_boxed_answer(text),
         extract_last_integer(text),
         text,
-    ]
+    )
 
     unique: list[str] = []
     seen: set[str] = set()
@@ -206,9 +214,8 @@ def answer_correct(text: str, answer: str) -> bool:
     return any(grade_answer(candidate, answer) for candidate in unique)
 
 
-
 def format_score(text: str) -> float:
-    """Return the format reward (max 0.1) for well-structured completions."""
+    """Return the format reward (max 0.05) for well-structured completions."""
 
     boxed_span = _last_boxed_span(text)
 
@@ -233,7 +240,7 @@ def format_score(text: str) -> float:
     extra_len = len(text[span_end:].strip())
     alpha = 5e-4
     bonus = max(0.0, 1.0 - alpha * extra_len)
-    return 0.1 * bonus
+    return 0.05 * bonus
 
 
 def format_correct(text: str) -> bool:
@@ -241,11 +248,13 @@ def format_correct(text: str) -> bool:
 
     return format_score(text) > 0.0
 
+
 def filter_function(example, tokenizer: AutoTokenizer) -> bool:
     # Filter out examples that are too long
     prompt = example['prompt']
     tokenized_prompt = tokenizer(prompt, return_tensors='pt')
     return tokenized_prompt['input_ids'].shape[1] <= 512
+
 
 def get_math8k_questions(split: str = "train") -> Dataset:
     """Load Math8K prompts using the unified system instructions."""
@@ -261,11 +270,13 @@ def get_math8k_questions(split: str = "train") -> Dataset:
     data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer})
     return data
 
+
 def extract_gsm8k_answer(text: str) -> str | None:
     # Extracts the answer from the GSM8K dataset
     if "####" not in text:
         return None
     return text.split("####")[1].strip().replace(",", "")
+
 
 def get_gsm8k_questions(split: str = "train") -> Dataset:
     """Load GSM8K prompts using the unified system instructions."""
@@ -281,6 +292,7 @@ def get_gsm8k_questions(split: str = "train") -> Dataset:
     data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer})
     return data
 
+
 def extract_math_answer(text: str) -> str:
     # Extracts the answer from the Math dataset
     if "\\boxed{" not in text:
@@ -288,6 +300,7 @@ def extract_math_answer(text: str) -> str:
     answer = text.split("\\boxed{")[-1]
     answer = answer.split("}")[0]
     return answer.strip()
+
 
 def get_math_questions(split: str = "train") -> Dataset:
     """Load the MATH dataset prompts with the unified system instructions."""
@@ -312,6 +325,7 @@ def get_math_questions(split: str = "train") -> Dataset:
     )
     data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer}).shuffle(seed=42)
     return data
+
 
 def get_math500_questions(split: str = "test") -> Dataset:
     """Load the Math500 dataset prompts with the unified system instructions."""
@@ -344,6 +358,7 @@ def get_amc23_questions(split: str = "test") -> Dataset:
     )
     return data
 
+
 def get_questions(name: str, split: str = "train") -> Dataset:
     """Load a dataset by name using the unified system instructions."""
 
@@ -365,15 +380,18 @@ def correctness_reward_func(completions, answer, **kwargs) -> list[float]:
     responses = [completion for completion in completions]
     return [1.0 if answer_correct(r, a) else 0.0 for r, a in zip(responses, answer)]
 
+
 def format_reward_func(completions, answer, **kwargs) -> list[float]:
-    # Format reward, 0.1 for correct format
+    # Format reward, max 0.05 when the chain is well structured
     responses = [completion for completion in completions]
     return [0.0 if answer_correct(r, a) else format_score(r) for r, a in zip(responses, answer)]
 
+
 def length_penalty_func(completion_mask, max_completion_length, **kwargs) -> list[float]:
-    # Length penalty, 0.5 for completion length >= max_completion_length
+    # Length penalty, 0.5 for completion length >= max completion length
     completion_lengths = completion_mask.sum(dim=1).tolist()
     return [-0.5 if l >= max_completion_length else 0.0 for l in completion_lengths]
+
 
 def instruct_structure_score(text: str) -> float:
     """Reward boxed answers and concise step-by-step structure (max 0.1)."""

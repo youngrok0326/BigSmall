@@ -1,7 +1,7 @@
 model:
-  model_name: Qwen/Qwen2.5-3B
+  model_name: Qwen/Qwen2.5-1.5B
   gpu_memory_utilization: 0.5
-  max_seq_length: 1024
+  max_seq_length: 2048
   lora_rank: 64
   load_in_4bit: true
   fast_inference: true
@@ -36,7 +36,7 @@ rl:
   delta: null
   loss_type: grpo
   mask_truncated_completions: null
-  resume_from_checkpoint: true
+  resume_from_checkpoint: null
 optim:
   learning_rate: 5.0e-06
   lr_scheduler_type: constant
