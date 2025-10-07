@@ -241,6 +241,11 @@ def format_score(text: str) -> float:
     if not _step_segments_have_content(text, matches, boxed_start):
         return 0.0
 
+    conclusions = list(_CONCLUSION_PREFIX.finditer(text))
+
+    if len(conclusions) != 1:
+        return 0.0
+
     conclusion = _locate_conclusion(text)
     span_end = conclusion[2] if conclusion is not None else boxed_end
     extra_len = len(text[span_end:].strip())
