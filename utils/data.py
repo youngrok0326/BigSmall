@@ -34,7 +34,7 @@ _STEP_HEADER_PATTERN = re.compile(
 def _system_chat_prompt(tokenizer: AutoTokenizer, question: str) -> str:
     """Compose a chat-style prompt that always uses the math system instructions."""
 
-    return tokenizer.apply_chat_template(
+    chat_prompt = tokenizer.apply_chat_template(
         [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": question},
@@ -43,11 +43,16 @@ def _system_chat_prompt(tokenizer: AutoTokenizer, question: str) -> str:
         add_generation_prompt=True,
     )
 
+    trimmed = chat_prompt.rstrip()
+    return f"{trimmed}\n\n## Step1:"
+
 
 def _text_prompt(question: str) -> str:
     """Return a plain-text prompt containing the system guidance followed by the problem."""
 
-    return f"{SYSTEM_PROMPT}\n\nProblem: {question}\n\nSolution:"
+    return (
+        f"{SYSTEM_PROMPT}\n\nProblem: {question}\n\nSolution:\n\n## Step1:"
+    )
 
 
 def _build_prompt(tokenizer: AutoTokenizer, question: str, style: str) -> str:
@@ -150,13 +155,19 @@ def _requires_blank_line(text: str, pos: int) -> bool:
     return text[second_nl + 1:first_nl].strip() == ""
 
 
-def _step_sequence(numbers: list[int]) -> bool:
-    """Check that step numbers increase sequentially from 1."""
+def _step_sequence(numbers: list[int], start: int = 1) -> bool:
+    """Check that step numbers increase sequentially starting from ``start``."""
 
     if not numbers:
         return False
-    expected = list(range(1, len(numbers) + 1))
+    expected = list(range(start, start + len(numbers)))
     return numbers == expected
+
+
+def _has_terminal_blank_line(text: str) -> bool:
+    """Return True when a blank line directly precedes the final line of ``text``."""
+
+    return bool(re.search(r"\n\s*\n[^\n]*\Z", text))
 
 
 def _step_segments_have_content(text: str, matches: list[re.Match], limit: int) -> bool:
@@ -174,10 +185,7 @@ def _step_segments_have_content(text: str, matches: list[re.Match], limit: int) 
 
         segment = text[start:end].strip()
 
-        if len(segment) < 20:
-            return False
-
-        if not any(ch.isdigit() for ch in segment) and not any(op in segment for op in "=+−-*/^"):
+        if segment == "":
             return False
 
     return True
@@ -245,30 +253,30 @@ def format_score(text: str) -> float:
     if boxed_span is None:
         return 0.0
 
-    boxed_start, boxed_end = boxed_span
+    boxed_start, _ = boxed_span
     matches = _step_matches_before(text, boxed_start)
 
-    if not matches:
+    user_matches = [m for m in matches if int(m.group(1)) >= 2]
+
+    if not user_matches:
         return 0.0
 
-    numbers = [int(match.group(1)) for match in matches]
-
-    if not _step_sequence(numbers) or len(numbers) > 3:
-        return 0.0
-    if not _step_segments_have_content(text, matches, boxed_start):
+    if len(user_matches) > 2:
         return 0.0
 
-    conclusions = list(_CONCLUSION_PREFIX.finditer(text))
+    numbers = [int(match.group(1)) for match in user_matches]
 
-    if len(conclusions) != 1:
+    if not _step_sequence(numbers, start=2):
+        return 0.0
+    if not _step_segments_have_content(text, user_matches, boxed_start):
         return 0.0
 
-    conclusion = _locate_conclusion(text)
-    span_end = conclusion[2] if conclusion is not None else boxed_end
-    extra_len = len(text[span_end:].strip())
-    alpha = 5e-4
-    bonus = max(0.0, 1.0 - alpha * extra_len)
-    return 0.05 * bonus
+    separation_segment = text[user_matches[-1].end():boxed_start]
+
+    if not _has_terminal_blank_line(separation_segment):
+        return 0.0
+
+    return 0.05
 
 
 def format_correct(text: str) -> bool:
@@ -293,7 +301,8 @@ def get_math8k_questions(split: str = "train", style: str = "base") -> Dataset:
         lambda x: {
             "prompt": _build_prompt(tokenizer, x["question"], style),
             "answer": x["gt_answer"],
-        }
+        },
+        load_from_cache_file=False,
     )
     data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer})
     return data
@@ -315,7 +324,8 @@ def get_gsm8k_questions(split: str = "train", style: str = "base") -> Dataset:
         lambda x: {
             "prompt": _build_prompt(tokenizer, x["question"], style),
             "answer": extract_gsm8k_answer(x["answer"]),
-        }
+        },
+        load_from_cache_file=False,
     )
     data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer})
     return data
@@ -349,7 +359,8 @@ def get_math_questions(split: str = "train", style: str = "base") -> Dataset:
         lambda x: {
             "prompt": _build_prompt(tokenizer, x["problem"], style),
             "answer": extract_math_answer(x["solution"]),
-        }
+        },
+        load_from_cache_file=False,
     )
     data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer}).shuffle(seed=42)
     return data
@@ -364,7 +375,8 @@ def get_math500_questions(split: str = "test", style: str = "base") -> Dataset:
         lambda x: {
             "prompt": _build_prompt(tokenizer, x["problem"], style),
             "answer": x["answer"],
-        }
+        },
+        load_from_cache_file=False,
     )
     data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer})
     return data
@@ -379,7 +391,8 @@ def get_amc23_questions(split: str = "test", style: str = "base") -> Dataset:
         lambda x: {
             "prompt": _build_prompt(tokenizer, x["question"], style),
             "answer": str(int(x["answer"])),
-        }
+        },
+        load_from_cache_file=False,
     )
     data = data.cast_column("answer", Value("string")).filter(
         filter_function, fn_kwargs={"tokenizer": tokenizer}
@@ -422,35 +435,34 @@ def length_penalty_func(completion_mask, max_completion_length, **kwargs) -> lis
 
 
 def instruct_structure_score(text: str) -> float:
-    """Reward meaningful steps (0.025) and add boxed bonus (0.025) when present."""
+    """Reward structured steps (0.025 each, up to two) plus boxed answer bonus."""
 
     boxed_span = _last_boxed_span(text)
-    boxed_start = boxed_span[0] if boxed_span is not None else len(text)
-    matches = _step_matches_before(text, boxed_start)
+    limit = boxed_span[0] if boxed_span is not None else len(text)
+    matches = _step_matches_before(text, limit)
 
-    step_score = _step_reward(text, matches, boxed_start) if matches else 0.0
+    user_matches = [m for m in matches if int(m.group(1)) >= 2]
 
-    if boxed_span is None:
-        return step_score
+    step_count = 0
 
-    if step_score == 0.0:
-        return 0.025
+    if user_matches:
+        numbers = [int(match.group(1)) for match in user_matches]
 
-    return 0.025 + step_score
+        if _step_sequence(numbers, start=2) and len(user_matches) <= 2 and _step_segments_have_content(text, user_matches, limit):
+            step_count = len(user_matches)
 
+            if boxed_span is not None:
+                separation_segment = text[user_matches[-1].end():boxed_span[0]]
 
-def _step_reward(text: str, matches: list[re.Match], limit: int) -> float:
-    if not matches:
-        return 0.0
+                if not _has_terminal_blank_line(separation_segment):
+                    step_count = 0
 
-    numbers = [int(match.group(1)) for match in matches]
+    reward = 0.025 * step_count
 
-    if not _step_sequence(numbers) or len(numbers) > 3:
-        return 0.0
-    if not _step_segments_have_content(text, matches, limit):
-        return 0.0
+    if boxed_span is not None and step_count > 0:
+        reward += 0.025
 
-    return (0.025 / 3.0) * min(len(numbers), 3)
+    return reward
 
 
 def xmlcount_reward_func(completions, answer, **kwargs) -> list[float]:

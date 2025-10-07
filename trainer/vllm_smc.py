@@ -882,12 +882,19 @@ class SMCVLLM:
         for idx, particle in enumerate(particles):
             if particle.is_stopped:
                 continue
-            ensured_prompt = self.sg.ensure_step_suffix(particle.prompt_text)
+            if particle.step_count > 0:
+                ensured_prompt = self.sg.ensure_step_suffix(particle.prompt_text)
 
-            if ensured_prompt != particle.prompt_text:
-                particle.prompt_text = ensured_prompt
-                # Step suffix contributes to the vLLM context, so refresh token accounting immediately.
-                self._sync_particle_tokens(particle)
+                if ensured_prompt != particle.prompt_text:
+                    particle.prompt_text = ensured_prompt
+                    # Step suffix contributes to the vLLM context, so refresh token accounting immediately.
+                    self._sync_particle_tokens(particle)
+            else:
+                trimmed = particle.prompt_text.rstrip()
+
+                if trimmed != particle.prompt_text:
+                    particle.prompt_text = trimmed
+                    self._sync_particle_tokens(particle)
             budget = self._next_token_budget(particle)
 
             if budget is None or budget <= 0:
@@ -995,10 +1002,14 @@ class SMCVLLM:
                 step_eos_counter[group_idx] += 1
         else:
             previous_prompt = particle.prompt_text
-            updated_prompt = self.sg.ensure_step_suffix(previous_prompt)
-            particle.prompt_text = updated_prompt
+
+            if particle.step_count > 0:
+                updated_prompt = self.sg.ensure_step_suffix(previous_prompt)
+            else:
+                updated_prompt = previous_prompt.rstrip()
 
             if updated_prompt != previous_prompt:
+                particle.prompt_text = updated_prompt
                 self._sync_particle_tokens(particle)
 
     def _apply_prm_scores(
