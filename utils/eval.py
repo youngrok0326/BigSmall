@@ -312,10 +312,16 @@ def test_model(
 
     results = {} if results is None else dict(results)
 
+    model_style = "instruct" if base_model_for_eval.split("/")[-1].endswith("Instruct") else "base"
+
     try:
         for dataset_name in cfg.datasets:
             print(f"Testing dataset {dataset_name}...")
-            dataset_testing = get_questions(dataset_name, split="test")
+            dataset_testing = get_questions(
+                dataset_name,
+                split="test",
+                style=model_style,
+            )
             prev = results.get(dataset_name)
             results[dataset_name] = test(
                 cfg,

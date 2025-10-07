@@ -15,7 +15,7 @@ def set_tokenizer_name(name):
     global tokenizer_name
     tokenizer_name = name
 
-SYSTEM_PROMPT = "Solve the following math problem efficiently and clearly:\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nAlways insert a blank line (two newline characters) before each Step header.\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$.\n\nWhere [answer] is just the final number or expression that solves the problem."
+SYSTEM_PROMPT = "Solve the following math problem carefully and present your reasoning step by step.\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nAlways insert a blank line (two newline characters) before each Step header.\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$.\n\nWhere [answer] is just the final number or expression that solves the problem."
 
 _CONCLUSION_PREFIX = re.compile(
     r"Therefore,\s*the\s*final\s*answer\s*is:\s*(?:\$\s*)?\\boxed\{",
@@ -42,6 +42,23 @@ def _system_chat_prompt(tokenizer: AutoTokenizer, question: str) -> str:
         tokenize=False,
         add_generation_prompt=True,
     )
+
+
+def _text_prompt(question: str) -> str:
+    """Return a plain-text prompt containing the system guidance followed by the problem."""
+
+    return f"{SYSTEM_PROMPT}\n\nProblem: {question}\n\nSolution:"
+
+
+def _build_prompt(tokenizer: AutoTokenizer, question: str, style: str) -> str:
+    """Construct the prompt according to ``style`` while reusing the unified system prompt."""
+
+    normalized = style.lower()
+    if normalized == "base":
+        return _text_prompt(question)
+    if normalized == "instruct":
+        return _system_chat_prompt(tokenizer, question)
+    raise ValueError(f"Unknown style: {style}")
 
 
 def _extract_balanced_braces(text: str, start_idx: int) -> tuple[str, int | None]:
@@ -267,14 +284,14 @@ def filter_function(example, tokenizer: AutoTokenizer) -> bool:
     return tokenized_prompt['input_ids'].shape[1] <= 512
 
 
-def get_math8k_questions(split: str = "train") -> Dataset:
+def get_math8k_questions(split: str = "train", style: str = "base") -> Dataset:
     """Load Math8K prompts using the unified system instructions."""
 
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     data = load_dataset("parquet", data_files=f"datasets/math8k/{split}.parquet")["train"]
     data = data.map(
         lambda x: {
-            "prompt": _system_chat_prompt(tokenizer, x["question"]),
+            "prompt": _build_prompt(tokenizer, x["question"], style),
             "answer": x["gt_answer"],
         }
     )
@@ -289,14 +306,14 @@ def extract_gsm8k_answer(text: str) -> str | None:
     return text.split("####")[1].strip().replace(",", "")
 
 
-def get_gsm8k_questions(split: str = "train") -> Dataset:
+def get_gsm8k_questions(split: str = "train", style: str = "base") -> Dataset:
     """Load GSM8K prompts using the unified system instructions."""
 
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     data = load_dataset("openai/gsm8k", "main")[split]
     data = data.map(
         lambda x: {
-            "prompt": _system_chat_prompt(tokenizer, x["question"]),
+            "prompt": _build_prompt(tokenizer, x["question"], style),
             "answer": extract_gsm8k_answer(x["answer"]),
         }
     )
@@ -313,7 +330,7 @@ def extract_math_answer(text: str) -> str:
     return answer.strip()
 
 
-def get_math_questions(split: str = "train") -> Dataset:
+def get_math_questions(split: str = "train", style: str = "base") -> Dataset:
     """Load the MATH dataset prompts with the unified system instructions."""
 
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
@@ -330,7 +347,7 @@ def get_math_questions(split: str = "train") -> Dataset:
     data = concatenate_datasets(datasets)
     data = data.map(
         lambda x: {
-            "prompt": _system_chat_prompt(tokenizer, x["problem"]),
+            "prompt": _build_prompt(tokenizer, x["problem"], style),
             "answer": extract_math_answer(x["solution"]),
         }
     )
@@ -338,14 +355,14 @@ def get_math_questions(split: str = "train") -> Dataset:
     return data
 
 
-def get_math500_questions(split: str = "test") -> Dataset:
+def get_math500_questions(split: str = "test", style: str = "base") -> Dataset:
     """Load the Math500 dataset prompts with the unified system instructions."""
 
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     data = load_dataset("HuggingFaceH4/MATH-500")[split]
     data = data.map(
         lambda x: {
-            "prompt": _system_chat_prompt(tokenizer, x["problem"]),
+            "prompt": _build_prompt(tokenizer, x["problem"], style),
             "answer": x["answer"],
         }
     )
@@ -353,14 +370,14 @@ def get_math500_questions(split: str = "test") -> Dataset:
     return data
 
 
-def get_amc23_questions(split: str = "test") -> Dataset:
+def get_amc23_questions(split: str = "test", style: str = "base") -> Dataset:
     """Load the AMC23 dataset prompts with the unified system instructions."""
 
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     data = load_dataset("zwhe99/amc23")[split]
     data = data.map(
         lambda x: {
-            "prompt": _system_chat_prompt(tokenizer, x["question"]),
+            "prompt": _build_prompt(tokenizer, x["question"], style),
             "answer": str(int(x["answer"])),
         }
     )
@@ -370,19 +387,19 @@ def get_amc23_questions(split: str = "test") -> Dataset:
     return data
 
 
-def get_questions(name: str, split: str = "train") -> Dataset:
+def get_questions(name: str, split: str = "train", style: str = "base") -> Dataset:
     """Load a dataset by name using the unified system instructions."""
 
     if name == "math8k":
-        return get_math8k_questions(split)
+        return get_math8k_questions(split, style)
     if name == "gsm8k":
-        return get_gsm8k_questions(split)
+        return get_gsm8k_questions(split, style)
     if name == "math500":
-        return get_math500_questions(split)
+        return get_math500_questions(split, style)
     if name == "amc23":
-        return get_amc23_questions(split)
+        return get_amc23_questions(split, style)
     if name == "math":
-        return get_math_questions(split)
+        return get_math_questions(split, style)
     raise ValueError(f"Unknown dataset name: {name}")
 
 # Reward functions
