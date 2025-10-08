@@ -4,7 +4,7 @@ Implementation of data loading and processing functions for math datasets.
 """
 
 import re
-from typing import Iterable
+from typing import Iterable, NamedTuple
 from datasets import Dataset, Value, Features, concatenate_datasets, load_dataset
 from transformers import AutoTokenizer
 
@@ -21,10 +21,15 @@ SYSTEM_PROMPT = \
 
 You must adhere strictly to the following formatting rules:
 
-**1. Blank Lines:** A blank line (two newlines, \\n\\n) is **MANDATORY** before each `## Step` header.
-**2. Final Answer:** The entire response **MUST** end with the final answer in the format `Therefore, the final answer is: $\\boxed{answer}`.
+1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.
+    - **Correct:**
+      ...some text.\\n\\n## Step 2
+    - **Incorrect:**
+      ...some text.\\n## Step 2
+      
+2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.
 
-Here is an example of the required output structure:
+**Example of the required format:**
 ---
 ## Step 1
 [Explanation and calculations for the first step.]
@@ -37,7 +42,7 @@ Here is an example of the required output structure:
 Therefore, the final answer is: $\\boxed{The Final Answer}`
 ---
 
-Now, solve the following problem:
+Now, solve the following problem, strictly adhering to all formatting rules:
 """
 
 _CONCLUSION_PREFIX = re.compile(
@@ -53,6 +58,40 @@ _STEP_HEADER_PATTERN = re.compile(
     flags=re.IGNORECASE,
 )
 
+_STEP_VARIANT_PATTERN = re.compile(
+    r"^\s*(?:[#*]+\s*)?(?:step\s*(\d+)|(\d+)[.)\-:])\s*:?(.*)$",
+    flags=re.IGNORECASE,
+)
+
+
+class StepInfo(NamedTuple):
+    start: int
+    end: int
+    number: int
+    has_blank: bool
+
+
+def _has_double_newline_before(text: str, pos: int) -> bool:
+    if pos <= 0:
+        return False
+    return bool(re.search(r"\n\s*\n\s*$", text[:pos]))
+
+
+def _extract_step_infos(text: str, limit: int | None = None) -> list[StepInfo]:
+    segment = text if limit is None else text[:limit]
+    infos: list[StepInfo] = []
+
+    for match in _STEP_VARIANT_PATTERN.finditer(segment):
+        num_str = match.group(1) or match.group(2)
+        if not num_str:
+            continue
+        start = match.start()
+        end = match.end()
+        has_blank = _has_double_newline_before(segment, start)
+        infos.append(StepInfo(start, end, int(num_str), has_blank))
+
+    return infos
+
 
 def _system_chat_prompt(tokenizer: AutoTokenizer, question: str) -> str:
     """Compose a chat-style prompt that always uses the math system instructions."""
@@ -67,14 +106,14 @@ def _system_chat_prompt(tokenizer: AutoTokenizer, question: str) -> str:
     )
 
     trimmed = chat_prompt.rstrip()
-    return f"{trimmed}"
+    return f"{trimmed}\n## Step 1:"
 
 
 def _text_prompt(question: str) -> str:
     """Return a plain-text prompt containing the system guidance followed by the problem."""
 
     return (
-        f"{SYSTEM_PROMPT}\n\nProblem: {question}\n\nSolution:"
+        f"{SYSTEM_PROMPT}\n\nProblem: {question}\n\nSolution:\n## Step 1:"
     )
 
 
@@ -149,35 +188,6 @@ def _last_boxed_span(text: str) -> tuple[int, int] | None:
     return start, closing_idx
 
 
-def _step_matches_before(text: str, limit: int) -> list[re.Match]:
-    """Return step header matches that appear before ``limit``."""
-
-    if limit <= 0:
-        return []
-    preamble = text[:limit]
-    matches = list(_STEP_HEADER_PATTERN.finditer(preamble))
-    return [m for m in matches if _requires_blank_line(preamble, m.start())]
-
-
-def _requires_blank_line(text: str, pos: int) -> bool:
-    """Ensure each step header is preceded by a blank line."""
-
-    if pos <= 0:
-        return True
-    first_nl = text.rfind("\n", 0, pos)
-
-    if first_nl == -1:
-        return False
-    if text[first_nl + 1:pos].strip():
-        return False
-
-    second_nl = text.rfind("\n", 0, first_nl)
-
-    if second_nl == -1:
-        return False
-    return text[second_nl + 1:first_nl].strip() == ""
-
-
 def _step_sequence(numbers: list[int], start: int = 1) -> bool:
     """Check that step numbers increase sequentially starting from ``start``."""
 
@@ -187,31 +197,26 @@ def _step_sequence(numbers: list[int], start: int = 1) -> bool:
     return numbers == expected
 
 
-def _has_terminal_blank_line(text: str) -> bool:
-    """Return True when a blank line directly precedes the final line of ``text``."""
-
-    return bool(re.search(r"\n\s*\n[^\n]*\Z", text))
-
-
 def _step_segments_have_content(
     text: str,
-    matches: list[re.Match],
+    infos: list[StepInfo],
     limit: int,
     *,
     require_blank: bool = True,
 ) -> bool:
     """Ensure each step header is followed by meaningful prose before ``limit``."""
 
-    if not matches:
+    if not infos:
         return False
 
-    for idx, match in enumerate(matches):
-        start = match.end()
-        if require_blank:
-            # Enforce blank line before the header
-            if not _requires_blank_line(text, match.start()):
-                return False
-        end = matches[idx + 1].start() if idx + 1 < len(matches) else limit
+    final_limit = len(text) if limit is None else limit
+
+    for idx, info in enumerate(infos):
+        if require_blank and not info.has_blank:
+            return False
+
+        start = info.end
+        end = infos[idx + 1].start if idx + 1 < len(infos) else final_limit
 
         if start >= end:
             return False
@@ -287,16 +292,17 @@ def format_score(text: str) -> float:
         return 0.0
 
     boxed_start, _ = boxed_span
-    matches = _step_matches_before(text, boxed_start)
+    infos = _extract_step_infos(text, boxed_start)
+    blank_infos = [info for info in infos if info.has_blank]
 
-    if not matches:
+    if not blank_infos:
         return 0.0
 
-    numbers = [int(match.group(1)) for match in matches]
+    numbers = [info.number for info in blank_infos]
 
     if not _step_sequence(numbers, start=1):
         return 0.0
-    if not _step_segments_have_content(text, matches, boxed_start, require_blank=True):
+    if not _step_segments_have_content(text, blank_infos, boxed_start, require_blank=True):
         return 0.0
 
     return 0.1
@@ -462,23 +468,25 @@ def instruct_structure_score(text: str) -> float:
 
     boxed_span = _last_boxed_span(text)
     limit = boxed_span[0] if boxed_span is not None else len(text)
-    raw_matches = list(_STEP_HEADER_PATTERN.finditer(text[:limit]))
-    matches = [m for m in raw_matches if int(m.group(1)) >= 2]
+    infos = _extract_step_infos(text, limit)
 
-    step_count = 0
+    reward = 0.0
 
-    if matches:
-        numbers = [int(match.group(1)) for match in matches]
+    if infos:
+        numbers = [info.number for info in infos]
 
-        if _step_sequence(numbers, start=2) and _step_segments_have_content(text, matches, limit, require_blank=False):
-            step_count = min(len(matches), 3)
+        if _step_sequence(numbers, start=1) and _step_segments_have_content(text, infos, limit, require_blank=False):
+            for info in infos[:3]:
+                reward += 0.025 if info.has_blank else 0.0125
 
-    reward = 0.0125 * step_count
+    box_count = text.count("\\boxed{")
 
-    if boxed_span is not None:
+    if box_count >= 1:
         reward += 0.0125
+        if box_count > 1:
+            reward -= 0.00625 * (box_count - 1)
 
-    return reward
+    return max(0.0, reward)
 
 
 def xmlcount_reward_func(completions, answer, **kwargs) -> list[float]:
