@@ -434,6 +434,21 @@ class SMCVLLM:
             prompt_logprobs=self._base_prompt_logprob_k,
         )
 
+    def _ensure_prompt_step_suffix(self, particle: SMCParticle) -> None:
+        if not isinstance(self.sg.step_token, str) or not self.sg.step_token:
+            return
+        original = particle.prompt_text
+        ensured = self.sg.ensure_step_suffix(original)
+
+        if ensured == original:
+            return
+        suffix = ensured[len(original):]
+        particle.prompt_text = ensured
+
+        if suffix:
+            particle.completion_chunks.append(suffix)
+        self._sync_particle_tokens(particle)
+
     def _resolve_headers(
         self,
         prompts_text: List[str],
@@ -883,12 +898,7 @@ class SMCVLLM:
             if particle.is_stopped:
                 continue
             if particle.step_count > 0:
-                ensured_prompt = self.sg.ensure_step_suffix(particle.prompt_text)
-
-                if ensured_prompt != particle.prompt_text:
-                    particle.prompt_text = ensured_prompt
-                    # Step suffix contributes to the vLLM context, so refresh token accounting immediately.
-                    self._sync_particle_tokens(particle)
+                self._ensure_prompt_step_suffix(particle)
             else:
                 trimmed = particle.prompt_text.rstrip()
 
@@ -1004,13 +1014,13 @@ class SMCVLLM:
             previous_prompt = particle.prompt_text
 
             if particle.step_count > 0:
-                updated_prompt = self.sg.ensure_step_suffix(previous_prompt)
+                self._ensure_prompt_step_suffix(particle)
             else:
                 updated_prompt = previous_prompt.rstrip()
 
-            if updated_prompt != previous_prompt:
-                particle.prompt_text = updated_prompt
-                self._sync_particle_tokens(particle)
+                if updated_prompt != previous_prompt:
+                    particle.prompt_text = updated_prompt
+                    self._sync_particle_tokens(particle)
 
     def _apply_prm_scores(
         self,
