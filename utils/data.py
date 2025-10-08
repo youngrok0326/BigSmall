@@ -42,8 +42,8 @@ Now, solve the following problem, strictly adhering to all formatting rules:
 """
 
 _CONCLUSION_PREFIX = re.compile(
-    r"Therefore,\s*the\s*final\s*answer\s*is:\s*(?:\$\s*)?\\boxed\{",
-    flags=re.IGNORECASE,
+    r"Therefore(?:[\s,]|$).*?(?:\$\s*)?\\boxed\{",
+    flags=re.IGNORECASE | re.DOTALL,
 )
 _CONCLUSION_SUFFIX = re.compile(
     r"\s*\$?\s*\.\s*",
@@ -234,7 +234,7 @@ def _step_segments_have_content(
 
         blank_lines = sum(1 for line in segment.splitlines() if not line.strip())
         if penalties is not None:
-            penalties.append(blank_lines * 0.01)
+            penalties.append(blank_lines * 0.02)
 
     return True
 
@@ -508,12 +508,16 @@ def instruct_structure_score(text: str) -> float:
                 reward += 0.025 if info.has_blank else 0.0125
 
     conclusion = _locate_conclusion(text)
+    conclusion_matches = list(_CONCLUSION_PREFIX.finditer(text))
     if conclusion is not None:
         _, conclusion_start, _ = conclusion
         if _has_double_newline_before(text, conclusion_start):
             reward += 0.025
         else:
             reward += 0.0125
+
+        if len(conclusion_matches) > 1:
+            reward -= 0.00625 * (len(conclusion_matches) - 1)
 
     box_count = text.count("\\boxed{")
 
