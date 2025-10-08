@@ -518,7 +518,7 @@ def instruct_structure_score(text: str) -> float:
     box_count = text.count("\\boxed{")
 
     if box_count >= 1:
-        reward += 0.0125
+        reward += 0.015
         if box_count > 1:
             reward -= 0.00625 * (box_count - 1)
 
