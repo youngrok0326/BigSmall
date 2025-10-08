@@ -15,7 +15,24 @@ def set_tokenizer_name(name):
     global tokenizer_name
     tokenizer_name = name
 
-SYSTEM_PROMPT = "Solve the following math problem carefully and present your reasoning step by step.\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nAlways insert a blank line (two newline characters) before each Step header.\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$.\n\nWhere [answer] is just the final number or expression that solves the problem."
+# SYSTEM_PROMPT = "Solve the following math problem carefully and present your reasoning step by step.\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nAlways insert a blank line (two newline characters) before each Step header.\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$.\n\nWhere [answer] is just the final number or expression that solves the problem."
+SYSTEM_PROMPT = """Here is an example of a step-by-step solution to a math problem. Follow this format precisely.
+
+Problem: What is the value of x in the equation 2x + 5 = 13?
+
+Solution:
+## Step 1: Isolate the term with x.
+To begin, we need to isolate the term containing x, which is 2x. We can do this by subtracting 5 from both sides of the equation.
+13 - 5 = 8
+This simplifies the equation to 2x = 8.
+
+## Step 2: Solve for x.
+Now that we have 2x = 8, we can solve for x by dividing both sides of the equation by 2.
+8 / 2 = 4
+This gives us the final value for x.
+
+Therefore, the final answer is: $\boxed{4}$.
+"""
 
 _CONCLUSION_PREFIX = re.compile(
     r"Therefore,\s*the\s*final\s*answer\s*is:\s*(?:\$\s*)?\\boxed\{",
@@ -44,14 +61,14 @@ def _system_chat_prompt(tokenizer: AutoTokenizer, question: str) -> str:
     )
 
     trimmed = chat_prompt.rstrip()
-    return f"{trimmed}\n\n## Step 1:"
+    return f"{trimmed}"
 
 
 def _text_prompt(question: str) -> str:
     """Return a plain-text prompt containing the system guidance followed by the problem."""
 
     return (
-        f"{SYSTEM_PROMPT}\n\nProblem: {question}\n\nSolution:\n\n## Step 1:"
+        f"{SYSTEM_PROMPT}\n\nProblem: {question}\n\nSolution:"
     )
 
 
