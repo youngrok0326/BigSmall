@@ -104,14 +104,14 @@ def _system_chat_prompt(tokenizer: AutoTokenizer, question: str) -> str:
     )
 
     trimmed = chat_prompt.rstrip()
-    return f"{trimmed}\n## Step 1:"
+    return f"{trimmed}\n\n## Step 1:"
 
 
 def _text_prompt(question: str) -> str:
     """Return a plain-text prompt containing the system guidance followed by the problem."""
 
     return (
-        f"{SYSTEM_PROMPT}\n\nProblem: {question}\n\nSolution:\n## Step 1:"
+        f"{SYSTEM_PROMPT}\n\nProblem: {question}\n\nSolution:\n\n## Step 1:"
     )
 
 
@@ -234,7 +234,7 @@ def _step_segments_have_content(
 
         blank_lines = sum(1 for line in segment.splitlines() if not line.strip())
         if penalties is not None:
-            penalties.append(blank_lines * 0.0125)
+            penalties.append(blank_lines * 0.01)
 
     return True
 
@@ -311,7 +311,6 @@ def format_score(text: str) -> float:
     numbers = [info.number for info in blank_infos]
     start = numbers[0]
 
-    penalties: List[float] = []
     if not _step_sequence(numbers, start=start):
         return 0.0
     if not _step_segments_have_content(
@@ -319,11 +318,11 @@ def format_score(text: str) -> float:
         blank_infos,
         boxed_start,
         require_blank=True,
-        penalties=penalties,
+        penalties=None,
     ):
         return 0.0
 
-    return 0.1 - sum(penalties)
+    return 0.1
 
 
 def format_correct(text: str) -> bool:
@@ -472,7 +471,7 @@ def correctness_reward_func(completions, answer, **kwargs) -> list[float]:
 def format_reward_func(completions, answer, **kwargs) -> list[float]:
     # Format reward, 0.1 when the chain follows the full structure
     responses = [completion for completion in completions]
-    return [0.0 if answer_correct(r, a) else format_score(r) for r, a in zip(responses, answer)]
+    return [format_score(r) for r in responses]
 
 
 def length_penalty_func(completion_mask, max_completion_length, **kwargs) -> list[float]:
@@ -530,4 +529,4 @@ def xmlcount_reward_func(completions, answer, **kwargs) -> list[float]:
     """Legacy name retained: rewards instruct-style structure when incorrect."""
 
     contents = [completion for completion in completions]
-    return [0.0 if answer_correct(r, a) else instruct_structure_score(r) for r, a in zip(contents, answer)]
+    return [instruct_structure_score(r) for r in contents]

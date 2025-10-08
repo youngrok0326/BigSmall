@@ -100,6 +100,7 @@ class SMCParticle:
     total_new: int
     base_prompt_token_len: int
     prompt_token_len: int
+    initial_completion_len: int
     token_tracker: TokenConfidenceTracker
     step_count: int
     running_sum: float
@@ -502,7 +503,26 @@ class SMCVLLM:
         if headers:
             return headers[-1]
         raise IndexError(f"Unable to resolve prompt for group {group_idx}")
-    
+
+    def _split_prompt_initial_completion(self, header: str) -> Tuple[str, str]:
+        text = header if isinstance(header, str) else str(header)
+        patterns = ("\n\n## Step 1:", "\n## Step 1:", "## Step 1:")
+
+        for pattern in patterns:
+            idx = text.rfind(pattern)
+
+            if idx == -1:
+                continue
+            after = text[idx + len(pattern):]
+
+            if after.strip():
+                continue
+            base = text[:idx]
+            chunk_tail = text[idx + len(pattern):]
+            normalized_chunk = "\n\n## Step 1:" + chunk_tail
+            return base, normalized_chunk
+        return text, ""
+
     @staticmethod
     def _inv_sigmoid(score: float) -> float:
         eps = 1e-7
@@ -678,23 +698,56 @@ class SMCVLLM:
             raise ValueError(f"SMC expects G*N items (N={self.N}). Got total={total}.")
         G = total // self.N
         headers = self._resolve_headers(prompts_text, original_prompts, G)
+        resolved_headers = [str(header) for header in headers]
+
+        base_headers: List[str] = []
+        initial_chunks: List[str] = []
+        normalized_headers: List[str] = []
+
+        for header in resolved_headers:
+            base, initial = self._split_prompt_initial_completion(header)
+            base_headers.append(base)
+            initial_chunks.append(initial)
+            if initial:
+                normalized_headers.append(base + initial)
+            else:
+                normalized_headers.append(header)
+
+        headers = normalized_headers
+
         header_token_lens: List[int] = []
+        base_header_token_lens: List[int] = []
+        initial_chunk_token_ids: List[List[int]] = []
 
         if headers:
-            header_token_ids = encode_batch(self.tok, list(headers))  # type: ignore[arg-type]
+            header_token_ids = encode_batch(self.tok, headers)
             header_token_lens = [len(ids) for ids in header_token_ids]
+            base_header_token_ids = encode_batch(self.tok, base_headers)
+            base_header_token_lens = [len(ids) for ids in base_header_token_ids]
+            initial_chunk_token_ids = encode_batch(self.tok, initial_chunks)
 
         particles: List[SMCParticle] = [
             SMCParticle(
                 is_stopped=False,
-                prompt_text=headers[idx // self.N],
-                completion_chunks=[],
+                prompt_text=headers[idx // self.N] if idx // self.N < len(headers) else "",
+                completion_chunks=(
+                    [initial_chunks[idx // self.N]]
+                    if idx // self.N < len(initial_chunks) and initial_chunks[idx // self.N]
+                    else []
+                ),
                 total_new=0,
                 base_prompt_token_len=(
-                    header_token_lens[idx // self.N] if idx // self.N < len(header_token_lens) else 0
+                    base_header_token_lens[idx // self.N]
+                    if idx // self.N < len(base_header_token_lens)
+                    else 0
                 ),
                 prompt_token_len=(
                     header_token_lens[idx // self.N] if idx // self.N < len(header_token_lens) else 0
+                ),
+                initial_completion_len=(
+                    len(initial_chunk_token_ids[idx // self.N])
+                    if idx // self.N < len(initial_chunk_token_ids)
+                    else 0
                 ),
                 token_tracker=TokenConfidenceTracker(self._group_mode, self.window_size),
                 step_count=0,
@@ -703,6 +756,11 @@ class SMCVLLM:
                 running_min=1.0,
                 last_step_conf=0.0,
                 current_conf_value=1.0,
+                completion_token_ids=list(
+                    initial_chunk_token_ids[idx // self.N]
+                )
+                if idx // self.N < len(initial_chunk_token_ids)
+                else [],
             )
 
             for idx in range(total)
@@ -853,7 +911,6 @@ class SMCVLLM:
                         for completion_idx, text in enumerate(texts):
                             table.add_data(global_call_step, group_idx, completion_idx, text)
                     wandb.log({"smc/completions": table}, commit=False)
-       
         return {
             "group_sizes": group_sizes,
             "completions": completions_by_group,
@@ -873,7 +930,10 @@ class SMCVLLM:
                 return None
 
         if self.max_new_tokens > 0:
-            generated_tokens = max(particle.prompt_token_len - particle.base_prompt_token_len, 0)
+            generated_tokens = max(
+                particle.prompt_token_len - particle.base_prompt_token_len - particle.initial_completion_len,
+                0,
+            )
             remaining = self.max_new_tokens - generated_tokens
 
             if remaining <= 0:
@@ -1102,7 +1162,8 @@ class SMCVLLM:
             particle.completion_token_ids = encode_batch(self.tok, [text])[0]
         else:
             particle.completion_token_ids = []
-        particle.total_new = len(particle.completion_token_ids)
+        completion_len = len(particle.completion_token_ids)
+        particle.total_new = max(completion_len - max(particle.initial_completion_len, 0), 0)
         full_prompt_ids = encode_batch(self.tok, [particle.prompt_text])[0]
         particle.prompt_token_len = len(full_prompt_ids)
 
@@ -1212,6 +1273,7 @@ class SMCVLLM:
             total_new=int(src.total_new),
             base_prompt_token_len=int(src.base_prompt_token_len),
             prompt_token_len=int(src.prompt_token_len),
+            initial_completion_len=int(src.initial_completion_len),
             token_tracker=src.token_tracker.clone(),
             step_count=int(src.step_count),
             running_sum=float(src.running_sum),
