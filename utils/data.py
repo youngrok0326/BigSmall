@@ -4,13 +4,13 @@ Implementation of data loading and processing functions for math datasets.
 """
 
 import re
-from typing import Iterable, NamedTuple
+from typing import Iterable, List, NamedTuple, Optional
 from datasets import Dataset, Value, Features, concatenate_datasets, load_dataset
 from transformers import AutoTokenizer
 
 from .grader import grade_answer
 
-# tokenizer_name = "Qwen/Qwen2.5-3B-Instruct"
+
 def set_tokenizer_name(name):
     global tokenizer_name
     tokenizer_name = name
@@ -55,7 +55,7 @@ _STEP_HEADER_PATTERN = re.compile(
 )
 
 _STEP_VARIANT_PATTERN = re.compile(
-    r"^\s*(?:[#*]+\s*)?(?:step\s*(\d+)|(\d+)[.)\-:])\s*:?(.*)$",
+    r"^[ \t]*(?:[#*]+\s*)?(?:step\s*(\d+)|(\d+)[.)\-:])\s*:?(.*)$",
     flags=re.IGNORECASE | re.MULTILINE,
 )
 
@@ -65,6 +65,7 @@ class StepInfo(NamedTuple):
     end: int
     number: int
     has_blank: bool
+    inline: str
 
 
 def _has_double_newline_before(text: str, pos: int) -> bool:
@@ -84,7 +85,8 @@ def _extract_step_infos(text: str, limit: int | None = None) -> list[StepInfo]:
         start = match.start()
         end = match.end()
         has_blank = _has_double_newline_before(segment, start)
-        infos.append(StepInfo(start, end, int(num_str), has_blank))
+        inline = (match.group(3) or "").strip()
+        infos.append(StepInfo(start, end, int(num_str), has_blank, inline))
 
     return infos
 
@@ -199,6 +201,7 @@ def _step_segments_have_content(
     limit: int,
     *,
     require_blank: bool = True,
+    penalties: Optional[List[float]] = None,
 ) -> bool:
     """Ensure each step header is followed by meaningful prose before ``limit``."""
 
@@ -215,12 +218,23 @@ def _step_segments_have_content(
         end = infos[idx + 1].start if idx + 1 < len(infos) else final_limit
 
         if start >= end:
-            return False
+            if not info.inline:
+                return False
+            if penalties is not None:
+                penalties.append(0.0)
+            continue
 
-        segment = text[start:end].strip()
+        raw_segment = text[start:end]
+        segment = raw_segment.strip()
 
         if segment == "":
-            return False
+            if not info.inline:
+                return False
+        # else segment has content or inline already satisfied
+
+        blank_lines = sum(1 for line in segment.splitlines() if not line.strip())
+        if penalties is not None:
+            penalties.append(blank_lines * 0.00625)
 
     return True
 
@@ -297,12 +311,19 @@ def format_score(text: str) -> float:
     numbers = [info.number for info in blank_infos]
     start = numbers[0]
 
+    penalties: List[float] = []
     if not _step_sequence(numbers, start=start):
         return 0.0
-    if not _step_segments_have_content(text, blank_infos, boxed_start, require_blank=True):
+    if not _step_segments_have_content(
+        text,
+        blank_infos,
+        boxed_start,
+        require_blank=True,
+        penalties=penalties,
+    ):
         return 0.0
 
-    return 0.1
+    return 0.1 - sum(penalties)
 
 
 def format_correct(text: str) -> bool:
@@ -469,11 +490,19 @@ def instruct_structure_score(text: str) -> float:
 
     reward = 0.0
 
+    penalties: List[float] = []
+
     if infos:
         numbers = [info.number for info in infos]
         start = numbers[0]
 
-        if _step_sequence(numbers, start=start) and _step_segments_have_content(text, infos, limit, require_blank=False):
+        if _step_sequence(numbers, start=start) and _step_segments_have_content(
+            text,
+            infos,
+            limit,
+            require_blank=False,
+            penalties=penalties,
+        ):
             for info in infos[:3]:
                 reward += 0.025 if info.has_blank else 0.0125
 
@@ -483,6 +512,8 @@ def instruct_structure_score(text: str) -> float:
         reward += 0.0125
         if box_count > 1:
             reward -= 0.00625 * (box_count - 1)
+
+    reward -= sum(penalties)
 
     return reward
 
