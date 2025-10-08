@@ -961,7 +961,7 @@ class SMCVLLM:
                 end_idx = particle.base_prompt_token_len + new_completion_len
                 if end_idx > start_idx:
                     within_limit = (
-                        self.max_model_len is None or particle.prompt_token_len <= self.max_model_len
+                        self.max_model_len is None or particle.prompt_token_len < self.max_model_len
                     )
 
                     if within_limit and not particle.is_stopped:
