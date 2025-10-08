@@ -303,19 +303,21 @@ def format_score(text: str) -> float:
 
     boxed_start, _ = boxed_span
     infos = _extract_step_infos(text, boxed_start)
-    blank_infos = [info for info in infos if info.has_blank]
 
-    if not blank_infos:
+    if not infos:
         return 0.0
 
-    numbers = [info.number for info in blank_infos]
+    if not all(info.has_blank for info in infos):
+        return 0.0
+
+    numbers = [info.number for info in infos]
     start = numbers[0]
 
     if not _step_sequence(numbers, start=start):
         return 0.0
     if not _step_segments_have_content(
         text,
-        blank_infos,
+        infos,
         boxed_start,
         require_blank=True,
         penalties=None,
