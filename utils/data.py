@@ -299,11 +299,6 @@ def format_score(text: str) -> float:
     if not _step_segments_have_content(text, matches, boxed_start, require_blank=True):
         return 0.0
 
-    separation_segment = text[matches[-1].end():boxed_start]
-
-    if not _has_terminal_blank_line(separation_segment):
-        return 0.0
-
     return 0.1
 
 
