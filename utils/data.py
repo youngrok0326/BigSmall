@@ -299,8 +299,9 @@ def format_score(text: str) -> float:
         return 0.0
 
     numbers = [info.number for info in blank_infos]
+    start = numbers[0]
 
-    if not _step_sequence(numbers, start=1):
+    if not _step_sequence(numbers, start=start):
         return 0.0
     if not _step_segments_have_content(text, blank_infos, boxed_start, require_blank=True):
         return 0.0
@@ -474,8 +475,9 @@ def instruct_structure_score(text: str) -> float:
 
     if infos:
         numbers = [info.number for info in infos]
+        start = numbers[0]
 
-        if _step_sequence(numbers, start=1) and _step_segments_have_content(text, infos, limit, require_blank=False):
+        if _step_sequence(numbers, start=start) and _step_segments_have_content(text, infos, limit, require_blank=False):
             for info in infos[:3]:
                 reward += 0.025 if info.has_blank else 0.0125
 
