@@ -16,7 +16,11 @@ def set_tokenizer_name(name):
     tokenizer_name = name
 
 # SYSTEM_PROMPT = "Solve the following math problem carefully and present your reasoning step by step.\n\n- For simple problems (2 steps or fewer):\nProvide a concise solution with minimal explanation.\n\n- For complex problems (3 steps or more):\nUse this step-by-step format:\n\n## Step 1: [Concise description]\n[Brief explanation and calculations]\n\n## Step 2: [Concise description]\n[Brief explanation and calculations]\n\n...\n\nAlways insert a blank line (two newline characters) before each Step header.\n\nRegardless of the approach, always conclude with:\n\nTherefore, the final answer is: $\\boxed{answer}$.\n\nWhere [answer] is just the final number or expression that solves the problem."
-SYSTEM_PROMPT = """Here is an example of a step-by-step solution to a math problem. Follow this format precisely.
+SYSTEM_PROMPT = """Solve the math problem using the following step-by-step format. Adhere to the formatting rules strictly.
+
+**Crucially, you must insert a blank line (two newline characters) before each `## Step` header.**
+
+Here is an example:
 
 Problem: What is the value of x in the equation 2x + 5 = 13?
 
@@ -187,7 +191,13 @@ def _has_terminal_blank_line(text: str) -> bool:
     return bool(re.search(r"\n\s*\n[^\n]*\Z", text))
 
 
-def _step_segments_have_content(text: str, matches: list[re.Match], limit: int) -> bool:
+def _step_segments_have_content(
+    text: str,
+    matches: list[re.Match],
+    limit: int,
+    *,
+    require_blank: bool = True,
+) -> bool:
     """Ensure each step header is followed by meaningful prose before ``limit``."""
 
     if not matches:
@@ -195,6 +205,10 @@ def _step_segments_have_content(text: str, matches: list[re.Match], limit: int) 
 
     for idx, match in enumerate(matches):
         start = match.end()
+        if require_blank:
+            # Enforce blank line before the header
+            if not _requires_blank_line(text, match.start()):
+                return False
         end = matches[idx + 1].start() if idx + 1 < len(matches) else limit
 
         if start >= end:
@@ -280,7 +294,7 @@ def format_score(text: str) -> float:
 
     if not _step_sequence(numbers, start=1):
         return 0.0
-    if not _step_segments_have_content(text, matches, boxed_start):
+    if not _step_segments_have_content(text, matches, boxed_start, require_blank=True):
         return 0.0
 
     separation_segment = text[matches[-1].end():boxed_start]
@@ -451,14 +465,15 @@ def instruct_structure_score(text: str) -> float:
 
     boxed_span = _last_boxed_span(text)
     limit = boxed_span[0] if boxed_span is not None else len(text)
-    matches = _step_matches_before(text, limit)
+    raw_matches = list(_STEP_HEADER_PATTERN.finditer(text[:limit]))
+    matches = [m for m in raw_matches if int(m.group(1)) >= 2]
 
     step_count = 0
 
     if matches:
         numbers = [int(match.group(1)) for match in matches]
 
-        if _step_sequence(numbers, start=1) and _step_segments_have_content(text, matches, limit):
+        if _step_sequence(numbers, start=2) and _step_segments_have_content(text, matches, limit, require_blank=False):
             step_count = min(len(matches), 3)
 
     reward = 0.0125 * step_count
