@@ -324,7 +324,16 @@ def format_score(text: str) -> float:
     ):
         return 0.0
 
-    return 0.1
+    conclusion = _locate_conclusion(text)
+    if conclusion is None:
+        return 0.0
+
+    _, _, conclusion_end = conclusion
+    tail_length = len(text[conclusion_end:])
+    alpha = 0.0005
+    penalty = tail_length * alpha
+
+    return max(0.0, 0.1 - penalty)
 
 
 def format_correct(text: str) -> bool:
