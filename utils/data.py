@@ -35,7 +35,7 @@ You must adhere strictly to the following formatting rules:
 
 ## Step 2 [Explanation and calculations for the second step.]
 
-Therefore, the final answer is: $\\boxed{The Final Answer}`
+Therefore, the final answer is: $\\boxed{The Final Answer}$
 ---
 
 Now, solve the following problem, strictly adhering to all formatting rules:
@@ -505,6 +505,14 @@ def instruct_structure_score(text: str) -> float:
         ):
             for info in infos[:3]:
                 reward += 0.025 if info.has_blank else 0.0125
+
+    conclusion = _locate_conclusion(text)
+    if conclusion is not None:
+        _, conclusion_start, _ = conclusion
+        if _has_double_newline_before(text, conclusion_start):
+            reward += 0.025
+        else:
+            reward += 0.0125
 
     box_count = text.count("\\boxed{")
 
