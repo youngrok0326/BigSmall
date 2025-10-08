@@ -486,7 +486,7 @@ def instruct_structure_score(text: str) -> float:
         if box_count > 1:
             reward -= 0.00625 * (box_count - 1)
 
-    return max(0.0, reward)
+    return reward
 
 
 def xmlcount_reward_func(completions, answer, **kwargs) -> list[float]:
