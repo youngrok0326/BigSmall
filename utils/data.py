@@ -263,7 +263,7 @@ def answer_correct(text: str, answer: str) -> bool:
 
 
 def format_score(text: str) -> float:
-    """Return the format reward (max 0.075) for well-structured completions."""
+    """Return the format reward (0.1) when the response follows the required structure."""
 
     boxed_span = _last_boxed_span(text)
 
@@ -291,8 +291,7 @@ def format_score(text: str) -> float:
     if not _has_terminal_blank_line(separation_segment):
         return 0.0
 
-    step_count = min(len(matches), 3)
-    return 0.025 * step_count
+    return 0.1
 
 
 def format_correct(text: str) -> bool:
@@ -439,7 +438,7 @@ def correctness_reward_func(completions, answer, **kwargs) -> list[float]:
 
 
 def format_reward_func(completions, answer, **kwargs) -> list[float]:
-    # Format reward, max 0.05 when the chain is well structured
+    # Format reward, 0.1 when the chain follows the full structure
     responses = [completion for completion in completions]
     return [0.0 if answer_correct(r, a) else format_score(r) for r, a in zip(responses, answer)]
 
@@ -451,7 +450,7 @@ def length_penalty_func(completion_mask, max_completion_length, **kwargs) -> lis
 
 
 def instruct_structure_score(text: str) -> float:
-    """Reward structured steps (0.025 each, up to two) plus boxed answer bonus."""
+    """Reward structured steps (0.0125 each, up to three) plus boxed answer bonus."""
 
     boxed_span = _last_boxed_span(text)
     limit = boxed_span[0] if boxed_span is not None else len(text)
@@ -459,22 +458,16 @@ def instruct_structure_score(text: str) -> float:
 
     step_count = 0
 
-    if matches and len(matches) <= 3:
+    if matches:
         numbers = [int(match.group(1)) for match in matches]
 
         if _step_sequence(numbers, start=1) and _step_segments_have_content(text, matches, limit):
             step_count = min(len(matches), 3)
 
-            if boxed_span is not None:
-                separation_segment = text[matches[-1].end():boxed_span[0]]
+    reward = 0.0125 * step_count
 
-                if not _has_terminal_blank_line(separation_segment):
-                    step_count = 0
-
-    reward = 0.025 * step_count
-
-    if boxed_span is not None and step_count > 0:
-        reward += 0.025
+    if boxed_span is not None:
+        reward += 0.0125
 
     return reward
 
