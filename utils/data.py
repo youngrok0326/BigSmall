@@ -234,7 +234,7 @@ def _step_segments_have_content(
 
         blank_lines = sum(1 for line in segment.splitlines() if not line.strip())
         if penalties is not None:
-            penalties.append(blank_lines * 0.00625)
+            penalties.append(blank_lines * 0.0125)
 
     return True
 
