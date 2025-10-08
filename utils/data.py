@@ -31,7 +31,7 @@ Now that we have 2x = 8, we can solve for x by dividing both sides of the equati
 8 / 2 = 4
 This gives us the final value for x.
 
-Therefore, the final answer is: $\boxed{4}$.
+Therefore, the final answer is: $\\boxed{4}$.
 """
 
 _CONCLUSION_PREFIX = re.compile(
@@ -263,7 +263,7 @@ def answer_correct(text: str, answer: str) -> bool:
 
 
 def format_score(text: str) -> float:
-    """Return the format reward (max 0.05) for well-structured completions."""
+    """Return the format reward (max 0.075) for well-structured completions."""
 
     boxed_span = _last_boxed_span(text)
 
@@ -273,27 +273,26 @@ def format_score(text: str) -> float:
     boxed_start, _ = boxed_span
     matches = _step_matches_before(text, boxed_start)
 
-    user_matches = [m for m in matches if int(m.group(1)) >= 2]
-
-    if not user_matches:
+    if not matches:
         return 0.0
 
-    if len(user_matches) > 2:
+    if len(matches) > 3:
         return 0.0
 
-    numbers = [int(match.group(1)) for match in user_matches]
+    numbers = [int(match.group(1)) for match in matches]
 
-    if not _step_sequence(numbers, start=2):
+    if not _step_sequence(numbers, start=1):
         return 0.0
-    if not _step_segments_have_content(text, user_matches, boxed_start):
+    if not _step_segments_have_content(text, matches, boxed_start):
         return 0.0
 
-    separation_segment = text[user_matches[-1].end():boxed_start]
+    separation_segment = text[matches[-1].end():boxed_start]
 
     if not _has_terminal_blank_line(separation_segment):
         return 0.0
 
-    return 0.05
+    step_count = min(len(matches), 3)
+    return 0.025 * step_count
 
 
 def format_correct(text: str) -> bool:
@@ -458,18 +457,16 @@ def instruct_structure_score(text: str) -> float:
     limit = boxed_span[0] if boxed_span is not None else len(text)
     matches = _step_matches_before(text, limit)
 
-    user_matches = [m for m in matches if int(m.group(1)) >= 2]
-
     step_count = 0
 
-    if user_matches:
-        numbers = [int(match.group(1)) for match in user_matches]
+    if matches and len(matches) <= 3:
+        numbers = [int(match.group(1)) for match in matches]
 
-        if _step_sequence(numbers, start=2) and len(user_matches) <= 2 and _step_segments_have_content(text, user_matches, limit):
-            step_count = len(user_matches)
+        if _step_sequence(numbers, start=1) and _step_segments_have_content(text, matches, limit):
+            step_count = min(len(matches), 3)
 
             if boxed_span is not None:
-                separation_segment = text[user_matches[-1].end():boxed_span[0]]
+                separation_segment = text[matches[-1].end():boxed_span[0]]
 
                 if not _has_terminal_blank_line(separation_segment):
                     step_count = 0
