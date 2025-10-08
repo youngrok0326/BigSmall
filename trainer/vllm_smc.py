@@ -891,7 +891,7 @@ class SMCVLLM:
         else:
             encoded_saved = [[] for _ in range(G)]
             saved_confidences_by_group = [[] for _ in range(G)]
-        breakpoint()
+        
         if self.log_wandb and global_call_step % 10 == 0:
             try:
                 import wandb  # type: ignore
