@@ -16,7 +16,7 @@ model:
   random_state: 42
 wandb:
   enable: true
-  project_name: "SMCGRPO_FINAL_BASE_CONFIDENCE"
+  project_name: "SMCGRPO_BASE_CONFIDENCE"
   run_name: debug #"Instruct-GSM8K-16-16-Run1"
 rl:
   algorithm: "SMCGRPO" # GRPO, SMCGRPO, "MaxVarGRPO"
