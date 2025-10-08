@@ -505,7 +505,7 @@ def instruct_structure_score(text: str) -> float:
             penalties=penalties,
         ):
             for info in infos[:3]:
-                reward += 0.025 if info.has_blank else 0.0125
+                reward += 0.025 if info.has_blank else 0.009375
 
     conclusion = _locate_conclusion(text)
     conclusion_matches = list(_CONCLUSION_PREFIX.finditer(text))
