@@ -838,7 +838,7 @@ class SMCVLLM:
                         for completion_idx, text in enumerate(texts):
                             table.add_data(global_call_step, group_idx, completion_idx, text)
                     wandb.log({"smc/completions": table}, commit=False)
-
+       
         return {
             "group_sizes": group_sizes,
             "completions": completions_by_group,
