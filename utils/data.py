@@ -276,9 +276,6 @@ def format_score(text: str) -> float:
     if not matches:
         return 0.0
 
-    if len(matches) > 3:
-        return 0.0
-
     numbers = [int(match.group(1)) for match in matches]
 
     if not _step_sequence(numbers, start=1):
