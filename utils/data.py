@@ -23,21 +23,17 @@ You must adhere strictly to the following formatting rules:
 
 1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.
     - **Correct:**
-      ...some text.\\n\\n## Step 2
+      ...some text.\\n\\n## Step 3
     - **Incorrect:**
-      ...some text.\\n## Step 2
+      ...some text.\\n## Step 3
       
 2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.
 
 **Example of the required format:**
 ---
-## Step 1
-[Explanation and calculations for the first step.]
+## Step 1 [Explanation and calculations for the first step.]
 
-## Step 2
-[Explanation and calculations for the second step.]
-
-... and so on for any additional steps.
+## Step 2 [Explanation and calculations for the second step.]
 
 Therefore, the final answer is: $\\boxed{The Final Answer}`
 ---
@@ -60,7 +56,7 @@ _STEP_HEADER_PATTERN = re.compile(
 
 _STEP_VARIANT_PATTERN = re.compile(
     r"^\s*(?:[#*]+\s*)?(?:step\s*(\d+)|(\d+)[.)\-:])\s*:?(.*)$",
-    flags=re.IGNORECASE,
+    flags=re.IGNORECASE | re.MULTILINE,
 )
 
 
