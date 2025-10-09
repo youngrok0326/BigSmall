@@ -1529,6 +1529,75 @@ class GRPOTrainer(Trainer):
         entropies = torch.cat(all_entropies, dim=0) if compute_entropy else None
         return logps, entropies, effective_keep
 
+    def _unpack_logps_entropy_outputs(
+        self,
+        outputs: Union[
+            tuple[torch.Tensor, Optional[torch.Tensor], int],
+            tuple[torch.Tensor, Optional[torch.Tensor]],
+            torch.Tensor,
+            dict[str, Any],
+        ],
+        logits_to_keep: Union[int, torch.Tensor],
+    ) -> tuple[torch.Tensor, Optional[torch.Tensor], int]:
+        """Normalize legacy return shapes into (logps, entropies, keep_len)."""
+
+        def _to_int(value: Union[int, torch.Tensor, None], fallback: int) -> int:
+            if value is None:
+                return fallback
+            if isinstance(value, torch.Tensor):
+                if value.numel() != 1:
+                    raise ValueError("Expected scalar tensor for keep length.")
+                value = value.detach().cpu().item()
+            try:
+                return max(int(value), 1)
+            except (TypeError, ValueError):
+                return fallback
+
+        if isinstance(logits_to_keep, torch.Tensor):
+            default_keep = _to_int(logits_to_keep, 1)
+        else:
+            try:
+                default_keep = max(int(logits_to_keep), 1)
+            except (TypeError, ValueError):
+                default_keep = 1
+
+        logps: Optional[torch.Tensor] = None
+        entropies: Optional[torch.Tensor] = None
+        keep_len: int = default_keep
+
+        if isinstance(outputs, dict):
+            logps = (
+                outputs.get("logps")
+                or outputs.get("per_token_logps")
+                or outputs.get("logits")
+                or outputs.get("per_token_logits")
+            )
+            entropies = outputs.get("entropies")
+            keep_len = _to_int(
+                outputs.get("keep_len") or outputs.get("effective_keep") or outputs.get("logits_to_keep"),
+                default_keep,
+            )
+        else:
+            if not isinstance(outputs, tuple):
+                outputs = (outputs,)
+
+            output_len = len(outputs)
+            if output_len >= 3:
+                logps, entropies, keep_component = outputs[:3]
+                keep_len = _to_int(keep_component, default_keep)
+            elif output_len == 2:
+                logps, entropies = outputs
+            elif output_len == 1:
+                (logps,) = outputs
+            else:
+                raise ValueError("Unexpected empty output from _get_per_token_logps_and_entropies.")
+
+        if logps is None:
+            raise ValueError("Missing log-probabilities from _get_per_token_logps_and_entropies.")
+
+        keep_len = _to_int(keep_len, default_keep)
+        return logps, entropies, keep_len
+
     def _fix_param_name_to_vllm(self, name, extra_prefixes: Optional[list[str]] = None):
         extra_prefixes = extra_prefixes or []
         prefixes = ["_checkpoint_wrapped_module."] + extra_prefixes
@@ -2240,7 +2309,7 @@ class GRPOTrainer(Trainer):
             # old_per_token_logps to None.
             generate_every = self.args.steps_per_generation * self.num_iterations  # generation frequency
             if self.args.gradient_accumulation_steps % generate_every != 0:
-                old_per_token_logps, _, keep_len = self._get_per_token_logps_and_entropies(
+                old_outputs = self._get_per_token_logps_and_entropies(
                     self.model,
                     prompt_completion_ids,
                     attention_mask,
@@ -2251,6 +2320,7 @@ class GRPOTrainer(Trainer):
                     pixel_attention_mask=prompt_inputs.get("pixel_attention_mask"),
                     image_sizes=prompt_inputs.get("image_sizes"),
                 )
+                old_per_token_logps, _, keep_len = self._unpack_logps_entropy_outputs(old_outputs, logits_to_keep)
                 _enforce_keep_len(keep_len)
                 if old_per_token_logps.size(1) > logits_to_keep:
                     old_per_token_logps = old_per_token_logps[:, -logits_to_keep:]
@@ -2260,7 +2330,7 @@ class GRPOTrainer(Trainer):
             # Compute the per-token log probabilities for the reference model
             if self.beta != 0.0:
                 if self.ref_model is not None:
-                    ref_per_token_logps, _, keep_len = self._get_per_token_logps_and_entropies(
+                    ref_outputs = self._get_per_token_logps_and_entropies(
                         self.ref_model,
                         prompt_completion_ids,
                         attention_mask,
@@ -2271,6 +2341,7 @@ class GRPOTrainer(Trainer):
                         pixel_attention_mask=prompt_inputs.get("pixel_attention_mask"),
                         image_sizes=prompt_inputs.get("image_sizes"),
                     )
+                    ref_per_token_logps, _, keep_len = self._unpack_logps_entropy_outputs(ref_outputs, logits_to_keep)
                     _enforce_keep_len(keep_len)
                     if old_per_token_logps is not None and old_per_token_logps.size(1) > logits_to_keep:
                         old_per_token_logps = old_per_token_logps[:, -logits_to_keep:]
@@ -2278,7 +2349,7 @@ class GRPOTrainer(Trainer):
                         ref_per_token_logps = ref_per_token_logps[:, -logits_to_keep:]
                 else:
                     with self.accelerator.unwrap_model(self.model).disable_adapter():
-                        ref_per_token_logps, _, keep_len = self._get_per_token_logps_and_entropies(
+                        ref_outputs = self._get_per_token_logps_and_entropies(
                             self.model,
                             prompt_completion_ids,
                             attention_mask,
@@ -2288,6 +2359,9 @@ class GRPOTrainer(Trainer):
                             image_grid_thw=prompt_inputs.get("image_grid_thw"),
                             pixel_attention_mask=prompt_inputs.get("pixel_attention_mask"),
                             image_sizes=prompt_inputs.get("image_sizes"),
+                        )
+                        ref_per_token_logps, _, keep_len = self._unpack_logps_entropy_outputs(
+                            ref_outputs, logits_to_keep
                         )
                         _enforce_keep_len(keep_len)
                         if old_per_token_logps is not None and old_per_token_logps.size(1) > logits_to_keep:
@@ -2734,7 +2808,7 @@ class GRPOTrainer(Trainer):
         logits_to_keep = completion_ids.size(1)  # we only need to compute the logits for the completion tokens
 
         # Compute the per_token_logps and the entropy at each position in the completion
-        per_token_logps, entropies, _ = self._get_per_token_logps_and_entropies(
+        outputs = self._get_per_token_logps_and_entropies(
             model,
             input_ids,
             attention_mask,
@@ -2745,6 +2819,7 @@ class GRPOTrainer(Trainer):
             pixel_attention_mask=inputs.get("pixel_attention_mask"),
             image_sizes=inputs.get("image_sizes"),
         )
+        per_token_logps, entropies, _ = self._unpack_logps_entropy_outputs(outputs, logits_to_keep)
 
         if self.top_entropy_quantile < 1.0:
             entropy_mask = self.get_high_entropy_mask(entropies, completion_mask, 1 - self.top_entropy_quantile)
