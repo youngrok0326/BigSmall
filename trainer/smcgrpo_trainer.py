@@ -2322,8 +2322,11 @@ class GRPOTrainer(Trainer):
                 )
                 old_per_token_logps, _, keep_len = self._unpack_logps_entropy_outputs(old_outputs, logits_to_keep)
                 _enforce_keep_len(keep_len)
-                if old_per_token_logps.size(1) > logits_to_keep:
-                    old_per_token_logps = old_per_token_logps[:, -logits_to_keep:]
+                if old_per_token_logps.size(1) > logits_to_keep + 1:
+                    keep_window = logits_to_keep + 1
+                else:
+                    keep_window = old_per_token_logps.size(1)
+                old_per_token_logps = old_per_token_logps[:, -keep_window:]
             else:
                 old_per_token_logps = None
 
@@ -2343,10 +2346,14 @@ class GRPOTrainer(Trainer):
                     )
                     ref_per_token_logps, _, keep_len = self._unpack_logps_entropy_outputs(ref_outputs, logits_to_keep)
                     _enforce_keep_len(keep_len)
-                    if old_per_token_logps is not None and old_per_token_logps.size(1) > logits_to_keep:
-                        old_per_token_logps = old_per_token_logps[:, -logits_to_keep:]
-                    if ref_per_token_logps.size(1) > logits_to_keep:
-                        ref_per_token_logps = ref_per_token_logps[:, -logits_to_keep:]
+                    if old_per_token_logps is not None:
+                        max_keep = min(old_per_token_logps.size(1), logits_to_keep + 1)
+                        old_per_token_logps = old_per_token_logps[:, -max_keep:]
+                    if ref_per_token_logps.size(1) > logits_to_keep + 1:
+                        keep_window = logits_to_keep + 1
+                    else:
+                        keep_window = ref_per_token_logps.size(1)
+                    ref_per_token_logps = ref_per_token_logps[:, -keep_window:]
                 else:
                     with self.accelerator.unwrap_model(self.model).disable_adapter():
                         ref_outputs = self._get_per_token_logps_and_entropies(
@@ -2364,10 +2371,14 @@ class GRPOTrainer(Trainer):
                             ref_outputs, logits_to_keep
                         )
                         _enforce_keep_len(keep_len)
-                        if old_per_token_logps is not None and old_per_token_logps.size(1) > logits_to_keep:
-                            old_per_token_logps = old_per_token_logps[:, -logits_to_keep:]
-                        if ref_per_token_logps.size(1) > logits_to_keep:
-                            ref_per_token_logps = ref_per_token_logps[:, -logits_to_keep:]
+                        if old_per_token_logps is not None:
+                            max_keep = min(old_per_token_logps.size(1), logits_to_keep + 1)
+                            old_per_token_logps = old_per_token_logps[:, -max_keep:]
+                        if ref_per_token_logps.size(1) > logits_to_keep + 1:
+                            keep_window = logits_to_keep + 1
+                        else:
+                            keep_window = ref_per_token_logps.size(1)
+                        ref_per_token_logps = ref_per_token_logps[:, -keep_window:]
             else:
                 ref_per_token_logps = None
 
