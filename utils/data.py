@@ -359,7 +359,7 @@ def get_math8k_questions(split: str = "train", style: str = "base") -> Dataset:
             "prompt": _build_prompt(tokenizer, x["question"], style),
             "answer": x["gt_answer"],
         },
-        load_from_cache_file=False,
+        load_from_cache_file=True,
     )
     data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer})
     return data
@@ -382,7 +382,7 @@ def get_gsm8k_questions(split: str = "train", style: str = "base") -> Dataset:
             "prompt": _build_prompt(tokenizer, x["question"], style),
             "answer": extract_gsm8k_answer(x["answer"]),
         },
-        load_from_cache_file=False,
+        load_from_cache_file=True,
     )
     data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer})
     return data
@@ -417,7 +417,7 @@ def get_math_questions(split: str = "train", style: str = "base") -> Dataset:
             "prompt": _build_prompt(tokenizer, x["problem"], style),
             "answer": extract_math_answer(x["solution"]),
         },
-        load_from_cache_file=False,
+        load_from_cache_file=True,
     )
     data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer}).shuffle(seed=42)
     return data
@@ -433,7 +433,7 @@ def get_math500_questions(split: str = "test", style: str = "base") -> Dataset:
             "prompt": _build_prompt(tokenizer, x["problem"], style),
             "answer": x["answer"],
         },
-        load_from_cache_file=False,
+        load_from_cache_file=True,
     )
     data = data.filter(filter_function, fn_kwargs={"tokenizer": tokenizer})
     return data
@@ -449,7 +449,7 @@ def get_amc23_questions(split: str = "test", style: str = "base") -> Dataset:
             "prompt": _build_prompt(tokenizer, x["question"], style),
             "answer": str(int(x["answer"])),
         },
-        load_from_cache_file=False,
+        load_from_cache_file=True,
     )
     data = data.cast_column("answer", Value("string")).filter(
         filter_function, fn_kwargs={"tokenizer": tokenizer}
