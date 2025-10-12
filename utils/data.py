@@ -234,7 +234,7 @@ def _step_segments_have_content(
 
         blank_lines = sum(1 for line in segment.splitlines() if not line.strip())
         if penalties is not None:
-            penalties.append(blank_lines * 0.02)
+            penalties.append(blank_lines * 0.015)
 
     return True
 
@@ -294,7 +294,7 @@ def answer_correct(text: str, answer: str) -> bool:
 
 
 def format_score(text: str) -> float:
-    """Return the format reward (0.1) when the response follows the required structure."""
+    """Return the format reward (0.3) when the response follows the required structure."""
 
     boxed_span = _last_boxed_span(text)
 
@@ -337,7 +337,7 @@ def format_score(text: str) -> float:
     alpha = 0.0005
     penalty = tail_length * alpha
 
-    return max(0.0, 0.1 - penalty)
+    return max(0.0, 0.3 - penalty)
 
 
 def format_correct(text: str) -> bool:
@@ -484,7 +484,7 @@ def correctness_reward_func(completions, answer, **kwargs) -> list[float]:
 
 
 def format_reward_func(completions, answer, **kwargs) -> list[float]:
-    # Format reward, 0.1 when the chain follows the full structure
+    # Format reward, 0.3 when the chain follows the full structure
     responses = [completion for completion in completions]
     return [format_score(r) for r in responses]
 
@@ -496,7 +496,7 @@ def length_penalty_func(completion_mask, max_completion_length, **kwargs) -> lis
 
 
 def instruct_structure_score(text: str) -> float:
-    """Reward structured steps (0.0125 each, up to three) plus boxed answer bonus."""
+    """Reward structured steps (0.1 each with blank lines, up to three) plus boxed answer bonus."""
 
     boxed_span = _last_boxed_span(text)
     limit = boxed_span[0] if boxed_span is not None else len(text)
@@ -518,14 +518,14 @@ def instruct_structure_score(text: str) -> float:
             penalties=penalties,
         ):
             for info in infos[:3]:
-                reward += 0.025 if info.has_blank else 0.009375
+                reward += 0.1 if info.has_blank else 0.009375
 
     conclusion = _locate_conclusion(text)
     conclusion_matches = list(_CONCLUSION_PREFIX.finditer(text))
     if conclusion is not None:
         _, conclusion_start, _ = conclusion
         if _has_double_newline_before(text, conclusion_start):
-            reward += 0.025
+            reward += 0.1
         else:
             reward += 0.0125
 
@@ -535,7 +535,7 @@ def instruct_structure_score(text: str) -> float:
     box_count = text.count("\\boxed{")
 
     if box_count >= 1:
-        reward += 0.015
+        reward += 0.05
         if box_count > 1:
             reward -= 0.00625 * (box_count - 1)
 
