@@ -328,7 +328,11 @@ def format_score(text: str) -> float:
     if conclusion is None:
         return 0.0
 
-    _, _, conclusion_end = conclusion
+    _, conclusion_start, conclusion_end = conclusion
+
+    if not _has_double_newline_before(text, conclusion_start):
+        return 0.0
+
     tail_length = len(text[conclusion_end:])
     alpha = 0.0005
     penalty = tail_length * alpha
