@@ -73,6 +73,7 @@ def main(cfg: DictConfig) -> None:
         "epsilon": cfg.rl.epsilon,
         "epsilon_high": cfg.rl.epsilon_high,
         "delta": cfg.rl.delta,
+        "scale_rewards": cfg.rl.scale_rewards,
         "loss_type": cfg.rl.loss_type,
         "mask_truncated_completions": cfg.rl.mask_truncated_completions
     }
