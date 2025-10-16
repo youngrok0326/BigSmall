@@ -551,6 +551,10 @@ def _evaluate_once_custom(
         scoring = str(confidence_cfg.get("scoring", custom_decode_cfg.get("scoring", "entropy")))
         conf_group = str(confidence_cfg.get("group", "mean"))
         conf_aggregation = str(confidence_cfg.get("aggregation", "last"))
+        conf_cap_val = confidence_cfg.get("cap") if confidence_cfg else None
+        if conf_cap_val is None and custom_decode_cfg is not None:
+            conf_cap_val = custom_decode_cfg.get("confidence_cap")
+        conf_cap = float(conf_cap_val) if conf_cap_val is not None else None
         return_all = bool(custom_decode_cfg.get("return_all", False))
         return_eos = bool(custom_decode_cfg.get("return_eos", False))
         smc_topk = int(custom_decode_cfg.get("smc_topk", -1))
@@ -611,6 +615,7 @@ def _evaluate_once_custom(
             scoring=scoring,
             confidence_group=conf_group,
             confidence_aggregation=conf_aggregation,
+            confidence_cap=conf_cap,
             return_all=return_all,
             return_eos=return_eos,
             wandb_logging=logging_enabled,

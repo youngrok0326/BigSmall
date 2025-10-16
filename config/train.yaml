@@ -71,6 +71,7 @@ smc:
     scoring: "prob" #logprob, prob, cdf
     cdf_alpha: 0.25
     group: "geo" #geo
+    cap: 0.8
     aggregation: "last" # prod, min, mean, last
 prm: 
   use_prm: false

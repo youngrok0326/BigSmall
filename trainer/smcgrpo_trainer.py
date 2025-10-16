@@ -240,7 +240,10 @@ def _smc_flatten_bundle(
         extras_conf = saved_confidences[group_idx] if group_idx < len(saved_confidences) else []
         extras, extras_conf = _sample_extras(extras, extras_conf, limit_per_group)
         if len(extras_conf) < len(extras):
-            extras_conf = extras_conf + [1.0] * (len(extras) - len(extras_conf))
+            raise RuntimeError(
+                f"Missing confidence for saved completions in group {group_idx}: "
+                f"expected {len(extras)} confidences but received {len(extras_conf)}."
+            )
         step_cap = int(reasoning_steps[group_idx]) if group_idx < len(reasoning_steps) else fallback_steps
         primary_conf = []
         if completion_confidences:
@@ -255,10 +258,12 @@ def _smc_flatten_bundle(
             drop_steps.append(-1)
             total_steps.append(step_cap)
             kinds.append(_SMCTrajectoryKind.LEGACY)
-            if primary_conf and seq_idx < len(primary_conf):
-                confidences.append(float(primary_conf[seq_idx]))
-            else:
-                confidences.append(1.0)
+            if not primary_conf or seq_idx >= len(primary_conf):
+                raise RuntimeError(
+                    f"Missing confidence for completion {seq_idx} in group {group_idx}: "
+                    f"expected {len(primary)} confidences but received {len(primary_conf)}."
+                )
+            confidences.append(float(primary_conf[seq_idx]))
 
         for (step_idx, seq), conf in zip(extras, extras_conf):
             flattened.append(seq)
@@ -1862,6 +1867,10 @@ class GRPOTrainer(Trainer):
         conf_group = str(confidence_cfg.get("group", "mean"))
         conf_aggregation = str(confidence_cfg.get("aggregation", "last"))
         conf_from_base = bool(confidence_cfg.get("from_base_model", False))
+        conf_cap_val = confidence_cfg.get("cap")
+        if conf_cap_val is None:
+            conf_cap_val = smc_cfg.get("confidence_cap")
+        conf_cap = float(conf_cap_val) if conf_cap_val is not None else None
         return_all = bool(smc_cfg.get("return_all", False))
         return_eos = bool(smc_cfg.get("return_eos", False))
         self._smc_return_eos = return_eos
@@ -1910,7 +1919,11 @@ class GRPOTrainer(Trainer):
 
         model_limit = None
         if self.max_prompt_length is not None and self.max_completion_length is not None:
-            model_limit = int(self.max_prompt_length) + int(self.max_completion_length)
+            model_limit = (
+                int(self.max_prompt_length)
+                + int(self.max_completion_length)
+                + 1
+            )
 
         signature = (
             step_token,
@@ -1920,6 +1933,7 @@ class GRPOTrainer(Trainer):
             conf_scoring,
             conf_group,
             conf_aggregation,
+            conf_cap,
             return_all,
             return_eos,
             random_sampling,
@@ -1969,6 +1983,7 @@ class GRPOTrainer(Trainer):
                 scoring=conf_scoring,
                 confidence_group=conf_group,
                 confidence_aggregation=conf_aggregation,
+                confidence_cap=conf_cap,
                 confidence_eta=conf_eta,
                 cdf_alpha=cdf_alpha,
                 return_all=return_all,

@@ -331,6 +331,7 @@ class SMCVLLM:
         scoring: str = "entropy",
         confidence_group: str = "mean",
         confidence_aggregation: str = "last",
+        confidence_cap: Optional[float] = None,
         return_all: bool = False,
         return_eos: bool = False,
         wandb_logging: bool = False,
@@ -352,6 +353,7 @@ class SMCVLLM:
         self.smc_topk = raw_topk
         self.window_size = int(window_size)
         self.confidence_eta = float(confidence_eta)
+        self._confidence_cap = float(confidence_cap) if confidence_cap is not None else None
         self.cdf_alpha = max(float(cdf_alpha), 1e-8)
         self.max_new_tokens = int(max_new_tokens)
         self.max_model_len = int(max_model_len) if max_model_len is not None else None
@@ -654,6 +656,12 @@ class SMCVLLM:
     def _agg_min(particle: SMCParticle) -> float:
         return float(particle.running_min) if particle.step_count else 1.0
 
+    def _apply_confidence_cap(self, value: float) -> float:
+        capped = float(value)
+        if self._confidence_cap is None:
+            return capped
+        return min(capped, self._confidence_cap)
+
     def _resolve_token_scorer(self, scoring: str):
         if scoring == "entropy":
             return self._entropy_conf_from_logprobs
@@ -809,7 +817,14 @@ class SMCVLLM:
             if self._confidence_from_base and base_conf_requests:
                 self._update_confidence_from_base(base_conf_requests, particles)
             if self._use_prm and prm_requests:
-                self._apply_prm_scores(prm_requests, particles, headers, prompts_text, original_prompts)
+                self._apply_prm_scores(
+                    prm_requests,
+                    particles,
+                    headers,
+                    prompts_text,
+                    original_prompts,
+                    terminated_records=terminated_records,
+                )
             weights = self._build_particle_weights(particles)
             not_selected_counts, weight_stds = self._resample_particles(
                 weights, particles, G, step_idx, saved_groups
@@ -999,6 +1014,8 @@ class SMCVLLM:
             particle.prompt_text += append_text
         self._sync_particle_tokens(particle)
         group_idx = particle_idx // self.N
+        new_completion_len = len(particle.completion_token_ids)
+        new_tokens_generated = new_completion_len > prev_completion_len
 
         if self._use_prm:
             prm_requests[group_idx].append((particle_idx, "".join(particle.completion_chunks)))
@@ -1011,12 +1028,15 @@ class SMCVLLM:
             ]
 
             if token_group_values:
-                step_conf = self._group_reducer_fn(token_group_values)
+                step_conf = self._apply_confidence_cap(
+                    self._group_reducer_fn(token_group_values)
+                )
                 particle.update_step_stats(step_conf)
-                particle.current_conf_value = self._step_aggregator_fn(particle)
+                particle.current_conf_value = self._apply_confidence_cap(
+                    self._step_aggregator_fn(particle)
+                )
         elif base_conf_requests is not None and self._confidence_from_base:
-            new_completion_len = len(particle.completion_token_ids)
-            if new_completion_len > prev_completion_len:
+            if new_tokens_generated:
                 start_idx = particle.base_prompt_token_len + prev_completion_len
                 end_idx = particle.base_prompt_token_len + new_completion_len
                 if end_idx > start_idx:
@@ -1033,6 +1053,10 @@ class SMCVLLM:
                                 end=end_idx,
                             )
                         )
+        elif self._use_prm and new_tokens_generated:
+            # Bump the step counter so that step_token re-appends even when PRM disables confidence updates.
+            particle.update_step_stats(1.0)
+            particle.current_conf_value = self._step_aggregator_fn(particle)
         stop_reason = getattr(decoded, "stop_reason", None)
         finish_reason = getattr(decoded, "finish_reason", None)
         step_stop = (
@@ -1089,6 +1113,8 @@ class SMCVLLM:
         headers: List[Any],
         prompts_text: List[str],
         original_prompts: List[Any],
+        *,
+        terminated_records: Optional[List[List[Tuple[int, int, List[int], str, float]]]] = None,
     ) -> None:
         if not self.prm:
             return
@@ -1107,12 +1133,35 @@ class SMCVLLM:
         if len(scores) != len(batch_entries):
             raise RuntimeError("PRM returned a mismatched number of scores.")
 
+        eps = 1e-7
         for (particle_idx, _, _), score_val in zip(batch_entries, scores):
             if isinstance(score_val, torch.Tensor):
-                score_float = float(score_val.detach().float().item())
+                raw_score = float(score_val.detach().float().item())
             else:
-                score_float = float(score_val)
-            particles[particle_idx].prm_log_weights.append(self._inv_sigmoid(score_float))
+                raw_score = float(score_val)
+            if math.isfinite(raw_score) and 0.0 <= raw_score <= 1.0:
+                prob = min(max(raw_score, eps), 1.0 - eps)
+                logit = self._inv_sigmoid(prob)
+            else:
+                logit = raw_score
+                prob = self._sigmoid(raw_score)
+            particle = particles[particle_idx]
+            particle.prm_log_weights.append(logit)
+            particle.current_conf_value = prob
+
+            if terminated_records:
+                pid = id(particle)
+                for group_records in terminated_records:
+                    for rec_idx, record in enumerate(group_records):
+                        if record[0] != pid:
+                            continue
+                        group_records[rec_idx] = (
+                            record[0],
+                            record[1],
+                            record[2],
+                            record[3],
+                            float(particle.current_conf_value),
+                        )
 
     def _update_confidence_from_base(
         self,
@@ -1152,9 +1201,13 @@ class SMCVLLM:
             ]
 
             if token_group_values:
-                step_conf = self._group_reducer_fn(token_group_values)
+                step_conf = self._apply_confidence_cap(
+                    self._group_reducer_fn(token_group_values)
+                )
                 particle.update_step_stats(step_conf)
-                particle.current_conf_value = self._step_aggregator_fn(particle)
+                particle.current_conf_value = self._apply_confidence_cap(
+                    self._step_aggregator_fn(particle)
+                )
 
     def _sync_particle_tokens(self, particle: SMCParticle) -> None:
         text = "".join(particle.completion_chunks)
@@ -1176,8 +1229,12 @@ class SMCVLLM:
             ]
         else:
             values = [
-                (max(p.current_conf_value, 1e-12) ** self.confidence_eta) if not p.is_stopped else 0.0
-
+                (
+                    max(self._apply_confidence_cap(p.current_conf_value), 1e-12)
+                    ** self.confidence_eta
+                )
+                if not p.is_stopped
+                else 0.0
                 for p in particles
             ]
         return torch.tensor(values, dtype=torch.float32)
@@ -1297,7 +1354,9 @@ class SMCVLLM:
                 confidences.append([])
                 continue
             encoded.append([(step, list(ids)) for step, ids, _, _ in group])
-            confidences.append([float(conf) for _, _, _, conf in group])
+            confidences.append(
+                [self._apply_confidence_cap(float(conf)) for _, _, _, conf in group]
+            )
         return encoded, confidences
 
     def _log_resampling_table(
