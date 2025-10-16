@@ -34,7 +34,7 @@ rl:
   epsilon: 0.2
   epsilon_high: #0.28 # one sided
   delta: #1.5 # two sided
-  scale_rewards: false
+  scale_rewards: true
   loss_type: 'grpo' # 'bnpo', 'dr_grpo'
   mask_truncated_completions: # True #DAPO
   resume_from_checkpoint:
@@ -71,7 +71,7 @@ smc:
     scoring: "prob" #logprob, prob, cdf
     cdf_alpha: 0.25
     group: "geo" #geo
-    cap: 0.8
+    cap: null
     aggregation: "last" # prod, min, mean, last
 prm: 
   use_prm: false
