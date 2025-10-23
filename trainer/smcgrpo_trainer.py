@@ -1154,7 +1154,7 @@ class GRPOTrainer(Trainer):
                 os.environ["MASTER_PORT"] = os.environ.get("MASTER_PORT", "12345")
 
                 if self.max_prompt_length is not None and self.max_completion_length is not None:
-                    max_model_len = self.max_prompt_length + self.max_completion_length
+                    max_model_len = self.max_prompt_length + self.max_completion_length + 1
                 else:
                     max_model_len = None
                 self.llm = LLM(

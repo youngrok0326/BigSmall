@@ -1,9 +1,9 @@
 defaults:
   - _self_
 
-base_model: "Qwen/Qwen2.5-0.5B"
+base_model: "Qwen/Qwen2.5-1.5B"
 
-run_name: "debug"
+run_name: "original"
 checkpoints_dir: "checkpoints"
 results_root: "results/decode_run"
 include_base: false
@@ -13,15 +13,15 @@ save_per_checkpoint: true
 model:
   model_name: ${base_model}
   tokenizer_name: ${base_model}
-  gpu_memory_utilization: 0.7
+  gpu_memory_utilization: 0.5
   max_seq_length: 1024
   load_in_4bit: true
   fast_inference: true
 
 datasets:
   # - "amc23"
-  # - "gsm8k"
-  - "math500"
+  - "gsm8k"
+  # - "math500"
 split: "test"
 num_samples: -1
 max_prompt_length: 512

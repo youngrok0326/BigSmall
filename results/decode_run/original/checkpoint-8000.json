@@ -1,0 +1,96 @@
+{
+  "gsm8k": {
+    "custom": {
+      "ans_acc": [
+        0.7134192570128886
+      ],
+      "for_acc": [
+        0.9916603487490523
+      ],
+      "both_acc": [
+        0.7035633055344959
+      ],
+      "lengths": [
+        167.82410917361636
+      ],
+      "ans_frac": [
+        0.6208850702484472
+      ],
+      "for_frac": [
+        0.9750093244566731
+      ],
+      "both_frac": [
+        0.6110615058350819
+      ],
+      "examples": [
+        {
+          "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+          "answer": "18",
+          "completion": "\n\n## Step 1: Calculate total eggs laid in a day.\n\nJanet's ducks lay 16 eggs per day.\n\n## Step 2: Calculate eggs eaten by Janet.\n\nJanet eats 3 eggs per morning, so she eats $3 \\times 1 = 3$ eggs.\n\n## Step 3: Calculate eggs left after breakfast.\n\nEggs left = 16 - 3 = 13.\n\n## Step 4: Calculate eggs used for muffins.\n\nJanet uses 4 eggs for muffins, so she uses $4$ eggs.\n\n## Step 5: Calculate eggs left after muffins.\n\nEggs left = 13 - 4 = 9.\n\n## Step 6: Calculate eggs sold.\n\nJanet sells 9 eggs, and she sells them for $2 each, so she gets $9 \\times 2 = 18$ dollars.\n\n## Step 7: Calculate total earnings.\n\nTotal earnings = $18$.\n\n## Step 8: Write Answer.\n\nTherefore, the answer is $18$. \n\n## Step 9: Answer.\n\nTherefore, the answer is $\\boxed{18}$.",
+          "correct": true,
+          "format_correct": true
+        },
+        {
+          "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+          "answer": "3",
+          "completion": "\n\n## Step 1: Determine the amount of blue fiber.\n\nIf 2 bolts of blue fiber are needed.\n\n## Step 2: Determine the amount of white fiber.\n\nHalf of 2 bolts is 1 bolt of white fiber.\n\n## Step 3: Calculate the total number of bolts.\n\n2 (blue) + 1 (white) = 3 bolts.\n\n## Step 4: Write the Answer.\n\nTherefore, the answer is 3.\n\n## Step 5: Answer.\n\nTherefore, the answer is $\\boxed{3}$.",
+          "correct": true,
+          "format_correct": true
+        },
+        {
+          "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+          "answer": "70000",
+          "completion": "\n\n## Step 1: Calculate the new value of the house.\n\nThe new value of the house is $80,000 + $80,000 * 1.5 = $260,000.\n\n## Step 2: Calculate the profit.\n\nThe profit is $260,000 - $130,000 = $130,000.\n\n## Step 3: Write the Answer.\n\nTherefore, the answer is $130,000.\n\n## Step 4: Answer.\n\nTherefore, the answer is $\\boxed{130000}$.",
+          "correct": false,
+          "format_correct": true
+        },
+        {
+          "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+          "answer": "540",
+          "completion": "\n\n## Step 1: Determine the total number of sprints.\n\nJames runs 3 sprints a week.\n\n## Step 2: Calculate the total distance run in one sprint.\n\n60 meters/sprint * 3 sprints = 180 meters.\n\n## Step 3: Calculate the total distance run in a week.\n\n180 meters/week.\n\n## Step 4: State the Answer.\n\nTherefore, the answer is 180. \n\n## Step 5: Answer.\n\nTherefore, the answer is $\\boxed{180}$.",
+          "correct": false,
+          "format_correct": true
+        },
+        {
+          "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+          "answer": "20",
+          "completion": "\n\n## Step 1: Calculate total feed given.\n\nTotal feed given in the morning is 15 cups and in the afternoon is 25 cups.\n\n## Step 2: Calculate total feed.\n\nTotal feed = 15 + 25 = 40 cups.\n\n## Step 3: Calculate feed for one chicken.\n\nFeed per chicken = 40 / 20 = 2 cups.\n\n## Step 4: Calculate total feed for all chickens.\n\nTotal feed for 20 chickens = 2 * 20 = 40 cups.\n\n## Step 5: Calculate feed for the final meal.\n\nSince the total feed is already distributed, no additional feed is needed.\n\n## Step 6: Write Answer.\n\nTherefore, the answer is 0. \n\n## Step 7: Answer.\n\nTherefore, the answer is $\\boxed{0}$.",
+          "correct": false,
+          "format_correct": true
+        }
+      ],
+      "pass_at_k": {
+        "0.1": [
+          0.6228421381400465
+        ],
+        "0.2": [
+          0.6636218370419854
+        ],
+        "0.3": [
+          0.6728996886012005
+        ],
+        "0.4": [
+          0.6860432356050695
+        ],
+        "0.5": [
+          0.6937606433169031
+        ],
+        "0.6": [
+          0.7001197227505038
+        ],
+        "0.7": [
+          0.7050465266348509
+        ],
+        "0.8": [
+          0.7067344373257943
+        ],
+        "0.9": [
+          0.7104369179805117
+        ],
+        "1.0": [
+          0.7134192570128886
+        ]
+      }
+    }
+  }
+}

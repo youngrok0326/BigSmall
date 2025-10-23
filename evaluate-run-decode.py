@@ -12,6 +12,8 @@ import hydra
 from hydra.utils import get_original_cwd
 from omegaconf import DictConfig, OmegaConf
 
+import unsloth  # Ensure Unsloth sets required flags before unsloth_zoo loads
+
 from unsloth_zoo.vllm_utils import delete_vllm
 from utils.eval import (
     ensure_shared_model,

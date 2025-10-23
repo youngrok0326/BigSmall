@@ -1,0 +1,797 @@
+{
+    "checkpoint-100": {
+        "gsm8k": {
+            "ans_acc": [
+                0.3730098559514784
+            ],
+            "for_acc": [
+                0.08642911296436695
+            ],
+            "both_acc": [
+                0.03790750568612585
+            ],
+            "lengths": [
+                242.31842304776345
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " Determine how many eggs remain after daily consumption and baking\n## Step 2: Calculate the total earnings from selling the remaining eggs\nTherefore, the final answer is:\n$\\boxed{12}$.",
+                    "correct": false,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " Calculate the amount of white fiber used.\nThe problem states that the fiber used for white is half the amount of blue fiber. Therefore, the amount of white fiber used is half the amount of blue fiber which is 1 bolt (2 bolts / 2).\n\n## Step 2: Calculate the total amount of fiber used.\nThe total amount of fiber used is the sum of blue and white fiber by adding 1 and 2, respectively.\n\nTherefore, the final answer is: $\\boxed{3}$.",
+                    "correct": true,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " Calculate the value of the house after the repairs.\nTo calculate the value of the house after the repairs, we need to find the value of the house that is 150% greater than $80,000.\n\n### Understanding 150% increase: 100% is the original value, and we want to find 150% of it. 150% means multiplying the original value by (1 + 1.5), since 150% = 150/100 = 1.5. Therefore, 150% increase of a value is $x \\times (1 + 0.5) = 1.5x$.\n\n## Step 2: Determine the value of the house after the repairs.\nTo find the value of the house after the repairs, we multiply the original value of the house by 1.5.\n\n$80,000 \\times 1.5 = 120,000$\n\nTherefore, the value of the house after the repairs is $120,000.\n\n## Step 3: Calculate the total cost of the house.\nTo find the total cost of the house including the repairs, we add the value of the house to the cost of the repairs.\n\n$120,000 + 50,000 = 170,000$\n\nTherefore, the total cost of the house including the repairs is $170,000.\n\n## Step 4: Calculate the profit.\nTo calculate the profit, we subtract the total cost of the house from the value of the house.\n\n$120,000 \\times 150 = 180,000$\n\nTherefore, the profit that Josh made is $180,000.\n\nTherefore, the final answer is: $\\boxed{180,000}$. The answer is: 180000",
+                    "correct": false,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " Determine the number of weeks James runs in a week.\nJames runs for 3 days a week.\n\n## Step 2: Calculate the total number of times James runs in a week.\nSince James runs 3 sprints each time, and he runs 3 times a week, the total number of times he runs in a week is \\(3 \\times 3 = 9\\).\n\n## Step 3: Calculate the total distance James runs each time.\nJames runs 60 meters each time.\n\n## Step 4: Calculate the total distance James runs each week.\nSince James runs 3 times a week and each time he runs 60 meters, the total distance he runs each week is \\(9 \\times 60 = 540\\) meters.\n\n## Step 5: Write the final answer.\nFinally, the final answer is \\(\\boxed{540}\\) meters.\n\nThe penultimate step was not correct as it was trying to create a concluding statement before the execution of the steps. The net number of sentences was six and not seven. Therefore, the final answer is \\(\\boxed{540}\\) meters.",
+                    "correct": true,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " Determine the total amount of feed Wendi gives away each day.\n\nWendi gives away a total of 15 cups in the morning + 25 cups in the afternoon, which equals a total of 40 cups of feed.\n\n## Step 2: Calculate the total number of feed cups needed for each chicken.\n\nThere are 20 chickens in her flock, and each chicken receives 3 cups per day, so 20 chickens * 3 cups per chicken = 60 cups of food per day.\n\n## Final Answer: Therefore, Wendi needs to give her flock 35 cups of feed in the final meal of the day to ensure every chicken receives the proper amount of mixed chicken feed.\n```",
+                    "correct": false,
+                    "format_correct": false
+                }
+            ]
+        }
+    },
+    "checkpoint-200": {
+        "gsm8k": {
+            "ans_acc": [
+                0.4177407126611069
+            ],
+            "for_acc": [
+                0.21076573161485973
+            ],
+            "both_acc": [
+                0.09704321455648218
+            ],
+            "lengths": [
+                217.62016679302502
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " Calculate the total number of eggs laid per day.\n\nJanet's ducks lay 16 eggs per day.\n\n## Step 2: Determine the number of eggs eaten for breakfast.\n\nJanet eats three eggs for breakfast every morning.\n\n## Step 3: Calculate the number of eggs used for muffins.\n\nJanet bakes muffins for her friends with four eggs.\n\n## Step 4: Find the number of eggs available for sale at the farmers' market.\n\nSubtract the eggs eaten for breakfast and the eggs used for muffins from the total number of eggs laid per day:\n\n16 eggs - 3 eggs (for breakfast) - 4 eggs (for muffins) = 9 eggs available for sale.\n\n## Step 5: Calculate the number of eggs sold at the farmers' market.\n\nJanet sells the remaining eggs at the farmers' market, and she sells them at $2 per fresh duck egg.\n\nTotal number of eggs available for sale: 9 eggs.\nCost per egg: $2.\n\nTherefore, the total amount earned at the farmers' market per day is:\n\nTotal number of eggs available for sale x Cost per egg = 9 eggs x $2 per egg = $18.00.\n\n## Step 6: The final answer is: $\\boxed{The final answer is: $18.00.}$",
+                    "correct": false,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " Determine the number of bolts of blue fiber and white fiber needed for a single robe.\n## Step 2: Calculate the total number of bolts needed for the given problem.\n## Step 3: Write a summary of the solution.\nTherefore, the final answer is: $\\boxed{4 bolts in total}.",
+                    "correct": false,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " Determine the total price Josh paid for the house.\nJosh bought the house for $80,000.\n\n## Step 2: Calculate the value of the house after repairs.\nJosh then added $50,000 in repairs.\n\n## Step 3: Apply the 150% increase to the value of the house.\nThe value of the house increased by 150%, so the increase is 150% of the original value.\n\n150% of $80,000 = 1.5 * $80,000 = $120,000\n\n## Step 4: Add the increase to the original value of the house.\nThe increased value of the house is $120,000.\n\n## Step 5: Calculate the total price Josh paid for the house.\nTotal price = original value + increase = $80,000 + $120,000 = $200,000.\n\n## Step 6: Subtract the original price from the total price to find the profit.\nProfit = total price - original price = $200,000 - $80,000 = $120,000.\n\nTherefore, the final answer is: $\\boxed{120000}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " Determine the number of sprints James runs each day.\n\nJames runs 3 sprints each day.\n\n## Step 2: Calculate the total number of sprints James runs in a week.\n\nSince James runs 3 sprints each day and there are 5 days in a week, the total number of sprints he runs in a week is \\(3 \\times 5 = 15\\) sprints.\n\n## Step 3: Determine the length of each sprint.\n\nJames runs 60 meters each sprint.\n\n## Step 4: Calculate the total distance James runs in a week.\n\nSince James runs 15 sprints in a week and each sprint is 60 meters long, the total distance he runs in a week is \\(15 \\times 60 = 900\\) meters.\n\nTherefore, the final answer is: $\\boxed{900}$ meters.",
+                    "correct": false,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " Determine the total amount of feed Wendi gives her chickens.\n\nThere are three meals per day, and she gives each chicken 3 cups of feed per meal. \n\n### Calculation: \n\\[\n\\text{Total feed per chicken} = 3 \\text{ cups/morning meal} \\times 3 \\text{ meals/day} = 9 \\text{ cups/day per chicken}\n\\]\n\n\\[\n\\text{Total feed for Wendi} = 20 \\text{ chickens} \\times 9 \\text{ cups/chicken/day} = 180 \\text{ cups/day}\n\\]\n\n## Step 2: Calculate the total amount of feed Wendi needs to give her chickens in the days.\n\n### Calculation:\n\\[\n\\text{Total feed for days} = 180 \\text{ cups/day} \\times 30 \\text{ days} = 5400 \\text{ cups}\n\\]\n\n## Step 3: Calculate the total amount of feed Wendi actually gave her chickens for the meals.\n\n### Calculation:\n\\[\n\\text{Total feed given} = 15 \\text{ cups in the morning} + 25 \\text{ cups in the afternoon} = 40 \\text{ cups}\n\\]\n\n## Step 4: Calculate the total amount of feed required for her chickens in the final meal.\n\n### Calculation:\n\\[\n\\text{Total feed needed for final meal} = 5400 \\text{ cups} - 40 \\text{ cups} = 5360 \\text{ cups}\n\\]\n\nTherefore, the final answer is:\n\\boxed{5360 \\text{ cups}}",
+                    "correct": false,
+                    "format_correct": false
+                }
+            ]
+        }
+    },
+    "checkpoint-300": {
+        "gsm8k": {
+            "ans_acc": [
+                0.48597422289613346
+            ],
+            "for_acc": [
+                0.3737680060652009
+            ],
+            "both_acc": [
+                0.18347232752084913
+            ],
+            "lengths": [
+                218.78544351781653
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " Determine the number of eggs laid each day.\nJanet's ducks lay 16 eggs per day.\n\n## Step 2: Calculate the number of eggs Janet eats for breakfast each day.\nJanet eats three eggs for breakfast each day.\n\n## Step 3: Calculate the number of eggs baked into muffins for friends.\nJanet bakes muffins for her friends, using four eggs per day.\n\n## Step 4: Determine the number of eggs remaining after breakfast and muffin baking.\nThe number of eggs remaining is 16 - 3 - 4 = 9 eggs.\n\n## Step 5: Calculate the number of eggs sold at the farmers' market each day.\nJanet sells the remaining 9 organic duck eggs at $2 each.\n\n## Step 6: Compute the total amount she makes from selling her duck eggs.\nTotal earnings = 9 eggs * $2 per egg = $18.\n\nTherefore, the final answer is: $\\boxed{18}.",
+                    "correct": true,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " Calculate the amount of white fiber needed.\nThe problem states that the number of bolts of white fiber is half the number of bolts of blue fiber. Since it takes 2 bolts of blue fiber, the number of bolts of white fiber is \\(2 \\div 2 = 1\\).\n\n## Step 2: Calculate the total number of bolts needed.\nThe total number of bolts required is the sum of the bolts of blue fiber (2) and the bolts of white fiber (1), which is \\(2 + 1 = 3\\).\n\nTherefore, the final answer is: \\boxed{3}.",
+                    "correct": true,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " Calculate the total cost of the house.\nThe total cost of the house is the sum of the original purchase price and the amount Josh put in.\nTotal cost = $80,000 + $50,000 = $130,000.\n\n## Step 2: Calculate the increase in value due to the repairs.\nThe value of the house increased by 150% due to the repairs.\n150% of $80,000 = $80,000 * 1.5 = $120,000.\n\n## Step 3: Calculate the total cost of the house after the repairs.\nTotal cost after repairs = Total cost + Increase in value.\nTotal cost after repairs = $130,000 + $120,000 = $250,000.\n\n## Step 4: Determine the profit.\nProfit = Total cost after repairs - Current value of the property.\nProfit = $250,000 - $80,000 - $50,000 = $120,000.\n\nTherefore, the final answer is: $\\boxed{120000}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " Calculate the total distance James runs in one session.\nJames runs 3 sprints, and each sprint is 60 meters long. Therefore, the total distance he runs in one session is 3 * 60 = 180 meters.\n\n## Step 2: Calculate the total distance James runs in a week.\nJames does sprints 3 times a week. Therefore, the total distance he runs in a week is 180 * 3 = 540 meters.\n\nTherefore, the final answer is: $\\boxed{540}$.",
+                    "correct": true,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " Calculate the total amount of feed given to the chickens in the morning.\nWendi feeds her chicken flock 15 cups of feed in the morning. \n\n## Step 2: Calculate the total amount of feed given to the chickens in the afternoon.\nWendi feeds her chicken flock 25 cups of feed in the afternoon.\n\n## Step 3: Calculate the total amount of feed given to the chickens throughout the day.\nTotal feed given = Feed given in the morning + Feed given in the afternoon\nTotal feed given = 15 cups + 25 cups\nTotal feed given = 40 cups\n\n## Step 4: Calculate the total amount of feed needed for the entire flock.\nSince each chicken is fed 3 cups of feed per day, we need to multiply the total amount of feed given (40 cups) by the number of chickens (20 chickens).\n\n## Step 5: Calculate the total number of cups of feed needed for the entire flock.\nTotal feed needed for the flock = (Feed given per chicken \u00d7 Number of chickens) + Final meal amount\nTotal feed needed for the flock = (3 cups \u00d7 20 chickens) + (3 cups \u00d7 17 chickens)  (since the final meal of the day is given to all 20 chickens)\nTotal feed needed for the flock = 60 cups + (3 cups \u00d7 17 chickens)\nTotal feed needed for the flock = 60 cups + 51 cups\nTotal feed needed for the flock = 111 cups\n\nTherefore, the final answer is: $\\boxed{111}$",
+                    "correct": false,
+                    "format_correct": false
+                }
+            ]
+        }
+    },
+    "checkpoint-400": {
+        "gsm8k": {
+            "ans_acc": [
+                0.49128127369219105
+            ],
+            "for_acc": [
+                0.6830932524639879
+            ],
+            "both_acc": [
+                0.3297952994692949
+            ],
+            "lengths": [
+                190.63608794541318
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " Calculate the total number of eggs laid per day by Janet's ducks.\n\n\\[\n16 \\text{ eggs/day} \\times 365 \\text{ days/year} = 600 \\text{ eggs/year}\n\\]\n\n## Step 2: Calculate the number of eggs Janet eats for breakfast each day.\n\n\\[\n\\frac{3 \\text{ eggs/morning} \\times 365 \\text{ days} = 1095 \\text{ eggs/day}\n\\]\n\n## Step 3: Calculate the number of muffins Janet bakes for her friends each day.\n\n\\[\n4 \\text{ muffins/day} \\times 365 \\text{ days/year} = 1460 \\text{ muffins/day}\n\\]\n\n## Step 4: Calculate the number of eggs Janet has left after eating for breakfast and baking muffins.\n\n\\[\n600 \\text{ eggs/day} - 1095 \\text{ eggs/day} = -495 \\text{ eggs/day}\n\\]\n\n## Step 5: Calculate the number of fresh duck eggs Janet sells at the farmers' market each day.\n\n\\[\n\\frac{600 \\text{ eggs/day} + 1460 \\text{ muffins/day}}{2} = 1030 \\text{ fresh duck eggs/day}\n\\]\n\n## Step 6: Calculate the total earnings from selling the eggs at the farmers' market each day.\n\n\\[\n1030 \\text{ fresh duck eggs/day} \\times \\$2 \\per \\text{ duck egg} = \\$2060 \\text{ per day}\n\\]\n\nTherefore, the final answer is: $\\boxed{2060}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " Calculate the amount of white fiber needed.\n\nThe document states that a robe takes half the amount of white fiber as blue fiber. Therefore, if 2 bolts of blue fiber are required, then the amount of white fiber needed would be half of that, which is $\\boxed{1}$ bolt.\n\n## Step 2: Calculate the total number of bolts.\n\nTo find out how many bolts in total are needed, we add the quantity of blue fiber (2 bolts) and the quantity of white fiber (1 bolt). Therefore, the total number of bolts required is $2 + 1 = \\boxed{3}$.",
+                    "correct": true,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " First, we need to calculate the increase in the value of the house due to the repairs.\n\n\\[\n\\text{Increase} = \\text{Value of the house} \\times \\text{Percentage increase}\n\\]\n\\[\n\\text{Increase} = $80,000 \\times 1.5\n\\]\n\\[\n\\text{Increase} = $120,000\n\\]\n\n## Step 2: Now, we add the increase in value to the original value of the house.\n\n\\[\n\\text{Total value of the house} = \\text{Original value} + \\text{Increase}\n\\]\n\\[\n\\text{Total value of the house} = $80,000 + $120,000\n\\]\n\\[\n\\text{Total value of the house} = $200,000\n\\]\n\n## Step 3: Finally, we subtract the original value of the house from the total value of the house to find the profit.\n\n\\[\n\\text{Profit} = \\text{Total value of the house} - \\text{Original value of the house}\n\\]\n\\[\n\\text{Profit} = $200,000 - $80,000\n\\]\n\\[\n\\text{Profit} = $120,000\n\\]\n\nTherefore, the final answer is: $\\boxed{120000}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " Determine the total number of times James runs each week.\n\nJames runs 3 sprints.\n\n## Step 2: Determine the total number of meters James runs each time he runs.\n\nEach sprint is 60 meters long.\n\n## Step 3: Determine the total number of meters James runs each week.\n\nSince James runs 3 sprints each week and each sprint is 60 meters long, he runs a total of \\(3 \\times 60 = 180\\) meters each week.\n\nTherefore, the final answer is: $\\boxed{180}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " Calculate the total amount of feed for all chickens each day.  \nWendi feeds each chicken 3 cups of feed daily. With 20 chickens, the total daily feed is \\( 20 \\times 3 = 60 \\) cups.\n\n## Step 2: Determine the amount of feed already given during the morning and afternoon meals.  \nIn the morning, she gives \\( 15 \\) cups to the flock. In the afternoon, she gives \\( 25 \\) cups.\n\n## Step 3: Calculate the remaining feed needed for the final meal.  \nSubtract the feed already given from the total daily feed: \\( 60 - 15 - 25 = 20 \\) cups.\n\nTherefore, the final answer is: $\\boxed{20}$.",
+                    "correct": true,
+                    "format_correct": true
+                }
+            ]
+        }
+    },
+    "checkpoint-500": {
+        "gsm8k": {
+            "ans_acc": [
+                0.4761182714177407
+            ],
+            "for_acc": [
+                0.8013646702047005
+            ],
+            "both_acc": [
+                0.3858984078847612
+            ],
+            "lengths": [
+                163.37755875663382
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " Calculate the total number of eggs laid per day.\n\n\\[ \\text{Total eggs per day} = 16 \\]\n\n## Step 2: Calculate the number of eggs eaten for breakfast.\n\n\\[ \\text{Eggs for breakfast} = 3 \\]\n\n## Step 3: Calculate the number of eggs used for muffins.\n\n\\[ \\text{Eggs for muffins} = 4 \\]\n\n## Step 4: Calculate the number of remaining eggs after considering breakfast and muffins.\n\n\\[ \\text{Remaining eggs} = 16 - 3 - 4 = 9 \\]\n\n## Step 5: Calculate the number of eggs sold at the market.\n\n\\[ \\text{Eggs sold} = 9 \\]\n\n## Step 6: Calculate the total revenue from selling eggs.\n\n\\[ \\text{Revenue} = 9 \\times 2 = 18 \\]\n\nTherefore, the final answer is: $\\boxed{18}$.",
+                    "correct": true,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " A robe takes 2 bolts of blue fiber.\n\n## Step 2: A robe takes half that much white fiber.\n\nTherefore, the final answer is: $\\boxed{3}$.",
+                    "correct": true,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " Calculate the increase in value.\n\nThe house value increased by 150%, so the increase is $80,000 * 1.5 = $120,000.\n\n## Step 2: Add the increase to the original value.\n\nThe new value of the house is $80,000 + $120,000 = $200,000.\n\n## Step 3: Subtract the initial cost from the new value.\n\nThe profit is $200,000 - $80,000 = $120,000.\n\nTherefore, the final answer is: $\\boxed{120000}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " Calculate the total distance James runs in one sprint.\n\n\\[\n60 \\text{ meters/sprint} \\times 3 \\text{ sprints} = 180 \\text{ meters}\n\\]\n\n## Step 2: Calculate the total distance James runs in one week.\n\n\\[\n180 \\text{ meters/sprint} \\times 3 \\text{ weeks} = 540 \\text{ meters}\n\\]\n\nTherefore, the final answer is: $\\boxed{540}$.",
+                    "correct": true,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " Calculate the total amount of feed consumed in the morning.\n\n\\[ \\text{Morning feed} = 15 \\text{ cups} \\]\n\n## Step 2: Calculate the total amount of feed consumed in the afternoon.\n\n\\[ \\text{Afternoon feed} = 25 \\text{ cups} \\]\n\n## Step 3: Calculate the total amount of feed consumed over the course of the day.\n\n\\[ \\text{Total feed} = Morning feed + Afternoon feed \\]\n\\[ \\text{Total feed} = 15 \\text{ cups} + 25 \\text{ cups} \\]\n\\[ \\text{Total feed} = 40 \\text{ cups} \\]\n\n## Step 4: Calculate the total amount of feed needed for the flock of 20 chickens.\n\n\\[ \\text{Feed per chicken} = \\frac{\\text{Total feed}}{\\text{Number of chickens}} \\]\n\\[ \\text{Feed per chicken} = \\frac{40 \\text{ cups}}{20 \\text{ chickens}} \\]\n\\[ \\text{Feed per chicken} = 2 \\text{ cups} \\]\n\nTherefore, the final answer is: $\\boxed{15}$.",
+                    "correct": false,
+                    "format_correct": true
+                }
+            ]
+        }
+    },
+    "checkpoint-600": {
+        "gsm8k": {
+            "ans_acc": [
+                0.5231235784685367
+            ],
+            "for_acc": [
+                0.8392721758908264
+            ],
+            "both_acc": [
+                0.44275966641395
+            ],
+            "lengths": [
+                178.7945413191812
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " Janet's ducks lay 16 eggs per day.\n\n## Step 2: She eats three for breakfast every morning.\n\n## Step 3: She bakes muffins for her friends every day with four.\n\n## Step 4: She has 16 - 3 - 4 = 9 eggs remaining.\n\n## Step 5: She sells the remainder at the farmers' market.\n\n## Step 6: She makes $2 per fresh duck egg.\n\n## Step 7: Therefore, she makes 9 * $2 = $18 per day.\n\nTherefore, the final answer is: $\\boxed{18}$.",
+                    "correct": true,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " The robe takes 2 bolts of blue fiber.\n\n## Step 2: The robe takes half the amount of blue fiber as white fiber.\n\n## Step 3: Therefore, the robe takes $2 / 2 = 1$ bolt of white fiber.\n\n## Step 4: The total amount of fiber is $2 + 1 = 3$ bolts.\n\nTherefore, the final answer is: $\\boxed{3}$.",
+                    "correct": true,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " Calculate the increase in value.\n\n\\[ \\text{Increase in value} = 80,000 \\times 1.5 = 120,000 \\]\n\n## Step 2: Add the increase in value to the original price.\n\n\\[ \\text{Total value} = 80,000 + 120,000 = 200,000 \\]\n\n## Step 3: Subtract the initial cost of the house.\n\n\\[ \\text{Profit} = 200,000 - 80,000 - 50,000 = 70,000 \\]\n\nTherefore, the final answer is: $\\boxed{70000}$.",
+                    "correct": true,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " Calculate the total distance for one sprint.\n\n\\[ \\text{Total distance for one sprint} = 60 \\text{ meters} \\]\n\n## Step 2: Calculate the total distance for three sprints.\n\n\\[ \\text{Total distance for three sprints} = 60 \\text{ meters/sprint} \\times 3 \\text{ sprints} = 180 \\text{ meters} \\]\n\nTherefore, the final answer is: $\\boxed{180}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " Calculate the total number of cups of feed consumed in the morning.\n\n\\[\n15 \\text{ cups}\n\\]\n\n## Step 2: Calculate the total number of cups of feed consumed in the afternoon.\n\n\\[\n25 \\text{ cups}\n\\]\n\n## Step 3: Add the morning and afternoon feed consumption to get the total feed consumption.\n\n\\[\n15 + 25 = 40 \\text{ cups}\n\\]\n\n## Step 4: Calculate the total feed consumption if Wendi has 20 chickens.\n\n\\[\n\\frac{40 \\text{ cups}}{20 \\text{ chickens}} = 2 \\text{ cups per chicken}\n\\]\n\n## Step 5: Calculate the total feed consumption for 20 chickens.\n\n\\[\n20 \\text{ chickens} \\times 2 \\text{ cups per chicken} = 40 \\text{ cups}\n\\]\n\n## Step 6: Calculate the total feed consumption for Wendi's flock in the final meal.\n\n\\[\n40 \\text{ cups}\n\\]\n\nTherefore, the final answer is: $\\boxed{40}$.",
+                    "correct": false,
+                    "format_correct": true
+                }
+            ]
+        }
+    },
+    "checkpoint-700": {
+        "gsm8k": {
+            "ans_acc": [
+                0.5360121304018196
+            ],
+            "for_acc": [
+                0.9492039423805914
+            ],
+            "both_acc": [
+                0.513267626990144
+            ],
+            "lengths": [
+                172.92570128885518
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " Janet's ducks lay 16 eggs per day.\n\n\\[ 16 \\]\n\n## Step 2: Janet eats three eggs for breakfast.\n\n\\[ 16 - 3 = 13 \\]\n\n## Step 3: Janet bakes muffins for her friends.\n\n\\[ 13 - 4 = 9 \\]\n\n## Step 4: Janet sells the remainder at the farmers' market.\n\n\\[ 9 \\]\n\nTherefore, the final answer is: $\\boxed{9}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " The total volume of fiber in blue is 2 bolts.\n\n## Step 2: The total volume of fiber in white is 2 bolts / 2 = 1 bolt.\n\n## Step 3: The total volume of fiber in blue is 2 bolts.\n\n## Step 4: The total volume of fiber in white is 1 bolt.\n\n## Step 5: The total volume of fiber is 2 + 1 = 3 bolts.\n\nTherefore, the final answer is: $\\boxed{3}$.",
+                    "correct": true,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " Calculate the total cost of the house.\n\n\\[ \\text{Total cost} = \\text{Initial price} + \\text{Repair cost} = 80,000 + 50,000 = 130,000 \\]\n\n## Step 2: Calculate the increase in value due to the repairs.\n\n\\[ \\text{Increase in value} = 0.15 \\times 130,000 = 19,500 \\]\n\n## Step 3: Calculate the total value of the house after repairs.\n\n\\[ \\text{Total value after repairs} = 130,000 + 19,500 = 149,500 \\]\n\n## Step 4: Calculate the profit.\n\n\\[ \\text{Profit} = \\text{Total value after repairs} - \\text{Total cost} = 149,500 - 130,000 = 19,500 \\]\n\nTherefore, the final answer is: $\\boxed{19500}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " Calculate the total distance for one sprint.\n\n\\[\n60 \\text{ meters/sprint} \\times 3 \\text{ sprints} = 180 \\text{ meters}\n\\]\n\n## Step 2: Calculate the total distance for one week.\n\n\\[\n180 \\text{ meters/sprint} \\times 3 \\text{ weeks} = 540 \\text{ meters}\n\\]\n\nTherefore, the final answer is: $\\boxed{540}$.",
+                    "correct": true,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " Calculate the total feed given in the morning.\n\n\\[ 15 \\text{ cups} \\times 3 \\text{ days} = 45 \\text{ cups} \\]\n\n## Step 2: Calculate the total feed given in the afternoon.\n\n\\[ 25 \\text{ cups} \\times 3 \\text{ days} = 75 \\text{ cups} \\]\n\n## Step 3: Calculate the total feed given in the morning and afternoon.\n\n\\[ 45 \\text{ cups} + 75 \\text{ cups} = 120 \\text{ cups} \\]\n\n## Step 4: Calculate the total feed needed for the flock of chickens.\n\n\\[ 20 \\text{ chickens} \\times 3 \\text{ days} = 60 \\text{ cups} \\]\n\n## Step 5: Calculate the total feed needed for the flock of chickens.\n\n\\[ 120 \\text{ cups} - 60 \\text{ cups} = 60 \\text{ cups} \\]\n\nTherefore, the final answer is: $\\boxed{60}$.",
+                    "correct": false,
+                    "format_correct": true
+                }
+            ]
+        }
+    },
+    "checkpoint-800": {
+        "gsm8k": {
+            "ans_acc": [
+                0.26156178923426837
+            ],
+            "for_acc": [
+                0.9431387414708112
+            ],
+            "both_acc": [
+                0.2585291887793783
+            ],
+            "lengths": [
+                131.18802122820318
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " Day 1 - Total eggs = 16.\n\n## Step 2: Eggs eaten = 3.\n\n## Step 3: Eggs left = 13.\n\n## Step 4: Eggs baked = 4.\n\n## Step 5: Eggs sold = 5.\n\n## Step 6: Eggs left = 8.\n\n## Step 7: Eggs sold = 10.\n\n## Step 8: Eggs left = 8.\n\n## Step 9: Eggs sold = 12.\n\n## Step 10: Eggs left = 8.\n\nTherefore, the final answer is: $\\boxed{20}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " 2 bolts of blue fiber.\n\n## Step 2: 1 bolt of white fiber.\n\n## Step 3: 1.5 bolts of white fiber.\n\n## Step 4: 3.5 bolts in total.\n\nTherefore, the final answer is: $\\boxed{3.5}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " Calculate the total cost.\n\n$$80,000 + 50,000 = 130,000$$\n\n## Step 2: Calculate the value increase.\n\n$$80,000 \\times 1.5 = 120,000$$\n\n## Step 3: Calculate the total cost.\n\n$$130,000 + 120,000 = 250,000$$\n\n## Step 4: Calculate the profit.\n\n$$250,000 - 80,000 = 170,000$$\n\nTherefore, the final answer is: $\\boxed{150,000}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " Calculate total distance per sprint.\n\n## Step 2: Calculate total distance per week.\n\n## Step 3: Calculate total distance per month.\n\n## Step 4: Calculate total distance per year.\n\nTherefore, the final answer is: $\\boxed{1800}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " Morning Feed = 15 cups.\n\n## Step 2: Morning Feed = 15 cups.\n\n## Step 3: Morning Feed = 15 cups.\n\n## Step 4: Morning Feed = 15 cups.\n\n## Step 5: Morning Feed = 15 cups.\n\n## Step 6: Morning Feed = 15 cups.\n\n## Step 7: Morning Feed = 15 cups.\n\n## Step 8: Morning Feed = 15 cups.\n\n## Step 9: Morning Feed = 15 cups.\n\n## Step 10: Morning Feed = 15 cups.\n\nTherefore, the final answer is: $\\boxed{15}$.",
+                    "correct": false,
+                    "format_correct": true
+                }
+            ]
+        }
+    },
+    "checkpoint-900": {
+        "gsm8k": {
+            "ans_acc": [
+                0.07050796057619409
+            ],
+            "for_acc": [
+                0.6868840030326004
+            ],
+            "both_acc": [
+                0.06141015921152388
+            ],
+            "lengths": [
+                379.79909021986356
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " $16 \\times 7 = 112$.\n\n## Step 2: $112 - 3 = 109$.\n\n## Step 3: $109 - 4 = 105$.\n\n## Step 4: $105 \\times 2 = 210$.\n\n## Step 5: $210 - 15 = 195$.\n\n## Step 6: $195 - 10 = 185$.\n\n## Step 7: $185 - 5 = 180$.\n\n## Step 8: $180 - 3 = 177$.\n\n## Step 9: $177 - 1 = 176$.\n\n## Step 10: $176 - 1 = 175$.\n\n## Step 11: $175 - 1 = 174$.\n\n## Step 12: $174 - 1 = 173$.\n\n## Step 13: $173 - 1 = 172$.\n\n## Step 14: $172 - 1 = 171$.\n\n## Step 15: $171 - 1 = 170$.\n\n## Step 16: $170 - 1 = 169$.\n\n## Step 17: $169 - 1 = 168$.\n\n## Step 18: $168 - 1 = 167$.\n\n## Step 19: $167 - 1 = 166$.\n\n## Step 20: $166 - 1 = 165$.\n\nTherefore, the final answer is: $\\boxed{165}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " 2 bolts of blue fiber.\n\n## Step 2: $0.5 \\times 2 = 1$ bolt of white fiber.\n\n## Step 3: $2 + 1 = 3$ bolts.\n\n## Step 4: $2 \\times 2 = 4$ bolts.\n\n## Step 5: $2 \\times 2 = 4$ bolts.\n\n## Step 6: $2 \\times 2 = 4$ bolts.\n\n## Step 7: $2 \\times 2 = 4$ bolts.\n\n## Step 8: $2 \\times 2 = 4$ bolts.\n\n## Step 9: $2 \\times 2 = 4$ bolts.\n\n## Step 10: $2 \\times 2 = 4$ bolts.\n\nTherefore, the final answer is: $\\boxed{7}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " Calculate total cost.\n\n$$100\\% + 150\\% = 300\\%$$\n\n$$80,000 + 50,000 = 130,000$$\n\n## Step 2: Calculate profit.\n\n$$300\\% - 100\\% = 200\\%$$\n\n$$130,000 \\times 200\\% = 260,000$$\n\n## Step 3: Calculate profit.\n\n$$260,000 \\times 1\\% = 260,000$$\n\n## Step 4: Calculate profit.\n\n$$260,000 \\times 1\\% = 260,000$$\n\n## Step 5: Calculate profit.\n\n$$260,000 \\times 1\\% = 260,000$$\n\n## Step 6: Calculate profit.\n\n$$260,000 \\times 1\\% = 260,000$$\n\n## Step 7: Calculate profit.\n\n$$260,000 \\times 1\\% = 260,000$$\n\n## Step 8: Calculate profit.\n\n$$260,000 \\times 1\\% = 260,000$$\n\n## Step 9: Calculate profit.\n\n$$260,000 \\times 1\\% = 260,000$$\n\n## Step 10: Calculate profit.\n\n$$260,000 \\times 1\\% = 260,000$$\n\nTherefore, the final answer is: $\\boxed{260000}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " $3 \\times 3 = 9$.\n\n## Step 2: $60 \\times 9 = 540$.\n\n## Step 3: $60 \\times 9 = 540$.\n\n## Step 4: $60 \\times 9 = 540$.\n\n## Step 5: $60 \\times 9 = 540$.\n\n## Step 6: $60 \\times 9 = 540$.\n\n## Step 7: $60 \\times 9 = 540$.\n\n## Step 8: $60 \\times 9 = 540$.\n\n## Step 9: $60 \\times 9 = 540$.\n\n## Step 10: $60 \\times 9 = 540$.\n\nTherefore, the final answer is: $\\boxed{540}$.\n\nThe final answer is: $\\boxed{540}$.",
+                    "correct": true,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " $15 + 25 = 40$.\n\n## Step 2: $40 - 40 = 0$.\n\n## Step 3: $0 + 3 = 3$.\n\n## Step 4: $3 + 3 = 6$.\n\n## Step 5: $6 + 3 = 9$.\n\n## Step 6: $9 + 3 = 12$.\n\n## Step 7: $12 + 3 = 15$.\n\n## Step 8: $15 + 3 = 18$.\n\n## Step 9: $18 + 3 = 21$.\n\n## Step 10: $21 + 3 = 24$.\n\n## Step 11: $24 + 3 = 27$.\n\n## Step 12: $27 + 3 = 30$.\n\n## Step 13: $30 + 3 = 33$.\n\n## Step 14: $33 + 3 = 36$.\n\n## Step 15: $36 + 3 = 39$.\n\n## Step 16: $39 + 3 = 42$.\n\n## Step 17: $42 + 3 = 45$.\n\n## Step 18: $45 + 3 = 48$.\n\n## Step 19: $48 + 3 = 51$.\n\n## Step 20: $51 + 3 = 54$.\n\n## Step 21: $54 + 3 = 57$.\n\n## Step 22: $57 + 3 = 60$.\n\n## Step 23: $60 + 3 = 63$.\n\n## Step 24: $63 + 3 = 66$.\n\n## Step 25: $66 + 3 = 69$.\n\n## Step 26: $69 + 3 = 72$.\n\n## Step 27: $72 + 3 = 75$.\n\n## Step 28: $75 + 3 = 78$.\n\n## Step 29: $78 + 3 = 81$.\n\n## Step 30: $81 +",
+                    "correct": false,
+                    "format_correct": false
+                }
+            ]
+        }
+    },
+    "checkpoint-1000": {
+        "gsm8k": {
+            "ans_acc": [
+                0.05307050796057619
+            ],
+            "for_acc": [
+                0.9257012888551933
+            ],
+            "both_acc": [
+                0.050037907505686124
+            ],
+            "lengths": [
+                262.2903714935557
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " Janet eats 3 eggs per day.\n\n## Step 2: Janet eats 3 eggs per day.\n\n## Step 3: Janet eats 3 eggs per day.\n\n## Step 4: Janet eats 3 eggs per day.\n\n## Step 5: Janet eats 3 eggs per day.\n\n## Step 6: Janet eats 3 eggs per day.\n\n## Step 7: Janet eats 3 eggs per day.\n\n## Step 8: Janet eats 3 eggs per day.\n\n## Step 9: Janet eats 3 eggs per day.\n\n## Step 10: Janet eats 3 eggs per day.\n\n## Step 11: Janet eats 3 eggs per day.\n\n## Step 12: Janet eats 3 eggs per day.\n\n## Step 13: Janet eats 3 eggs per day.\n\n## Step 14: Janet eats 3 eggs per day.\n\n## Step 15: Janet eats 3 eggs per day.\n\n## Step 16: Janet eats 3 eggs per day.\n\n## Step 17: Janet eats 3 eggs per day.\n\n## Step 18: Janet eats 3 eggs per day.\n\n## Step 19: Janet eats 3 eggs per day.\n\n## Step 20: Janet eats 3 eggs per day.\n\nTherefore, the final answer is: $\\boxed{160}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " 2 bolts of blue fiber.\n\n## Step 2: 1 bol of white fiber.\n\n## Step 3: 1 bol of white fiber.\n\n## Step 4: 0.5 bol of white fiber.\n\n## Step 5: 0.5 bol of white fiber.\n\n## Step 6: 0.5 bol of white fiber.\n\n## Step 7: 0.5 bol of white fiber.\n\n## Step 8: 0.5 bol of white fiber.\n\n## Step 9: 0.5 bol of white fiber.\n\n## Step 10: 0.5 bol of white fiber.\n\nTherefore, the final answer is: $\\boxed{4}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " $80,000 + $50,000 = $130,000.\n\n## Step 2: $130,000 * 1.5 = $195,000.\n\n## Step 3: $195,000 - $80,000 = $115,000.\n\n## Step 4: $115,000 - $50,000 = $65,000.\n\n## Step 5: $65,000 - $50,000 = $15,000.\n\n## Step 6: $15,000 - $50,000 = $35,000.\n\n## Step 7: $35,000 - $50,000 = $15,000.\n\n## Step 8: $15,000 - $50,000 = $15,000.\n\n## Step 9: $15,000 - $50,000 = $15,000.\n\n## Step 10: $15,000 - $50,000 = $15,000.\n\nTherefore, the final answer is: $\\boxed{15000}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " $3 \\times 3 = 9$.\n\n## Step 2: $3 \\times 60 = 180$.\n\n## Step 3: $180 \\times 3 = 540$.\n\n## Step 4: $540 \\times 3 = 1620$.\n\n## Step 5: $1620 \\times 3 = 4860$.\n\n## Step 6: $4860 \\times 3 = 14580$.\n\n## Step 7: $14580 \\times 3 = 43740$.\n\n## Step 8: $43740 \\times 3 = 131220$.\n\n## Step 9: $131220 \\times 3 = 393660$.\n\n## Step 10: $393660 \\times 3 = 1180980$.\n\nTherefore, the final answer is: $\\boxed{1180980}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " $15 + 25 = 40$.\n\n## Step 2: $40 - 15 = 25$.\n\n## Step 3: $25 - 25 = 0$.\n\n## Step 4: $0 + 25 = 25$.\n\n## Step 5: $25 - 25 = 0$.\n\n## Step 6: $0 + 25 = 25$.\n\n## Step 7: $25 - 25 = 0$.\n\n## Step 8: $0 + 25 = 25$.\n\n## Step 9: $25 - 25 = 0$.\n\n## Step 10: $0 + 25 = 25$.\n\n## Step 11: $25 - 25 = 0$.\n\n## Step 12: $0 + 25 = 25$.\n\n## Step 13: $25 - 25 = 0$.\n\n## Step 14: $0 + 25 = 25$.\n\n## Step 15: $25 - 25 = 0$.\n\nTherefore, the final answer is: $\\boxed{25}$.",
+                    "correct": false,
+                    "format_correct": true
+                }
+            ]
+        }
+    },
+    "checkpoint-1100": {
+        "gsm8k": {
+            "ans_acc": [
+                0.22896133434420016
+            ],
+            "for_acc": [
+                0.9878695981804397
+            ],
+            "both_acc": [
+                0.2266868840030326
+            ],
+            "lengths": [
+                165.00758150113722
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " Janet's ducks lay 16 eggs per day.\n\n## Step 2: Janet eats 3 eggs for breakfast.\n\n## Step 3: Janet has 13 eggs left.\n\n## Step 4: Janet bakes muffins with 4 eggs.\n\n## Step 5: Janet has 9 eggs left.\n\n## Step 6: Janet sells 2 eggs.\n\n## Step 7: Janet has 7 eggs left.\n\n## Step 8: Janet sells 2 eggs.\n\n## Step 9: Janet has 5 eggs left.\n\n## Step 10: Janet sells 2 eggs.\n\n## Step 11: Janet has 3 eggs left.\n\n## Step 12: Janet sells 2 eggs.\n\n## Step 13: Janet has 1 egg left.\n\n## Step 14: Janet sells 1 egg.\n\n## Step 15: Janet has 0 eggs left.\n\nTherefore, the final answer is: $\\boxed{26}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " 2 bolts of blue fiber.\n\n## Step 2: 2 / 2 = 1 bolt of white fiber.\n\n## Step 3: 2 + 1 = 3 bolts.\n\n## Step 4: 3 + 1 = 4 bolts.\n\nTherefore, the final answer is: $\\boxed{4}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " Buy house for $80,000.\n\n## Step 2: Add repairs cost of $50,000.\n\n## Step 3: Total cost $80,000 + $50,000 = $130,000.\n\n## Step 4: Value increase by 150%.\n\n## Step 5: Value increase $130,000 * 1.5 = $190,000.\n\n## Step 6: Total value $130,000 + $190,000 = $320,000.\n\n## Step 7: Profit $320,000 - $130,000 = $190,000.\n\nTherefore, the final answer is: $\\boxed{190000}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " Run 60 meters.\n\n## Step 2: Run 60 meters.\n\n## Step 3: Run 60 meters.\n\n## Step 4: Run 60 meters.\n\n## Step 5: Run 60 meters.\n\n## Step 6: Run 60 meters.\n\n## Step 7: Run 60 meters.\n\n## Step 8: Run 60 meters.\n\n## Step 9: Run 60 meters.\n\n## Step 10: Run 60 meters.\n\nTherefore, the final answer is: $\\boxed{1800}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " Feed 15 cups of feed in the morning.\n\n## Step 2: Feed 15 cups of feed in the morning.\n\n## Step 3: Feed 15 cups of feed in the morning.\n\n## Step 4: Feed 15 cups of feed in the morning.\n\n## Step 5: Feed 15 cups of feed in the morning.\n\n## Step 6: Feed 15 cups of feed in the morning.\n\n## Step 7: Feed 15 cups of feed in the morning.\n\n## Step 8: Feed 15 cups of feed in the morning.\n\n## Step 9: Feed 15 cups of feed in the morning.\n\n## Step 10: Feed 15 cups of feed in the morning.\n\n## Step 11: Feed 15 cups of feed in the morning.\n\n## Step 12: Feed 15 cups of feed in the morning.\n\n## Step 13: Feed 15 cups of feed in the morning.\n\n## Step 14: Feed 15 cups of feed in the morning.\n\n## Step 15: Feed 15 cups of feed in the morning.\n\nTherefore, the final answer is: $\\boxed{150}$.",
+                    "correct": false,
+                    "format_correct": true
+                }
+            ]
+        }
+    },
+    "checkpoint-1200": {
+        "gsm8k": {
+            "ans_acc": [
+                0.0401819560272934
+            ],
+            "for_acc": [
+                0.756633813495072
+            ],
+            "both_acc": [
+                0.03184230477634572
+            ],
+            "lengths": [
+                244.855193328279
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " 16 eggs/day * 7 days = 112 eggs\n\n## Step 2: 112 eggs - 3 eggs = 109 eggs\n\n## Step 3: 109 eggs - 4 eggs = 105 eggs\n\n## Step 4: 105 eggs - 4 eggs = 101 eggs\n\n## Step 5: 101 eggs - 4 eggs = 97 eggs\n\n## Step 6: 97 eggs - 4 eggs = 93 eggs\n\n## Step 7: 93 eggs - 4 eggs = 89 eggs\n\n## Step 8: 89 eggs - 4 eggs = 85 eggs\n\n## Step 9: 85 eggs - 4 eggs = 81 eggs\n\n## Step 10: 81 eggs - 4 eggs = 77 eggs\n\n## Step 11: 77 eggs - 3 eggs = 74 eggs\n\n## Step 12: 74 eggs - 3 eggs = 71 eggs\n\n## Step 13: 71 eggs - 3 eggs = 68 eggs\n\n## Step 14: 68 eggs - 3 eggs = 65 eggs\n\n## Step 15: 65 eggs - 3 eggs = 62 eggs\n\nTherefore, the final answer is: $\\boxed{20}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " 2 bolts of blue fiber.\n\n## Step 2: 2 bolts of blue fiber.\n\n## Step 3: 2 bolts of blue fiber.\n\n## Step 4: 2 bolts of blue fiber.\n\n## Step 5: 2 bolts of blue fiber.\n\n## Step 6: 2 bolts of blue fiber.\n\n## Step 7: 2 bolts of blue fiber.\n\n## Step 8: 2 bolts of blue fiber.\n\n## Step 9: 2 bolts of blue fiber.\n\n## Step 10: 2 bolts of blue fiber.\n\n## Step 11: 2 bolts of blue fiber.\n\n## Step 12: 2 bolts of blue fiber.\n\n## Step 13: 2 bolts of blue fiber.\n\n## Step 14: 2 bolts of blue fiber.\n\n## Step 15: 2 bolts of blue fiber.\n\n## Step 16: 2 bolts of blue fiber.\n\n## Step 17: 2 bolts of blue fiber.\n\n## Step 18: 2 bolts of blue fiber.\n\n## Step 19: 2 bolts of blue fiber.\n\n## Step 20: 2 bolts of blue fiber.\n\nTherefore, the final answer is: $\\boxed{10}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " $80,000 + $50,000 = $130,000\n\n## Step 2: $130,000 * 1.5 = $195,000\n\n## Step 3: $195,000 - $80,000 = $115,000\n\n## Step 4: $115,000 - $50,000 = $65,000\n\n## Step 5: $65,000 * 1.5 = $97,500\n\n## Step 6: $97,500 - $80,000 = $17,500\n\n## Step 7: $17,500 * 1.5 = $26,250\n\n## Step 8: $26,250 - $50,000 = $16,250\n\n## Step 9: $16,250 * 1.5 = $24,375\n\n## Step 10: $24,375 - $80,000 = $19,375\n\nTherefore, the final answer is: $\\boxed{19375}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " $60 \\times 3 = 180$\n\n## Step 2: $180 \\times 3 = 540$\n\n## Step 3: $540 \\times 3 = 1620$\n\n## Step 4: $1620 \\times 3 = 4860$\n\n## Step 5: $4860 \\times 3 = 14610$\n\n## Step 6: $14610 \\times 3 = 43830$\n\n## Step 7: $43830 \\times 3 = 131510$\n\n## Step 8: $131510 \\times 3 = 394530$\n\n## Step 9: $394530 \\times 3 = 1183590$\n\n## Step 10: $1183590 \\times 3 = 3550770$\n\nTherefore, the final answer is: $\\boxed{3550770}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " 15 * 2 = 30\n\n## Step 2: 30 * 2 = 60\n\n## Step 3: 60 * 2 = 120\n\n## Step 4: 120 * 2 = 240\n\n## Step 5: 240 * 2 = 480\n\n## Step 6: 480 * 2 = 960\n\n## Step 7: 960 * 2 = 1920\n\n## Step 8: 1920 * 2 = 3840\n\n## Step 9: 3840 * 2 = 7680\n\n## Step 10: 7680 * 2 = 15360\n\nTherefore, the final answer is: $\\boxed{15360}$.",
+                    "correct": false,
+                    "format_correct": true
+                }
+            ]
+        }
+    },
+    "checkpoint-1300": {
+        "gsm8k": {
+            "ans_acc": [
+                0.034874905231235785
+            ],
+            "for_acc": [
+                0.909021986353298
+            ],
+            "both_acc": [
+                0.032600454890068235
+            ],
+            "lengths": [
+                244.63229719484457
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " Janet's ducks lay 16 eggs per day.\n\n\\[ 16 \\]\n\n## Step 2: Janet eats 3 eggs for breakfast.\n\n\\[ 16 - 3 = 13 \\]\n\n## Step 3: Janet has 13 eggs.\n\n## Step 4: Janet has 13 eggs.\n\n## Step 5: Janet has 13 eggs.\n\n## Step 6: Janet has 13 eggs.\n\n## Step 7: Janet has 13 eggs.\n\n## Step 8: Janet has 13 eggs.\n\n## Step 9: Janet has 13 eggs.\n\n## Step 10: Janet has 13 eggs.\n\n## Step 11: Janet has 13 eggs.\n\n## Step 12: Janet has 13 eggs.\n\n## Step 13: Janet has 13 eggs.\n\n## Step 14: Janet has 13 eggs.\n\n## Step 15: Janet has 13 eggs.\n\n## Step 16: Janet has 13 eggs.\n\n## Step 17: Janet has 13 eggs.\n\n## Step 18: Janet has 13 eggs.\n\n## Step 19: Janet has 13 eggs.\n\n## Step 20: Janet has 13 eggs.\n\nAnswer: $13.\n\nTherefore, the final answer is: $\\boxed{13}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " Fiber Blue - 2\n\n$$2 = 2 \\times 1$$\n\n## Step 2: Fiber Blue - 2\n\n$$4 = 2 \\times 2$$\n\n## Step 3: Fiber Blue - 2\n\n$$6 = 2 \\times 3$\n\n## Step 4: Fiber Blue - 2\n\n$$8 = 2 \\times 4$\n\n## Step 5: Fiber Blue - 2\n\n$$10 = 2 \\times 5$\n\n## Step 6: Fiber Blue - 2\n\n$$12 = 2 \\times 6$\n\n## Step 7: Fiber Blue - 2\n\n$$14 = 2 \\times 7$\n\n## Step 8: Fiber Blue - 2\n\n$$16 = 2 \\times 8$\n\n## Step 9: Fiber Blue - 2\n\n$$18 = 2 \\times 9$\n\n## Step 10: Fiber Blue - 2\n\n$$20 = 2 \\times 10$\n\n## Step 11: Fiber Blue - 2\n\n$$22 = 2 \\times 11$\n\n## Step 12: Fiber Blue - 2\n\n$$24 = 2 \\times 12$\n\n## Step 13: Fiber Blue - 2\n\n$$26 = 2 \\times 13$\n\n## Step 14: Fiber Blue - 2\n\n$$28 = 2 \\times 14$\n\n## Step 15: Fiber Blue - 2\n\n$$30 = 2 \\times 15$\n\nTherefore, the final answer is: $\\boxed{30}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " $80,000 + $50,000 = $130,000\n\n## Step 2: $130,000 * 1.5 = $195,000\n\n## Step 3: $195,000 - $80,000 = $115,000\n\n## Step 4: $115,000 - $50,000 = $65,000\n\n## Step 5: $65,000 - $50,000 = $15,000\n\n## Step 6: $15,000 - $50,000 = $35,000\n\n## Step 7: $35,000 - $50,000 = $20,000\n\n## Step 8: $20,000 - $50,000 = $30,000\n\n## Step 9: $30,000 - $50,000 = $40,000\n\n## Step 10: $40,000 - $50,000 = $50,000\n\nTherefore, the final answer is: $\\boxed{50000}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " Run 60 meters - 60 meters\n\n## Step 2: Run 60 - 60 meters - 60 meters\n\n## Step 3: Run 60 - 60 - 60 meters.\n\n## Step 4: Run 60 - 60 - 60 meters.\n\n## Step 5: Run 60 - 60 - 60 meters.\n\n## Step 6: Run 60 - 60 - 60 meters.\n\n## Step 7: Run 60 - 60 - 60 meters.\n\n## Step 8: Run 60 - 60 - 60 meters.\n\n## Step 9: Run 60 - 60 - 60 meters.\n\n## Step 10: Run 60 - 60 - 60 meters.\n\nAnswer: $600 meters.\n\nTherefore, the final answer is: $\\boxed{600}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": "  15 - 5 = 10\n\n## Step 2:  10 - 5 = 5\n\n## Step 3:  5 - 5 = 0\n\n## Step 4:  0 - 5 = -5\n\n## Step 5:  -5 - 5 = -10\n\n## Step 6:  -10 - 5 = -15\n\n## Step 7:  -15 - 5 = -20\n\n## Step 8:  -20 - 5 = -25\n\n## Step 9:  -25 - 5 = -30\n\n## Step 10:  -30 - 5 = -35\n\n## Step 11:  -35 - 5 = -40\n\n## Step 12:  -40 - 5 = -45\n\n## Step 13:  -45 - 5 = -50\n\n## Step 14:  -50 - 5 = -55\n\n## Step 15:  -55 - 5 = -60\n\nTherefore, the final answer is: $\\boxed{-60}$.",
+                    "correct": false,
+                    "format_correct": true
+                }
+            ]
+        }
+    },
+    "checkpoint-1400": {
+        "gsm8k": {
+            "ans_acc": [
+                0.0401819560272934
+            ],
+            "for_acc": [
+                0.4306292645943897
+            ],
+            "both_acc": [
+                0.015163002274450341
+            ],
+            "lengths": [
+                284.01440485216074
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " Ducks = 16 / 2 = 8.\n\n## Step 2: Ducks = 8 / 2 = 4.\n\n## Step 3: Ducks = 4 / 2 = 2.\n\n## Step 4: Ducks = 2 / 2 = 1.\n\n## Step 5: Ducks = 1 / 2 = 0.5.\n\n## Step 6: Ducks = 0.5 / 2 = 0.25.\n\n## Step 7: Ducks = 0.25 / 2 = 0.125.\n\n## Step 8: Ducks = 0.125 / 2 = 0.0625.\n\n## Step 9: Ducks = 0.0625 / 2 = 0.03125.\n\n## Step 10: Ducks = 0.03125 / 2 = 0.015625.\n\n## Step 11: Ducks = 0.015625 / 2 = 0.0078125.\n\n## Step 12: Ducks = 0.0078125 / 2 = 0.00390625.\n\n## Step 13: Ducks = 0.00390625 / 2 = 0.001953125.\n\n## Step 14: Ducks = 0.001953125 / 2 = 0.000976562.\n\n## Step 15: Ducks = 0.000976562 / 2 = 0.000488281.\n\nTherefore, the total ducks = 16.\n\n## Step 16: Ducks = 16.\n\n## Step 17: Ducks = 16.\n\n## Step 18: Ducks = 16.\n\n## Step 19: Ducks = 16.\n\n## Step 19: Ducks = 16.\n\n## Step 20: Ducks = 16.\n\n---\n\nTherefore, the final answer is: $\\boxed{1}$.",
+                    "correct": false,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " Addito\u84dd\u7ea4\u7ef4(Blue A)\n\n$\\Delta x = 2 + 1$\n\n## Step 1: Addito\u84dd\u7ea4\u7ef4(Blue B)\n\n$\\Delta x = 2 + 2$\n\n## Step 1: Addito\u84dd\u7ea4\u7ef4(Blue C)\n\n$\\Delta x = 4 + 3$\n\n## Step 1: Addito\u84dd\u7ea4\u7ef4(Blue D)\n\n$\\Delta x = 4 + 4$\n\n## Step 1: Addito\u84dd\u7ea4\u7ef4(Blue E)\n\n$\\Delta x = 6 + 5$\n\n## Step 1: Addito\u84dd\u7ea4\u7ef4(Blue F)\n\n$\\Delta x = 6 + 6$\n\n## Step 1: Addito\u84dd\u7ea4\u7ef4(Blue G)\n\n$\\Delta x = 8 + 7$\n\n## Step 1: Addito\u84dd\u7ea4\u7ef4(Blue H)\n\n$\\Delta x = 8 + 8$\n\n## Step 1: Addito\u84dd\u7ea4\u7ef4(Blue.\n\nTherefore, the final answer is: $\\boxed{20}$.",
+                    "correct": false,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " $50,000 + $80,000 = $130,000\n\n## Step 2: $130,000 * 1.5 = $195,000\n\n## Step 3: $195,000 - $80,000 = $115,000\n\n## Step 4: $115,000 - $50,000 = $65,000\n\n## Step 5: $65,000 - $80,000 = $65,000\n\n## Step 6: $65,000 - $50,000 = $15,000\n\n## Step 7: $15,000 - $80,000 = $15,000\n\n## Step 8: $15,000 - $50,000 = $15,000\n\n## Step 9: $15,000 - $100,000 = $15,000\n\n## Step 10: $15,000 - $150,000 = $150,000\n\n## Step 11: $150,000 - $80,000 = $150,000\n\n## Step 12: $150,000 - $50,000 = $100,000\n\n## Step 13: $100,000 - $150,000 = $100,000\n\n## Step 14: $100,000 - $150,000 = $100,000\n\n## Step 15: $100,000 - $100,000 = $100,000\n\nTherefore, the final answer is: $\\boxed{100000}$",
+                    "correct": false,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " $x = 60 \\times 3$\n\n## Step 2: $x = 180$\n\n## Step 3: $x = 180 \\times 3$\n\n## Step 4: $x = 540$\n\n## Step 5: $x = 540 \\times 3$\n\n## Step 6: $x = 1620$\n\n## Step 7: $x = 1620 \\times 3$\n\n## Step 8: $x = 4860$\n\n## Step 9: $x = 4860 \\times 3$\n\n## Step 10: $x = 14610$\n\n## Step 11: $x = 14610 \\div 3$\n\n## Step 12:\n$x = 4870$\n\n## Step 13:\n$x = 4870 $\n\n## Step 14:\n$x = 4870 $\n\n## Step 15:\n$x = 4870 $\n\n## Step 16:\n$x = 4870 $\n\n## Step 17:\n$x = 4870 $\n\n## Step 18:\n$x = 4870 $\n\n## Step 19:\n$x = 4870 $\n\n## Step 19:\n$x = 4870 $\n\nTherefore, the final answer is: $\\boxed{4870}$",
+                    "correct": false,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": " $15 + 25 = 40$\n\n## Step 2: $40 + 10 = 50$\n\n## Step 3: $50 + 10 = 60$\n\n## Step 4: $60 + 10 = 70$\n\n## Step 5: $70 + 10 = 80$\n\n## Step 6: $80 + 10 = 90$\n\n## Step 7: $90 + 10 = 100$\n\n## Step 8: $100 + 10 = 110$\n\n## Step 9: $110 + 10 = 120$\n\n## Step 10: $120 + 10 = 130$\n\n## Step 11: $130 + 10 = 140$\n\n## Step 12: $140 + 10 = 150$\n\n## Step 13: $150 + 10 = 160$\n\n## Step 14: $160 + 10 = 170$\n\n## Step 15: $170 + 10 = 180$\n\nTherefore, the final answer is: $\\boxed{180}$",
+                    "correct": false,
+                    "format_correct": false
+                }
+            ]
+        }
+    },
+    "checkpoint-1500": {
+        "gsm8k": {
+            "ans_acc": [
+                0.02880970432145565
+            ],
+            "for_acc": [
+                0.23351023502653526
+            ],
+            "both_acc": [
+                0.009097801364670205
+            ],
+            "lengths": [
+                407.58453373768003
+            ],
+            "examples": [
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Janet\u2019s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?\n\nSolution:\n\n## Step 1:",
+                    "answer": "18",
+                    "completion": " = 16 + 16\n\n:: = 16 + 16:\n\n= 32 = 16;\n\n##\n\n## Step 2: = 16 + 16\n\n:: = 16 + 16:\n\n= 32 = 2:\n\n:\n\n## Step 3: = 16 + 16\n\n:= = 16 + 16;\n\n:\n\n## Step 4: = 16 + 16\n\n:= = 16 + 16;\n\n:\n\n## Step 5: = 16 + 16\n\n:= = 16 + 16;\n\n:\n\n## Step 6: = 16 + 16\n\n.: = 16 + 16;\n\n:\n\n## Step 7: = 16 + 16\n\n.: = 16 + 16;\n\n:\n\n## Step 8: = 16 + 16\n\n: = = 16 + 16;\n\n:\n\n## Step 9: = 16 + 16\n\n: = = 16 + 16;\n\n:\n\n## Step 9: = 16 + 16\n\n: = = 16 + 16;\n\n:\n\n## Step 10: = 16 + 16\n\n: = = 16 + 16;\n\n:\n\n:\n\n## Step 10: = 16 + 16\n\n:= = 16 + 16;\n\n:\n\n:\n\n:\n\n:\n\n## Step 11: = 16 + 16\n\n:= = 16 + 16;\n\n:\n\n:\n\\\n\n## Step 11: = 16 + 16\n\n:= = 16 + 16;\n\n:\n\n:\n\n:\n\n:\n\n## Step 12: = 16 + 16\n\n:= = 16 + 16;\n\n:\n\n:\n\n:\n\n:\n\n## Step 12: = 16 + 16\n\n:= = 16 + 16;\n\n:\n\n:\n\n:\n\n:\n\n## Step 13: = 16 + 16\n\n:: = 16 + 16;\n\n:\n\n:\n:\n\n:\n\n## Step 13: = 16 + 16\n\n:: = 16 + 16;\n\n:\n\n:\n\n:\n\n:\n\n## Step 14: = 16 + 16\n\n::",
+                    "correct": false,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?\n\nSolution:\n\n## Step 1:",
+                    "answer": "3",
+                    "completion": " $x + 2 = 2\\%\\$\n\n.SuspendLayout;\n\n## Step: $x + 2 = 2\\%\n\n.SuspendLayout;\n\n# Step: 1 + 2 = 2,\n\n.SuspendLayout;\n\n# Step: 3 = 2,\n\n.SuspendLayout;\n\n# Step: 3 = 2,\n\n.SuspendLayout;\n\n# Step: 3 = 2,\n\n.SuspendLayout;\n\n# Step: 3 = 2,\n\n.SuspendLayout;\n\n# Step: 3 = 2,\n\n.SuspendLayout:\n\n## Step: $x + 2 = 2\\%\n\n:\n\\$.;\n\n## Step: $x + 2 = 2\\%\n\n:\n$,:\n\n# Step: 4 + 2 = 2,\n\n:\n\n# Step: 4 + 2 = 2,\n\n:\n\n# Step: 4 + 2 = 2,\n\n:\n\n# Step: 4 + 2 = 2,\n\n:\n\n# Step: 4 + 2 = 2,\n\n:\n\n:\n:\n\n# Step: 5 + 2 = 2:\n\n:\n\n# Step: 5 + 2 = 2:\n\n:\n\n:\n\n:\n\n:\n\n# Step: 6 + 2 = 2:\n\n:\n\n# Step: 6 + 2 = 2:\n\n:\n\n:\n\n:\n\n:\n\n## Step: $x + 2 = 2###\n\n:\n$,:\n\n###:\n\nTherefore, the final answer is: $\\boxed{6}$.",
+                    "correct": false,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?\n\nSolution:\n\n## Step 1:",
+                    "answer": "70000",
+                    "completion": " $ 50,000 -> $ 80,000\n\n($ 80,000 + $ 50,000 = $ 130,000)\n\n## Step 2: $ 50,000 -> $ 80,000\n\n($ 130,000 - $ 50,000 = $ 80,000).\n\n## Step 3: $ 50,000 -> $ 80,000\n\n($ $ 80,000 = $ 80,000).\n\n## Step 4: $ 50,000 -> $ 80,000\n\n($ $ 80,000 = $ 80,000).\n\n## Step 5: $ 50,000 -> $ 80,000\n\n($ $ 80,000 = $ 80,000).\n\n## Step 6: $ 50,000 -> $ 80,000\n\n($ $ 80,000 = $ 80,000).\n\n## Step 7: $ 50,0: $ 80,0\n\n($ $ 80,0 = $ 80,0).\n\n## Step 7: $ 50,0 -> $ 80,:\n\n($ $ 80, = $ 80).\n\n## Step 8: $ 50,0 -> $ 80,:\n\n($ $ 80 = $ 80).\n\n## Step 8: $ 50,0 -> $ 80,:\n\n($ $ 80 = $ 80.\n\n## Step 9: $ 50,0 -> $ 80,:\n\n($ $ 80 = $ 80.\n\n: $ 50,0 -> $ 80,:\n\n(($ :\n\n:\n\n:/vnd: $ 50,0 -> $ 80,:\n\n:\",:$:\n\n:\",:\n\n:\",:\n\n:.,:\n\n:\",:\n\n:.,:\n\n:.,:\n\n:.,:\n\n:.,:\n\nTherefore, the final answer is: $\\boxed{375}$.",
+                    "correct": false,
+                    "format_correct": false
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: James decides to run 3 sprints 3 times a week.  He runs 60 meters each sprint.  How many total meters does he run a week?\n\nSolution:\n\n## Step 1:",
+                    "answer": "540",
+                    "completion": " $60 = 3 * 20$\n\n:::= $60 = 3 * 20$\n\n## Step 2: $60 = 3 * 20$\n\n:::= $60 = 3 * 20$\n\n## Step 3: $60 = 3 * 20$\n\n:::= $60 = 3 * 20$\n\n## Step 4: $60 = 3 * 20$\n\n:::= $60 = 3 * 20$\n\n## Step 5: $60 = 3 * 20$\n\n:::= $60 = 3 * 20$\n\n## Step 6: $60 = 3 * 20$\n\n:::= $60 = 3 * 20$\n\n## Step 7: $60 = 3 * 20$\n\n:::= $60 = 3 * 20$\n\n## Step 8: $60 = 3 * 20$\n\n:::= $60 = 3 * 20$\n\n## Step 9: $60 = 3 * 20$\n\n:::= $60 = 3 * 20$\n\n## Step 10: $60 = 3 * 20$\n\n:::= $60 = 3 * 20$\n\n therefore, the final answer is: $\\boxed{60}$.",
+                    "correct": false,
+                    "format_correct": true
+                },
+                {
+                    "prompt": "You are a math problem-solving assistant. Your task is to solve the given math problem by providing a clear, step-by-step solution.\n\nYou must adhere strictly to the following formatting rules:\n\n1.  **Blank Line Pre-Header:** ALWAYS place a single blank line (`\\n\\n`) immediately before each `## Step` header.\n    - **Correct:**\n      ...some text.\\n\\n## Step 3\n    - **Incorrect:**\n      ...some text.\\n## Step 3\n      \n2.  **Final Answer:** ALWAYS end your entire response with the phrase `Therefore, the final answer is: $\\boxed{answer}`. This must be the absolute last text in your output.\n\n**Example of the required format:**\n---\n## Step 1 [Explanation and calculations for the first step.]\n\n## Step 2 [Explanation and calculations for the second step.]\n\nTherefore, the final answer is: $\\boxed{The Final Answer}$\n---\n\nNow, solve the following problem, strictly adhering to all formatting rules:\n\n\nProblem: Every day, Wendi feeds each of her chickens three cups of mixed chicken feed, containing seeds, mealworms and vegetables to help keep them healthy.  She gives the chickens their feed in three separate meals. In the morning, she gives her flock of chickens 15 cups of feed.  In the afternoon, she gives her chickens another 25 cups of feed.  How many cups of feed does she need to give her chickens in the final meal of the day if the size of Wendi's flock is 20 chickens?\n\nSolution:\n\n## Step 1:",
+                    "answer": "20",
+                    "completion": "  15 + 20 = 35\n\n# , = 8 = 16\n\n## Step 2:  8 + 20 = 28,\n\n# , = 14 = 20\n\n## Step 3:  20 + 20 = 40,\n\n# , = 26 = 28\n\n## Step 4:  40 + 20 = 60,\n\n# , = 32 = 36\n\n## Step 5:  60 + 20 = 80,\n\n# , = 44 = 44\n\n## Step 6:  80 + 20 = 100,\n\n# , = 50 = 52\n\n## Step 7:  100 + 20 = 120,\n\n# , = 62 = 64\n\n## Step 8:  120 + 20 = 140,\n\n# , = 74 = 76\n\n## Step 9:  140 + 20 = 160,\n\n# , = 86 = 88\n\n## Step 10:  160 + 20 = 180,\n\n# , = 98 = 90:\n\n:\n\n## Step 11:  20 + 20 = 40,\n\n# , = 10 = 12:\n\n:\n\n## Step 13:  40 + 20 = 60,\n\n# , = 12 = 14:\n\n:\n\n## Step 14:  60 + 20 = 80,\n\n# , = 14 = 16:\n\n:\n\n## Step 15:  80 + 20 = 100,\n\n# , = 16 = 18:\n\n:\n\n:\n\n## Step 20:  160 + 20 = 180,\n\n# , = 18 = 20:\n\n:\n\n: , 180 + 20 = 200,\n\n\n\n: , 200 + 20 = 220,\n\n\\_, := 220 = 220:\n\n:\n\nTherefore, the final answer is: $\\boxed{22",
+                    "correct": false,
+                    "format_correct": false
+                }
+            ]
+        }
+    }
+}
