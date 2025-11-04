@@ -12,9 +12,10 @@ import logging
 logging.getLogger("vllm").setLevel(logging.WARNING)
 
 import hydra
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 
 from utils.logging_utils import setup_file_logging
+from utils.geo_vllm import apply_geo_patch, restore_vllm
 
 
 @hydra.main(version_base=None, config_path="config", config_name="train")
@@ -23,6 +24,10 @@ def main(cfg: DictConfig) -> None:
 
     from utils.patcher import apply_patch
     apply_patch(cfg.rl.algorithm)
+    if (cfg.rl.algorithm or "").lower() == "geogrpo":
+        apply_geo_patch()
+    else:
+        restore_vllm()
     from utils.data import set_tokenizer_name
     set_tokenizer_name(cfg.model.model_name)
     # Patch the trl trainers to use FastLanguageModel
@@ -62,10 +67,10 @@ def main(cfg: DictConfig) -> None:
     # Initialize the trainer
     rlparams = {
         "algorithm": cfg.rl.algorithm,
+        "geo_lambda": cfg.rl.geo_lambda,
         "max_prompt_length": cfg.rl.max_prompt_length,
         "max_completion_length": cfg.rl.max_completion_length,
         "num_generations": cfg.rl.num_generations,
-        "num_generations_grad": cfg.rl.num_generations_grad,
         "max_steps": cfg.rl.max_steps,
         "save_steps": cfg.rl.save_steps,
         "beta": cfg.rl.beta,
@@ -77,7 +82,6 @@ def main(cfg: DictConfig) -> None:
         "loss_type": cfg.rl.loss_type,
         "mask_truncated_completions": cfg.rl.mask_truncated_completions
     }
-    # SMC hyperparameters are now carried inside generation_kwargs when enabled.
     if cfg.wandb.enable:
         import wandb
         wandb_run = wandb.init(
@@ -91,14 +95,10 @@ def main(cfg: DictConfig) -> None:
     from inspect import signature
     valid_params = signature(Config.__init__).parameters.keys()
     rlparams = {k: v for k, v in rlparams.items() if k in valid_params}
-    # Build generation kwargs for SMC (confidence-based) only if enabled
-    gen_kwargs = {}
-    if cfg.smc.use_smc:
-        smc_cfg = OmegaConf.to_container(cfg.smc, resolve=True)
-        gen_kwargs["smc"] = smc_cfg
-    prm_cfg = cfg.get("prm")
-    if prm_cfg and prm_cfg.get("use_prm"):
-        gen_kwargs["prm"] = OmegaConf.to_container(prm_cfg, resolve=True)
+    gen_kwargs: dict[str, object] = {}
+    if (cfg.rl.algorithm or "").lower() == "geogrpo":
+        gen_kwargs["geo_lambda"] = cfg.rl.geo_lambda
+    generation_kwargs = gen_kwargs or None
 
     training_args = Config(
         learning_rate = cfg.optim.learning_rate,
@@ -117,14 +117,10 @@ def main(cfg: DictConfig) -> None:
         max_grad_norm = cfg.optim.max_grad_norm,
         report_to = "wandb" if cfg.wandb.enable else None,
         output_dir = f"checkpoints/{cfg.wandb.run_name}",
-        generation_kwargs=gen_kwargs,
+        generation_kwargs=generation_kwargs,
         **rlparams,
     )
-    reward_funcs = [correctness_reward_func]
-    if cfg.rl.dataset in {"gsm8k", "math"}:
-        reward_funcs.extend([format_reward_func, xmlcount_reward_func])
-    # if cfg.rl.dataset == "gsm8k":
-    #     reward_funcs = reward_funcs + [format_reward_func, xmlcount_reward_func]
+    reward_funcs = [correctness_reward_func, format_reward_func, xmlcount_reward_func]
     trainer = Trainer(
         model = model,
         processing_class = tokenizer,

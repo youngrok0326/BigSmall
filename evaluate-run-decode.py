@@ -1,4 +1,4 @@
-"""Run custom decoding for every LoRA checkpoint without reloading the base model."""
+"""Run decoding for every LoRA checkpoint without reloading the base model."""
 
 import importlib.util
 import json
@@ -83,8 +83,6 @@ def _build_decode_cfg(cfg: DictConfig, run_name: str) -> DictConfig:
         "max_prompt_length": cfg.get("max_prompt_length"),
         "eval": _to_container(cfg.eval),
         "default_decode": _to_container(cfg.default_decode),
-        "custom_decode": _to_container(cfg.custom_decode),
-        "prm": _to_container(cfg.prm),
         "wandb": _to_container(cfg.wandb),
     }
     decode_dict["wandb"]["run_name"] = run_name

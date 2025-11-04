@@ -17,10 +17,10 @@ model:
 wandb:
   enable: true
   project_name: "GeoGRPO"
-  run_name: debug #"Instruct-GSM8K-16-16-Run1"
+  run_name: GeoGRPO_1.5B_T512_N16_lambda0.01 #"Instruct-GSM8K-16-16-Run1"
 rl:
   algorithm: "GeoGRPO" # GRPO, SMCGRPO, "GeoGRPO"
-  geo_lambda: 0.5
+  geo_lambda: 0.01
   dataset: "math"
   max_prompt_length: 512
   max_completion_length: 512 #TODO: debugging temporarily

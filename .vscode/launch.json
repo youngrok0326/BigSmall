@@ -12,9 +12,11 @@
         "wandb.enable=false"
       ],
       "env": {
-        "CUDA_VISIBLE_DEVICES": "2",
+        "CUDA_VISIBLE_DEVICES": "7",
         "WANDB_DISABLED": "true",
-        "CUDA_LAUNCH_BLOCKING": "1"
+        // "CUDA_LAUNCH_BLOCKING": "1",
+        // "TORCH_USE_CUDA_DSA": "1",
+        // "TORCH_LOGS": "+cudagraphs,+inductor"
       },
       "justMyCode": false,
       "subProcess": true

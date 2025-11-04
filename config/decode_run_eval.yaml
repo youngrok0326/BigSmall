@@ -33,8 +33,7 @@ eval:
   num_generations: 8
   max_new_tokens: 512
   pass_k: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-  run_default: false
-  run_custom: true
+  run_default: true
   default_use_vllm: true
 
 default_decode:
@@ -42,31 +41,6 @@ default_decode:
   temperature: 0.9
   top_p: 1.0
   top_k: 0
-
-custom_decode:
-  use_smc: true
-  step_token: "\n\n"
-  stop_token: "\\boxed"
-  max_steps: 1000
-  smc_confidence_eta: 1.0
-  smc_confidence_window_size: 512
-  smc_topk: 1
-  return_eos: true
-  return_all: false
-  return_all_limit_per_group: null
-  random_sampling: false
-  confidence:
-    scoring: "prob"
-    cdf_alpha: 0.25
-    group: "geo"
-    aggregation: "last"
-
-prm:
-  use_prm: false
-  model_name: "Qwen/Qwen2.5-Math-PRM-7B"
-  aggregation: "prod"
-  gpu_memory_utilization: 1.0
-  cuda: 5
 
 wandb:
   enable: true

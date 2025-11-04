@@ -14,14 +14,11 @@
 
 import copy
 import inspect
-import math
 import os
 import re
 import textwrap
 import warnings
 from collections import defaultdict, deque
-from dataclasses import dataclass
-from enum import Enum
 from collections.abc import Sequence, Sized
 from contextlib import nullcontext
 from functools import partial
@@ -81,7 +78,6 @@ if is_liger_kernel_available():
 if is_vllm_available():
     from vllm import LLM, SamplingParams
     from vllm.sampling_params import GuidedDecodingParams
-    from trainer.vllm_smc import StepGeneration, SMCVLLM, build_prm_model
 
 if is_wandb_available():
     import wandb
@@ -90,334 +86,6 @@ if is_wandb_available():
 # rewards. When it's a string, it's a model ID, so it's loaded as a pretrained model.
 RewardFunc = Union[str, PreTrainedModel, Callable[[list, list], list[float]]]
 
-
-class _SMCTrajectoryKind(str, Enum):
-    LEGACY = "legacy"
-    DROPPED = "dropped"
-
-
-@dataclass(slots=True)
-class _SMCBatchMeta:
-    group_counts: list[int]
-    group_indices: list[int]
-    drop_steps: list[int]
-    total_steps: list[int]
-    kinds: list[_SMCTrajectoryKind]
-    confidences: list[float]
-
-    @property
-    def num_groups(self) -> int:
-        return len(self.group_counts)
-
-    @property
-    def num_samples(self) -> int:
-        return len(self.group_indices)
-
-
-def _smc_is_bundle(payload: Any) -> bool:
-    return isinstance(payload, dict) and "completions" in payload and "group_sizes" in payload
-
-
-def _smc_build_uniform_meta(
-    num_samples: int,
-    num_generations: int,
-    fallback_steps: int,
-    confidences: Optional[Sequence[float]] = None,
-) -> _SMCBatchMeta:
-    if num_generations <= 0:
-        raise ValueError("num_generations must be positive")
-    if num_samples % num_generations != 0:
-        raise ValueError(
-            f"Batch size {num_samples} must be divisible by num_generations {num_generations}."
-        )
-    num_groups = num_samples // num_generations
-    group_counts = [num_generations] * num_groups
-    group_indices = [group for group in range(num_groups) for _ in range(num_generations)]
-    drop_steps = [-1] * len(group_indices)
-    total_steps = [fallback_steps] * len(group_indices)
-    kinds = [_SMCTrajectoryKind.LEGACY] * len(group_indices)
-    if confidences is None:
-        confidences = [1.0 for _ in range(num_samples)]
-    if len(confidences) != num_samples:
-        raise ValueError("confidences length must match num_samples")
-    return _SMCBatchMeta(
-        group_counts,
-        group_indices,
-        drop_steps,
-        total_steps,
-        kinds,
-        list(map(float, confidences)),
-    )
-
-
-def _smc_flatten_bundle(
-    payload: dict[str, Any],
-    fallback_steps: int,
-    limit_per_group: Optional[int] = None,
-) -> tuple[list[list[int]], _SMCBatchMeta]:
-    completions_by_group: list[list[list[int]]] = payload.get("completions", [])  # type: ignore[assignment]
-    completion_confidences: list[list[float]] = payload.get("completion_confidences", [])  # type: ignore[assignment]
-    saved: list[list[tuple[int, list[int]]]] = payload.get("saved", [])  # type: ignore[assignment]
-    saved_confidences: list[list[float]] = payload.get("saved_confidences", [])  # type: ignore[assignment]
-    reasoning_steps: list[int] = payload.get("group_reasoning_steps", [])  # type: ignore[assignment]
-
-    flattened: list[list[int]] = []
-    group_counts: list[int] = []
-    group_indices: list[int] = []
-    drop_steps: list[int] = []
-    total_steps: list[int] = []
-    kinds: list[_SMCTrajectoryKind] = []
-    confidences: list[float] = []
-
-    if limit_per_group is not None and limit_per_group < 0:
-        limit_per_group = 0
-
-    def _sample_extras(
-        extras: list[tuple[int, list[int]]],
-        confs: list[float],
-        limit: Optional[int],
-    ) -> tuple[list[tuple[int, list[int]]], list[float]]:
-        if not extras or limit is None or limit >= len(extras):
-            return extras, confs
-        if limit <= 0:
-            return [], []
-
-        by_step: dict[int, list[int]] = {}
-        for idx, (step_idx, _seq) in enumerate(extras):
-            step_val = int(step_idx)
-            by_step.setdefault(step_val, []).append(idx)
-
-        total = sum(len(indices) for indices in by_step.values())
-        if total <= limit:
-            return extras
-
-        allocations: dict[int, int] = {}
-        fractional: list[tuple[float, int]] = []
-        for step_val, indices in by_step.items():
-            raw = len(indices) * limit / total
-            assign = min(len(indices), int(math.floor(raw)))
-            allocations[step_val] = assign
-            fractional.append((raw - assign, step_val))
-
-        assigned = sum(allocations.values())
-        remaining = limit - assigned
-        if remaining > 0:
-            fractional.sort(key=lambda item: (-item[0], item[1]))
-            for _frac, step_val in fractional:
-                if remaining == 0:
-                    break
-                capacity = len(by_step[step_val]) - allocations[step_val]
-                if capacity <= 0:
-                    continue
-                take = min(capacity, remaining)
-                allocations[step_val] += take
-                remaining -= take
-        if remaining > 0:
-            for step_val in sorted(by_step.keys()):
-                if remaining == 0:
-                    break
-                capacity = len(by_step[step_val]) - allocations[step_val]
-                if capacity <= 0:
-                    continue
-                take = min(capacity, remaining)
-                allocations[step_val] += take
-                remaining -= take
-
-        selected_indices: list[int] = []
-        for step_val, indices in by_step.items():
-            take = allocations.get(step_val, 0)
-            if take <= 0:
-                continue
-            perm = torch.randperm(len(indices))
-            chosen = perm[:take].tolist()
-            selected_indices.extend(indices[idx] for idx in chosen)
-
-        selected_indices.sort()
-        return [extras[idx] for idx in selected_indices], [confs[idx] for idx in selected_indices]
-
-    for group_idx, primary in enumerate(completions_by_group):
-        extras = saved[group_idx] if group_idx < len(saved) else []
-        extras_conf = saved_confidences[group_idx] if group_idx < len(saved_confidences) else []
-        extras, extras_conf = _sample_extras(extras, extras_conf, limit_per_group)
-        if len(extras_conf) < len(extras):
-            raise RuntimeError(
-                f"Missing confidence for saved completions in group {group_idx}: "
-                f"expected {len(extras)} confidences but received {len(extras_conf)}."
-            )
-        step_cap = int(reasoning_steps[group_idx]) if group_idx < len(reasoning_steps) else fallback_steps
-        primary_conf = []
-        if completion_confidences:
-            if group_idx < len(completion_confidences):
-                primary_conf = completion_confidences[group_idx]
-            else:
-                primary_conf = []
-
-        for seq_idx, seq in enumerate(primary):
-            flattened.append(seq)
-            group_indices.append(group_idx)
-            drop_steps.append(-1)
-            total_steps.append(step_cap)
-            kinds.append(_SMCTrajectoryKind.LEGACY)
-            if not primary_conf or seq_idx >= len(primary_conf):
-                raise RuntimeError(
-                    f"Missing confidence for completion {seq_idx} in group {group_idx}: "
-                    f"expected {len(primary)} confidences but received {len(primary_conf)}."
-                )
-            confidences.append(float(primary_conf[seq_idx]))
-
-        for (step_idx, seq), conf in zip(extras, extras_conf):
-            flattened.append(seq)
-            group_indices.append(group_idx)
-            drop_steps.append(int(step_idx))
-            total_steps.append(max(step_cap, int(step_idx) + 1))
-            kinds.append(_SMCTrajectoryKind.DROPPED)
-            confidences.append(float(conf))
-
-        group_counts.append(len(primary) + len(extras))
-
-    meta = _SMCBatchMeta(group_counts, group_indices, drop_steps, total_steps, kinds, confidences)
-    return flattened, meta
-
-
-def _smc_expand_batch(
-    inputs: Sequence[dict[str, Any]],
-    prompts: Sequence[Any],
-    original_prompts: Sequence[Any],
-    prompts_text: Sequence[str],
-    images: Optional[Sequence[Any]],
-    num_generations: int,
-    meta: _SMCBatchMeta,
-) -> tuple[list[dict[str, Any]], list[Any], list[Any], list[str], Optional[list[Any]]]:
-    if num_generations <= 0:
-        raise ValueError("num_generations must be positive")
-    if len(inputs) % num_generations != 0:
-        raise ValueError("SMC bundle size mismatch: batch is not a multiple of num_generations")
-
-    num_groups = len(inputs) // num_generations
-    base_inputs = [copy.deepcopy(inputs[g * num_generations]) for g in range(num_groups)]
-    base_prompts = [copy.deepcopy(prompts[g * num_generations]) for g in range(num_groups)]
-    base_original_prompts = [copy.deepcopy(original_prompts[g * num_generations]) for g in range(num_groups)]
-    base_prompts_text = [prompts_text[g * num_generations] for g in range(num_groups)]
-    base_images = None if images is None else [images[g * num_generations] for g in range(num_groups)]
-
-    expanded_inputs: list[dict[str, Any]] = []
-    expanded_prompts: list[Any] = []
-    expanded_original_prompts: list[Any] = []
-    expanded_prompts_text: list[str] = []
-    expanded_images: Optional[list[Any]] = [] if base_images is not None else None
-
-    for group_idx, count in enumerate(meta.group_counts):
-        for _ in range(count):
-            expanded_inputs.append(copy.deepcopy(base_inputs[group_idx]))
-            expanded_prompts.append(copy.deepcopy(base_prompts[group_idx]))
-            expanded_original_prompts.append(copy.deepcopy(base_original_prompts[group_idx]))
-            expanded_prompts_text.append(base_prompts_text[group_idx])
-            if expanded_images is not None and base_images is not None:
-                expanded_images.append(base_images[group_idx])
-
-    return expanded_inputs, expanded_prompts, expanded_original_prompts, expanded_prompts_text, expanded_images
-
-
-def _smc_drop_bonus(
-    kinds: Sequence[_SMCTrajectoryKind],
-    drop_steps: Sequence[int],
-    total_steps: Sequence[int],
-    scheme: str,
-    device: torch.device,
-) -> torch.Tensor:
-    reward = torch.zeros(len(kinds), dtype=torch.float32, device=device)
-    if not kinds:
-        return reward
-    drop_mask = torch.tensor([kind == _SMCTrajectoryKind.DROPPED for kind in kinds], dtype=torch.bool, device=device)
-    if not drop_mask.any():
-        return reward
-    drop_tensor = torch.tensor(drop_steps, dtype=torch.float32, device=device)
-    total_tensor = torch.tensor(total_steps, dtype=torch.float32, device=device)
-    denom = torch.where(total_tensor <= 0, torch.ones_like(total_tensor), total_tensor)
-    progress = torch.clamp(drop_tensor[drop_mask] + 1.0, min=0.0) / denom[drop_mask]
-    scheme = scheme.lower()
-    if scheme == "penalty":
-        reward[drop_mask] = -(1.0 - progress)
-    else:
-        # Default to proportional progress
-        reward[drop_mask] = progress
-    return reward
-
-
-def _max_variance_subset(rewards: torch.Tensor, subset_size: int) -> list[int]:
-    if subset_size <= 0 or rewards.numel() == 0:
-        return []
-    if rewards.numel() <= subset_size:
-        return list(range(rewards.numel()))
-    if subset_size == 1:
-        return [int(torch.argmax(rewards).item())]
-
-    sorted_vals, sorted_indices = torch.sort(rewards, descending=True)
-    sorted_indices = sorted_indices.tolist()
-
-    def _variance(idx_list: list[int]) -> float:
-        if not idx_list:
-            return float("-inf")
-        selected = rewards[idx_list]
-        return float(torch.var(selected, unbiased=False).item())
-
-    best_indices = sorted_indices[:subset_size]
-    best_variance = _variance(best_indices)
-
-    for i in range(subset_size + 1):
-        prefix = sorted_indices[:i]
-        suffix_count = subset_size - i
-        if suffix_count < 0:
-            continue
-        suffix = sorted_indices[-suffix_count:] if suffix_count > 0 else []
-        candidate = prefix + suffix
-        if len(candidate) != subset_size:
-            continue
-        candidate_variance = _variance(candidate)
-        if candidate_variance > best_variance:
-            best_variance = candidate_variance
-            best_indices = candidate
-
-    return best_indices
-
-
-def _build_legacy_keep_mask(
-    group_indices: Sequence[int],
-    kinds: Sequence[str],
-    rewards: torch.Tensor,
-    num_generations_grad: int,
-) -> list[bool]:
-    rewards = rewards.detach()
-    total = len(group_indices)
-    keep_mask: list[bool] = [False] * total
-    if total == 0:
-        return keep_mask
-
-    dropped_label = _SMCTrajectoryKind.DROPPED.value
-    legacy_label = _SMCTrajectoryKind.LEGACY.value
-
-    groups: dict[int, list[int]] = defaultdict(list)
-    for idx, (group_idx, kind) in enumerate(zip(group_indices, kinds)):
-        groups[int(group_idx)].append(idx)
-        if kind == dropped_label:
-            keep_mask[idx] = True
-        elif kind not in {legacy_label, dropped_label}:
-            keep_mask[idx] = True
-
-    for _, indices in groups.items():
-        legacy_indices = [idx for idx in indices if kinds[idx] == legacy_label]
-        if not legacy_indices:
-            continue
-        if len(legacy_indices) <= num_generations_grad:
-            for pos in legacy_indices:
-                keep_mask[pos] = True
-            continue
-        legacy_rewards = rewards[legacy_indices]
-        selected_rel = _max_variance_subset(legacy_rewards, num_generations_grad)
-        for rel_idx in selected_rel:
-            keep_mask[legacy_indices[rel_idx]] = True
-
-    return keep_mask
 
 class RepeatSampler(Sampler):
     """
@@ -962,24 +630,6 @@ class GRPOTrainer(Trainer):
         self.max_prompt_length = args.max_prompt_length
         self.max_completion_length = args.max_completion_length  # = |o_i| in the GRPO paper
         self.num_generations = args.num_generations  # = G in the GRPO paper
-        self.num_generations_grad = args.num_generations_grad
-        self.num_generations_grad_raw = args.num_generations_grad
-        if self.num_generations_grad is None:
-            self.num_generations_grad = self.num_generations
-        self._downsample_disabled = (
-            self.num_generations_grad_raw is not None and self.num_generations_grad_raw <= 0
-        )
-        self._num_generations_grad_effective = (
-            self.num_generations if self._downsample_disabled else self.num_generations_grad
-        )
-        if self._downsample_disabled:
-            self.num_generations_grad = self._num_generations_grad_effective
-        self._smc_drop_coef = 0.1
-        self._smc_drop_reward_scheme = "progress"
-        self._smc_return_all_limit: Optional[int] = None
-        self._smc_return_eos: bool = False
-        self._smc_self_reward: bool = False
-        self._enable_drop_bonus = False
         self.temperature = args.temperature
         self.top_p = args.top_p
         self.top_k = args.top_k
@@ -1103,8 +753,6 @@ class GRPOTrainer(Trainer):
             "completion": deque(maxlen=args.generation_batch_size),
             "rewards": defaultdict(lambda: deque(maxlen=args.generation_batch_size)),
             "advantages": deque(maxlen=args.generation_batch_size),
-            "self_confidence": deque(maxlen=args.generation_batch_size),
-            "self_weighted_reward": deque(maxlen=args.generation_batch_size),
         }
 
         # Ensure each process receives a unique seed to prevent duplicate completions when generating with
@@ -1154,7 +802,7 @@ class GRPOTrainer(Trainer):
                 os.environ["MASTER_PORT"] = os.environ.get("MASTER_PORT", "12345")
 
                 if self.max_prompt_length is not None and self.max_completion_length is not None:
-                    max_model_len = self.max_prompt_length + self.max_completion_length + 1
+                    max_model_len = self.max_prompt_length + self.max_completion_length
                 else:
                     max_model_len = None
                 self.llm = LLM(
@@ -1203,38 +851,6 @@ class GRPOTrainer(Trainer):
             if args.generation_kwargs is not None:
                 generation_kwargs.update(args.generation_kwargs)
             self.generation_config = GenerationConfig(**generation_kwargs)
-            
-            # Pull SMC params from generation_kwargs if provided
-            _smc_cfg = {}
-            if getattr(self.args, "generation_kwargs", None):
-                _smc_cfg = (self.args.generation_kwargs or {}).get("smc", {})
-            return_all_cfg = bool(_smc_cfg.get("return_all", False))
-            self._smc_return_eos = bool(_smc_cfg.get("return_eos", self._smc_return_eos))
-            self._smc_self_reward = bool(_smc_cfg.get("self_reward", self._smc_self_reward))
-            drop_scheme = str(_smc_cfg.get("drop_reward_scheme", self._smc_drop_reward_scheme)).lower()
-            if drop_scheme not in {"progress", "penalty"}:
-                drop_scheme = "progress"
-            self._smc_drop_reward_scheme = drop_scheme
-            limit_cfg = _smc_cfg.get("return_all_limit_per_group", self._smc_return_all_limit)
-            if limit_cfg is None:
-                self._smc_return_all_limit = None
-            else:
-                self._smc_return_all_limit = max(int(limit_cfg), 0)
-            self._smc_drop_coef = float(_smc_cfg.get("drop_reward_coef", self._smc_drop_coef))
-            self._set_drop_bonus_enabled(return_all_cfg)
-
-            smc_params = {
-                "use_smc": bool(_smc_cfg),
-                "num_generations": self.args.num_generations,
-                "smc_beta": _smc_cfg.get("smc_beta", 1.0),
-                "smc_warmup_tokens": getattr(self.args, "smc_warmup_tokens", 0),
-                "smc_confidence_eta": _smc_cfg.get("smc_confidence_eta", 1.0),
-                "smc_resample_threshold": getattr(self.args, "smc_resample_threshold", 0.5),
-                "smc_confidence_window_size": _smc_cfg.get("smc_confidence_window_size", 50),
-                "smc_topk": _smc_cfg.get("smc_topk", -1),
-            }
-            for key, value in smc_params.items():
-                setattr(self.generation_config, key, value)
 
         # Gradient accumulation requires scaled loss. Normally, loss scaling in the parent class depends on whether the
         # model accepts loss-related kwargs. Since we compute our own loss, this check is irrelevant. We set
@@ -1264,7 +880,6 @@ class GRPOTrainer(Trainer):
                     self.reward_funcs[i] = self.accelerator.prepare_model(
                         reward_func, evaluation_mode=True, device_placement=True
                     )
-                    
 
     def _set_signature_columns_if_needed(self):
         # If `self.args.remove_unused_columns` is True, non-signature columns are removed.
@@ -1465,14 +1080,11 @@ class GRPOTrainer(Trainer):
         image_grid_thw=None,
         pixel_attention_mask=None,
         image_sizes=None,
-    ) -> tuple[torch.Tensor, Optional[torch.Tensor], int]:
-        """Compute log-probs/entropies and return the effective completion length used."""
-
+    ) -> dict[str, Optional[torch.Tensor]]:
+        """Compute log-probs and (optionally) entropies for each token."""
         batch_size = batch_size or input_ids.size(0)  # Chunk inputs into smaller batches to reduce memory peak
-        all_logps: list[torch.Tensor] = []
-        all_entropies: list[torch.Tensor] = []
-        effective_keep = max(int(logits_to_keep), 1)
-
+        all_logps = []
+        all_entropies = []
         for start in range(0, input_ids.size(0), batch_size):
             input_ids_batch = input_ids[start : start + batch_size]
             attention_mask_batch = attention_mask[start : start + batch_size]
@@ -1500,23 +1112,13 @@ class GRPOTrainer(Trainer):
             logits = model(**model_inputs).logits
             # Exclude the last value: it corresponds to the next token pred
             logits = logits[:, :-1, :]  # (B, L-1, H)
-
-            chunk_keep = min(
-                logits_to_keep,
-                logits.size(1),
-                input_ids_batch.size(1),
-            )
-            chunk_keep = max(int(chunk_keep), 1)
-            effective_keep = min(effective_keep, chunk_keep)
-
-            # Only keep the last chunk_keep tokens. For models that support logits_to_keep, this is a no-op.
-            logits = logits[:, -chunk_keep:, :]  # (B, chunk_keep, H)
-
+            # Only keep the last logits_to_keep. For model that support logits_to_keep, this is a no-op.
+            logits = logits[:, -logits_to_keep:, :]  # (B, logits_to_keep, H)
             # Divide logits by sampling temperature.
             # See https://huggingface.co/blog/the_n_implementation_details_of_rlhf_with_ppo#policy-training-implementation-details
             logits = logits / self.temperature
 
-            completion_ids = input_ids_batch[:, -chunk_keep:]
+            completion_ids = input_ids_batch[:, -logits_to_keep:]
             logps = selective_log_softmax(logits, completion_ids)  # compute logprobs
             all_logps.append(logps)
 
@@ -1525,83 +1127,9 @@ class GRPOTrainer(Trainer):
                     entropies = entropy_from_logits(logits)
                 all_entropies.append(entropies)
 
-        if effective_keep < logits_to_keep:
-            all_logps = [logp[:, -effective_keep:] for logp in all_logps]
-            if compute_entropy:
-                all_entropies = [entropy[:, -effective_keep:] for entropy in all_entropies]
-
         logps = torch.cat(all_logps, dim=0)
         entropies = torch.cat(all_entropies, dim=0) if compute_entropy else None
-        return logps, entropies, effective_keep
-
-    def _unpack_logps_entropy_outputs(
-        self,
-        outputs: Union[
-            tuple[torch.Tensor, Optional[torch.Tensor], int],
-            tuple[torch.Tensor, Optional[torch.Tensor]],
-            torch.Tensor,
-            dict[str, Any],
-        ],
-        logits_to_keep: Union[int, torch.Tensor],
-    ) -> tuple[torch.Tensor, Optional[torch.Tensor], int]:
-        """Normalize legacy return shapes into (logps, entropies, keep_len)."""
-
-        def _to_int(value: Union[int, torch.Tensor, None], fallback: int) -> int:
-            if value is None:
-                return fallback
-            if isinstance(value, torch.Tensor):
-                if value.numel() != 1:
-                    raise ValueError("Expected scalar tensor for keep length.")
-                value = value.detach().cpu().item()
-            try:
-                return max(int(value), 1)
-            except (TypeError, ValueError):
-                return fallback
-
-        if isinstance(logits_to_keep, torch.Tensor):
-            default_keep = _to_int(logits_to_keep, 1)
-        else:
-            try:
-                default_keep = max(int(logits_to_keep), 1)
-            except (TypeError, ValueError):
-                default_keep = 1
-
-        logps: Optional[torch.Tensor] = None
-        entropies: Optional[torch.Tensor] = None
-        keep_len: int = default_keep
-
-        if isinstance(outputs, dict):
-            logps = (
-                outputs.get("logps")
-                or outputs.get("per_token_logps")
-                or outputs.get("logits")
-                or outputs.get("per_token_logits")
-            )
-            entropies = outputs.get("entropies")
-            keep_len = _to_int(
-                outputs.get("keep_len") or outputs.get("effective_keep") or outputs.get("logits_to_keep"),
-                default_keep,
-            )
-        else:
-            if not isinstance(outputs, tuple):
-                outputs = (outputs,)
-
-            output_len = len(outputs)
-            if output_len >= 3:
-                logps, entropies, keep_component = outputs[:3]
-                keep_len = _to_int(keep_component, default_keep)
-            elif output_len == 2:
-                logps, entropies = outputs
-            elif output_len == 1:
-                (logps,) = outputs
-            else:
-                raise ValueError("Unexpected empty output from _get_per_token_logps_and_entropies.")
-
-        if logps is None:
-            raise ValueError("Missing log-probabilities from _get_per_token_logps_and_entropies.")
-
-        keep_len = _to_int(keep_len, default_keep)
-        return logps, entropies, keep_len
+        return logps, entropies
 
     def _fix_param_name_to_vllm(self, name, extra_prefixes: Optional[list[str]] = None):
         extra_prefixes = extra_prefixes or []
@@ -1726,35 +1254,6 @@ class GRPOTrainer(Trainer):
         elif self.vllm_mode == "colocate":
             self.llm.reset_prefix_cache()
 
-    def _current_drop_reward_name(self) -> str:
-        return "drop_penalty" if self._smc_drop_reward_scheme == "penalty" else "drop_progress"
-
-    def _set_drop_bonus_enabled(self, enable: bool) -> None:
-        """Synchronize the drop-reward head with the generator configuration and scheme."""
-        enable = bool(enable)
-        dtype = self.reward_weights.dtype
-        device = self.reward_weights.device
-        reward_names = list(self.reward_func_names)
-        weights_list = [float(w) for w in self.reward_weights.tolist()]
-
-        drop_names = {"drop_progress", "drop_penalty"}
-        # Remove any previously registered drop reward to avoid duplicates when scheme changes.
-        idx = 0
-        while idx < len(reward_names):
-            if reward_names[idx] in drop_names:
-                reward_names.pop(idx)
-                weights_list.pop(idx)
-                continue
-            idx += 1
-
-        if enable:
-            reward_names.append(self._current_drop_reward_name())
-            weights_list.append(float(self._smc_drop_coef))
-
-        self.reward_func_names = reward_names
-        self.reward_weights = torch.tensor(weights_list, dtype=dtype, device=device)
-        self._enable_drop_bonus = enable
-
     @profiling_decorator
     def _prepare_inputs(
         self, generation_batch: dict[str, Union[torch.Tensor, Any]]
@@ -1843,160 +1342,6 @@ class GRPOTrainer(Trainer):
         rewards_per_func = gather(rewards_per_func)
         return rewards_per_func
 
-    @torch.no_grad()
-    def _generate_completions_smc(self, unwrapped_model: nn.Module, prompt_ids: torch.Tensor, prompt_mask: torch.Tensor) -> dict:
-        """Wrapper to call the external TSMC generator function."""
-        return self.smc_generator.generate(unwrapped_model, prompt_ids, prompt_mask)
-
-    def _ensure_smc_vllm(self) -> "SMCVLLM":
-        smc_cfg: dict[str, Any] = {}
-        if getattr(self.args, "generation_kwargs", None):
-            smc_cfg = (self.args.generation_kwargs or {}).get("smc", {})
-            prm_cfg = (self.args.generation_kwargs or {}).get("prm", {})
-        else:
-            prm_cfg = {}
-
-        step_token = smc_cfg.get("step_token")
-        stop_token = smc_cfg.get("stop_token")
-        max_steps = int(smc_cfg.get("max_steps", 32))
-        tokens_per_step = smc_cfg.get("tokens_per_step")
-        if tokens_per_step is not None:
-            tokens_per_step = int(tokens_per_step)
-        confidence_cfg = smc_cfg.get("confidence", {})
-        conf_scoring = str(confidence_cfg.get("scoring", smc_cfg.get("scoring", "entropy")))
-        conf_group = str(confidence_cfg.get("group", "mean"))
-        conf_aggregation = str(confidence_cfg.get("aggregation", "last"))
-        conf_from_base = bool(confidence_cfg.get("from_base_model", False))
-        conf_cap_val = confidence_cfg.get("cap")
-        if conf_cap_val is None:
-            conf_cap_val = smc_cfg.get("confidence_cap")
-        conf_cap = float(conf_cap_val) if conf_cap_val is not None else None
-        return_all = bool(smc_cfg.get("return_all", False))
-        return_eos = bool(smc_cfg.get("return_eos", False))
-        self._smc_return_eos = return_eos
-        self._smc_self_reward = bool(smc_cfg.get("self_reward", self._smc_self_reward))
-        random_sampling = bool(smc_cfg.get("random_sampling", False))
-        smc_topk = int(smc_cfg.get("smc_topk", -1))
-        conf_window = int(smc_cfg.get("smc_confidence_window_size", 512))
-        conf_eta = float(smc_cfg.get("smc_confidence_eta", 1.0))
-        cdf_alpha_val = confidence_cfg.get("cdf_alpha") if confidence_cfg else None
-        if cdf_alpha_val is None:
-            cdf_alpha_val = smc_cfg.get("cdf_alpha", 0.25)
-        cdf_alpha = float(cdf_alpha_val)
-        include_stop = smc_cfg.get("include_stop_str_in_output", True)
-        drop_scheme = str(smc_cfg.get("drop_reward_scheme", self._smc_drop_reward_scheme)).lower()
-        if drop_scheme not in {"progress", "penalty"}:
-            drop_scheme = "progress"
-        self._smc_drop_reward_scheme = drop_scheme
-        limit_cfg = smc_cfg.get("return_all_limit_per_group", self._smc_return_all_limit)
-        if limit_cfg is None:
-            self._smc_return_all_limit = None
-        else:
-            self._smc_return_all_limit = max(int(limit_cfg), 0)
-        self._smc_drop_coef = float(smc_cfg.get("drop_reward_coef", self._smc_drop_coef))
-        self._set_drop_bonus_enabled(return_all)
-        report_to = getattr(self.args, "report_to", None)
-
-        if isinstance(report_to, str):
-            report_to_list = [report_to]
-        elif isinstance(report_to, (list, tuple)):
-            report_to_list = list(report_to)
-        else:
-            report_to_list = []
-        log_wandb = ("wandb" in report_to_list) and self.is_world_process_zero()
-
-        prm_signature = None
-        prm_model = None
-        if prm_cfg and bool(prm_cfg.get("use_prm")):
-            prm_signature = tuple(sorted((str(k), repr(v)) for k, v in prm_cfg.items()))
-            if getattr(self, "_smc_prm_signature", None) != prm_signature:
-                self._smc_prm = build_prm_model(prm_cfg)
-                self._smc_prm_signature = prm_signature
-            prm_model = getattr(self, "_smc_prm", None)
-        else:
-            self._smc_prm = None
-            self._smc_prm_signature = None
-
-        model_limit = None
-        if self.max_prompt_length is not None and self.max_completion_length is not None:
-            model_limit = (
-                int(self.max_prompt_length)
-                + int(self.max_completion_length)
-                + 1
-            )
-
-        signature = (
-            step_token,
-            stop_token,
-            max_steps,
-            tokens_per_step,
-            conf_scoring,
-            conf_group,
-            conf_aggregation,
-            conf_cap,
-            return_all,
-            return_eos,
-            random_sampling,
-            smc_topk,
-            conf_window,
-            conf_eta,
-            cdf_alpha,
-            include_stop,
-            self.num_generations,
-            self.pad_token_id,
-            self.temperature,
-            self.top_p,
-            -1 if self.top_k is None else self.top_k,
-            0.0 if self.min_p is None else self.min_p,
-            self.repetition_penalty,
-            int(self.max_completion_length),
-            None if model_limit is None else int(model_limit),
-            id(self.llm),
-            prm_signature,
-            log_wandb,
-        )
-
-        if getattr(self, "_smc_vllm_signature", None) != signature:
-            sg = StepGeneration(
-                max_steps=max_steps,
-                step_token=step_token,
-                tokens_per_step=tokens_per_step,
-                stop_token=stop_token,
-                include_stop_str_in_output=include_stop,
-            )
-
-            self._smc_vllm = SMCVLLM(
-                llm=self.llm,
-                tokenizer=self.processing_class,
-                num_particles=self.num_generations,
-                pad_token_id=self.pad_token_id,
-                temperature=self.temperature,
-                top_p=self.top_p,
-                top_k=-1 if self.top_k is None else self.top_k,
-                min_p=0.0 if self.min_p is None else self.min_p,
-                repetition_penalty=self.repetition_penalty,
-                sg=sg,
-                smc_topk=smc_topk,
-                window_size=conf_window,
-                max_new_tokens=int(self.max_completion_length),
-                max_model_len=model_limit,
-                scoring=conf_scoring,
-                confidence_group=conf_group,
-                confidence_aggregation=conf_aggregation,
-                confidence_cap=conf_cap,
-                confidence_eta=conf_eta,
-                cdf_alpha=cdf_alpha,
-                return_all=return_all,
-                return_eos=return_eos,
-                wandb_logging=log_wandb,
-                prm=prm_model,
-                random_sampling=random_sampling,
-                confidence_from_base=conf_from_base,
-            )
-            self._smc_vllm_signature = signature
-
-        return self._smc_vllm
-
     def _generate_and_score_completions(
         self, inputs: list[dict[str, Union[torch.Tensor, Any]]]
     ) -> dict[str, Union[torch.Tensor, Any]]:
@@ -2014,7 +1359,6 @@ class GRPOTrainer(Trainer):
         # [{"role": "user", "content": "What color is the sky?"}] to
         # [{"role": "user", "content": [{"type": "image"}, {"type": "text", "text": "What color is the sky?"}]}]
         kwargs = {}
-        images = None
         has_images = "image" in inputs[0]
         if has_images:
             images = [example.get("image") for example in inputs]
@@ -2034,154 +1378,193 @@ class GRPOTrainer(Trainer):
 
         prompts_text = [maybe_apply_chat_template(example, self.processing_class)["prompt"] for example in inputs]
 
-        if self.max_prompt_length is not None:
-            trunc_inputs = self.processing_class(
-                text=prompts_text,
-                return_tensors="pt",
-                padding=True,
-                padding_side="left",
-                add_special_tokens=False,
-                **kwargs,
-            )
-            trunc_inputs = super()._prepare_inputs(trunc_inputs)
-            trunc_ids, trunc_mask = trunc_inputs["input_ids"], trunc_inputs["attention_mask"]
+        prompt_inputs = self.processing_class(
+            text=prompts_text,
+            return_tensors="pt",
+            padding=True,
+            padding_side="left",
+            add_special_tokens=False,
+            **kwargs,
+        )
+        prompt_inputs = super()._prepare_inputs(prompt_inputs)
+        prompt_ids, prompt_mask = prompt_inputs["input_ids"], prompt_inputs["attention_mask"]
 
+        if self.max_prompt_length is not None:
+            # If max_prompt_length is set, we trim the prompt to keep only the last `max_prompt_length` tokens.
+            # Then we decode those tokens back into text. We manually remove leading pad tokens from the decoded text,
+            # because we can't use `skip_special_tokens=True` (some special tokens are still needed for generation).
             protected = [self.image_token_id, self.vision_start_token_id, self.vision_end_token_id]
             protected = [token for token in protected if token is not None]
-            trunc_ids, trunc_mask = truncate_with_protected_tokens(
-                trunc_ids,
-                trunc_mask,
-                self.max_prompt_length,
-                protected,
+            prompt_ids, prompt_mask = truncate_with_protected_tokens(
+                prompt_ids, prompt_mask, self.max_prompt_length, protected
             )
 
-            truncated_prompts_text = self.processing_class.batch_decode(
-                trunc_ids,
-                skip_special_tokens=False,
-                clean_up_tokenization_spaces=False,
+            prompts_text = self.processing_class.batch_decode(
+                prompt_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
             )
-            truncated_prompts_text = [
-                re.sub(rf"^({re.escape(self.pad_token)})+", "", text) for text in truncated_prompts_text
-            ]
+            prompts_text = [re.sub(rf"^({re.escape(self.pad_token)})+", "", text) for text in prompts_text]
 
+            # The chat template inserts a single image token into the prompt text. However, when this text is later
+            # tokenized, the single image token string is expanded into multiple image token IDs, depending on the
+            # image size. Since we're detokenizing here, we may see repeated image tokens in the decoded text. We
+            # collapse them back into a single token string to match the original template.
             if self.image_token is not None:
-                truncated_prompts_text = [
-                    re.sub(rf"({re.escape(self.image_token)})+", self.image_token, text)
-                    for text in truncated_prompts_text
+                prompts_text = [
+                    re.sub(rf"({re.escape(self.image_token)})+", self.image_token, text) for text in prompts_text
                 ]
 
-            prompts_text = truncated_prompts_text
-
-        smc_meta: Optional[_SMCBatchMeta] = None
-
-        if (self.use_vllm or hasattr(self, "llm")):
+        # Generate completions using either vLLM or regular generation
+        if self.use_vllm:
+            # First, update the vLLM weights if needed
             if self.state.global_step != self._last_loaded_step:
                 self._move_model_to_vllm()
                 self._last_loaded_step = self.state.global_step
 
-            smc_runner = self._ensure_smc_vllm()
-            if hasattr(smc_runner, "_call_index"):
-                smc_runner._call_index = max(int(self.state.global_step) - 1, 0)
-            lora_request = self.model.load_lora("grpo_trainer_lora_model", load_tensors=True)
-            payload = smc_runner.generate(prompts_text, list(prompts_text), lora_request=lora_request)
+            # Generate completions using vLLM: gather all prompts and use them in a single call in the main process
+            if self.vllm_mode == "server":
+                all_prompts_text = gather_object(prompts_text)
+                if has_images:
+                    all_images = gather_object(images)
 
-            if _smc_is_bundle(payload):
-                completion_ids_list, smc_meta = _smc_flatten_bundle(
-                    payload,
-                    int(self.max_completion_length),
-                    self._smc_return_all_limit,
+                if self.accelerator.is_main_process:
+                    # Since 'prompts' contains 'num_generations' duplicates, we first take unique prompts, and generate
+                    # num_generations outputs for each one. This is faster than generating outputs for each duplicate
+                    # prompt individually.
+                    ordered_set_of_prompts = all_prompts_text[:: self.num_generations]
+
+                    if has_images:
+                        ordered_set_of_images = all_images[:: self.num_generations]
+                    else:
+                        ordered_set_of_images = None
+
+                    with profiling_context(self, "vLLM.generate"):
+                        completion_ids = self.vllm_client.generate(
+                            prompts=ordered_set_of_prompts,
+                            images=ordered_set_of_images,
+                            n=self.num_generations,
+                            repetition_penalty=self.repetition_penalty,
+                            temperature=self.temperature,
+                            top_p=self.top_p,
+                            top_k=-1 if self.top_k is None else self.top_k,
+                            min_p=0.0 if self.min_p is None else self.min_p,
+                            max_tokens=self.max_completion_length,
+                            guided_decoding_regex=self.guided_decoding_regex,
+                            generation_kwargs=self.args.generation_kwargs,
+                        )
+                else:
+                    completion_ids = [None] * len(all_prompts_text)
+                # Broadcast the completions from the main process to all processes, ensuring each process receives its
+                # corresponding slice.
+                completion_ids = broadcast_object_list(completion_ids, from_process=0)
+                process_slice = slice(
+                    self.accelerator.process_index * len(prompts),
+                    (self.accelerator.process_index + 1) * len(prompts),
                 )
-                inputs, prompts, original_prompts, prompts_text, images = _smc_expand_batch(
-                    inputs,
-                    prompts,
-                    original_prompts,
-                    prompts_text,
-                    images if has_images else None,
-                    self.num_generations,
-                    smc_meta,
-                )
-                has_images = images is not None
-                kwargs = {"images": [[img] for img in images]} if has_images else {}
-            else:
-                completion_ids_list = payload
-                smc_meta = _smc_build_uniform_meta(
-                    len(completion_ids_list), self.num_generations, int(self.max_completion_length)
-                )
+                completion_ids = completion_ids[process_slice]
 
-            prompt_inputs = self.processing_class(
-                text=prompts_text,
-                return_tensors="pt",
-                padding=True,
-                padding_side="left",
-                add_special_tokens=False,
-                **kwargs,
-            )
-            prompt_inputs = super()._prepare_inputs(prompt_inputs)
-            prompt_ids, prompt_mask = prompt_inputs["input_ids"], prompt_inputs["attention_mask"]
+            # Generate completions using colocated vLLM instances: each device holds vLLM copy and work on their own batch of prompts
+            elif self.vllm_mode == "colocate":
+                if self.guided_decoding_regex:
+                    guided_decoding = GuidedDecodingParams(regex=self.guided_decoding_regex)
+                else:
+                    guided_decoding = None
 
-            if self.max_prompt_length is not None:
-                protected = [self.image_token_id, self.vision_start_token_id, self.vision_end_token_id]
-                protected = [token for token in protected if token is not None]
-                prompt_ids, prompt_mask = truncate_with_protected_tokens(
-                    prompt_ids, prompt_mask, self.max_prompt_length, protected
-                )
+                generation_kwargs = {
+                    "n": 1,  # vLLM on each GPU generates only 1 in colocate mode
+                    "repetition_penalty": self.repetition_penalty,
+                    "temperature": self.temperature,
+                    "top_p": self.top_p,
+                    "top_k": -1 if self.top_k is None else self.top_k,
+                    "min_p": 0.0 if self.min_p is None else self.min_p,
+                    "max_tokens": self.max_completion_length,
+                    "guided_decoding": guided_decoding,
+                }
+                if self.args.generation_kwargs is not None:
+                    generation_kwargs.update(self.args.generation_kwargs)
+                sampling_params = SamplingParams(**generation_kwargs)
 
-                prompts_text = self.processing_class.batch_decode(
-                    prompt_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
-                )
-                prompts_text = [re.sub(rf"^({re.escape(self.pad_token)})+", "", text) for text in prompts_text]
+                if self.vllm_tensor_parallel_size > 1:
+                    # Gather prompts from all ranks in the TP group and flatten.
+                    # Each rank starts with its own prompts; after gathering, all ranks see the full group set.
+                    orig_size = len(prompts_text)
+                    gathered_prompts = [None for _ in range(self.vllm_tensor_parallel_size)]
+                    torch.distributed.all_gather_object(gathered_prompts, prompts_text, group=self.tp_group)
+                    all_prompts_text = [p for sublist in gathered_prompts for p in sublist]
 
-                if self.image_token is not None:
-                    prompts_text = [
-                        re.sub(rf"({re.escape(self.image_token)})+", self.image_token, text) for text in prompts_text
-                    ]
+                    if has_images:
+                        gathered_images = [None for _ in range(self.vllm_tensor_parallel_size)]
+                        torch.distributed.all_gather_object(gathered_images, images, group=self.tp_group)
+                        all_images = [img for sublist in gathered_images for img in sublist]
+                    else:
+                        all_images = None
+                else:
+                    all_prompts_text = prompts_text
+                    all_images = images if has_images else None
 
-            raw_lengths = torch.tensor(
-                [len(ids) for ids in completion_ids_list],
-                device=prompt_ids.device,
-                dtype=torch.long,
-            )
-            completion_ids = [torch.tensor(ids, device=prompt_ids.device) for ids in completion_ids_list]
-            completion_ids = pad(completion_ids, padding_value=self.pad_token_id, padding_side="right")
+                if has_images and all_images:
+                    vllm_inputs = []
+                    for prompt, image in zip(all_prompts_text, all_images):
+                        if image is not None:
+                            vllm_inputs.append({"prompt": prompt, "multi_modal_data": {"image": image}})
+                        else:
+                            vllm_inputs.append(prompt)
+                else:
+                    vllm_inputs = all_prompts_text
+
+                with profiling_context(self, "vLLM.generate"):
+                    all_outputs = self.llm.generate(vllm_inputs, sampling_params=sampling_params, use_tqdm=False)
+
+                completion_ids = [output.token_ids for outputs in all_outputs for output in outputs.outputs]
+
+                if self.vllm_tensor_parallel_size > 1:
+                    # Slice completions for this rank within its TP group.
+                    # Each rank generates all outputs — we keep only our share.
+                    local_rank_in_group = torch.distributed.get_rank(group=self.tp_group)
+                    tp_slice = slice(local_rank_in_group * orig_size, (local_rank_in_group + 1) * orig_size)
+                    completion_ids = completion_ids[tp_slice]
+
+            # Pad the completions, and concatenate them with the prompts
+            completion_ids = [torch.tensor(ids, device=device) for ids in completion_ids]
+            completion_ids = pad(completion_ids, padding_value=self.pad_token_id)
             prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
 
+        elif self.use_transformers_paged:
+            # Re-process inputs for paged generation if needed
+            # Note: images are already validated and preprocessed above
+            paged_prompt_inputs = self.processing_class(text=prompts_text, **kwargs)
+            previous_attn = self.model_wrapped.config._attn_implementation
+
+            if is_flash_attn_2_available():
+                self.model_wrapped.config._attn_implementation = "paged_attention"
+            else:
+                self.model_wrapped.config._attn_implementation = "sdpa_paged"
+            with (
+                profiling_context(self, "transformers.generate_batch"),
+                unwrap_model_for_generation(
+                    self.model_wrapped, self.accelerator, gather_deepspeed3_params=self.args.ds3_gather_for_generation
+                ) as unwrapped_model,
+                torch.no_grad(),
+                FSDP.summon_full_params(self.model_wrapped, recurse=False) if self.is_fsdp_enabled else nullcontext(),
+            ):
+                # Cast to the appropriate dtype based on training configuration
+                if self.args.bf16:
+                    unwrapped_model.to(torch.bfloat16)
+                elif self.args.fp16:
+                    unwrapped_model.to(torch.float16)
+                with torch.inference_mode():
+                    all_outputs = unwrapped_model.generate_batch(
+                        paged_prompt_inputs.input_ids, generation_config=self.generation_config, progress_bar=False
+                    )
+            completion_ids = [output.generated_tokens for output in all_outputs.values()]
+            completion_ids = [torch.tensor(ids, device=device) for ids in completion_ids]
+            completion_ids = pad(completion_ids, padding_value=self.pad_token_id, padding_side="right")
+            prompt_ids = [torch.tensor(ids, device=device) for ids in paged_prompt_inputs.input_ids]
+            prompt_ids = pad(prompt_ids, padding_value=self.pad_token_id, padding_side="left")
+            prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
+            # Restore the original attention implementation, training mode
+            self.model_wrapped.config._attn_implementation = previous_attn
         else:
-            # Default path: route through HF custom_generate (your existing SMC/HF path)
-            # logging in generate function
-            logging_config = {
-                "is_main_process": self.is_world_process_zero(),
-                "report_to": self.args.report_to,
-                "global_step": self.state.global_step,
-            }
-
-            prompt_inputs = self.processing_class(
-                text=prompts_text,
-                return_tensors="pt",
-                padding=True,
-                padding_side="left",
-                add_special_tokens=False,
-                **kwargs,
-            )
-            prompt_inputs = super()._prepare_inputs(prompt_inputs)
-            prompt_ids, prompt_mask = prompt_inputs["input_ids"], prompt_inputs["attention_mask"]
-
-            if self.max_prompt_length is not None:
-                protected = [self.image_token_id, self.vision_start_token_id, self.vision_end_token_id]
-                protected = [token for token in protected if token is not None]
-                prompt_ids, prompt_mask = truncate_with_protected_tokens(
-                    prompt_ids, prompt_mask, self.max_prompt_length, protected
-                )
-
-                prompts_text = self.processing_class.batch_decode(
-                    prompt_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
-                )
-                prompts_text = [re.sub(rf"^({re.escape(self.pad_token)})+", "", text) for text in prompts_text]
-
-                if self.image_token is not None:
-                    prompts_text = [
-                        re.sub(rf"({re.escape(self.image_token)})+", self.image_token, text) for text in prompts_text
-                    ]
-
+            # Regular generation path
             with (
                 profiling_context(self, "transformers.generate"),
                 unwrap_model_for_generation(
@@ -2192,29 +1575,14 @@ class GRPOTrainer(Trainer):
             ):
                 prompt_inputs["input_ids"], prompt_inputs["attention_mask"] = prompt_ids, prompt_mask
                 prompt_completion_ids = unwrapped_model.generate(
-                    **prompt_inputs,
-                    custom_generate='.',
-                    generation_config=self.generation_config,
-                    disable_compile=True,
-                    logging_config=logging_config,
-            )
+                    **prompt_inputs, generation_config=self.generation_config, disable_compile=True
+                )
             # Compute prompt length and extract completion ids
             prompt_length = prompt_ids.size(1)
             prompt_ids = prompt_completion_ids[:, :prompt_length]
             completion_ids = prompt_completion_ids[:, prompt_length:]
-            smc_meta = _smc_build_uniform_meta(
-                completion_ids.size(0), self.num_generations, int(self.max_completion_length)
-            )
 
-        if smc_meta is None:
-            num_samples = completion_ids.size(0) if isinstance(completion_ids, torch.Tensor) else len(completion_ids)
-            smc_meta = _smc_build_uniform_meta(
-                num_samples,
-                self.num_generations,
-                int(self.max_completion_length),
-            )
-
-        # Mask everything after the first EOS token (note: vLLM strips the EOS token itself)
+        # Mask everything after the first EOS token
         is_eos = completion_ids == self.eos_token_id
         eos_idx = torch.full((is_eos.size(0),), is_eos.size(1), dtype=torch.long, device=device)
         eos_idx[is_eos.any(dim=1)] = is_eos.int().argmax(dim=1)[is_eos.any(dim=1)]
@@ -2223,321 +1591,33 @@ class GRPOTrainer(Trainer):
 
         # Convert tensor to a list of lists of token IDs. This will be passed to the reward function, avoiding the need
         # to re-tokenize completions if the reward is computed from tokens.
-        if raw_lengths is not None:
-            completion_ids_list = [
-                [int(token) for token in seq[:length.item()]]
-                for seq, length in zip(completion_ids_list, raw_lengths)
-            ]
-        else:
-            completion_ids_list = [
-                [id.item() for id, m in zip(row, mask_row) if m]
-                for row, mask_row in zip(completion_ids, completion_mask)
-            ]
+        completion_ids_list = [
+            [id.item() for id, m in zip(row, mask_row) if m] for row, mask_row in zip(completion_ids, completion_mask)
+        ]
 
-        # Sequence lengths for logging/truncation
-        if raw_lengths is not None:
-            lengths_for_mask = raw_lengths
-        else:
-            lengths_for_mask = completion_mask.sum(1)
-        completion_lengths = lengths_for_mask.clone()
-
-        max_length_cap = int(self.max_completion_length)
+        # Sum along sequence dimension (dim=1) to get completion length per sequence, used for logging
+        completion_lengths = completion_mask.sum(1)
 
         # If mask_truncated_completions is enabled, zero out truncated completions in completion_mask
         if self.mask_truncated_completions:
-            truncated_completions = lengths_for_mask >= max_length_cap
+            truncated_completions = ~is_eos.any(dim=1)
             completion_mask = completion_mask * (~truncated_completions).unsqueeze(1).int()
 
-        # Determine the model's maximum supported sequence length (prompt + completion).
-        model_max_length = (
-            getattr(self.model.config, "max_position_embeddings", None)
-            or getattr(self.model.config, "max_sequence_length", None)
-            or getattr(self.processing_class, "model_max_length", None)
-            or getattr(self.processing_class, "max_length", None)
-        )
-        if model_max_length is not None:
-            model_max_length = int(model_max_length)
-            max_prompt_allowed = max(model_max_length - 1, 1)
-            if prompt_ids.size(1) > max_prompt_allowed:
-                trim_prompt = prompt_ids.size(1) - max_prompt_allowed
-                prompt_ids = prompt_ids[:, trim_prompt:].contiguous()
-                prompt_mask = prompt_mask[:, trim_prompt:].contiguous()
-                if "input_ids" in prompt_inputs:
-                    prompt_inputs["input_ids"] = prompt_ids
-                    prompt_inputs["attention_mask"] = prompt_mask
-
-        # Align completion tensors to the maximum generated length and respect model constraints to avoid gather
-        # mismatches downstream.
-        effective_keep = int(completion_mask.sum(dim=1).max().item())
-        effective_keep = max(effective_keep, 1)
-        if model_max_length is not None:
-            max_completion_allowed = max(model_max_length - prompt_ids.size(1), 1)
-            effective_keep = min(effective_keep, max_completion_allowed)
-
-        if self.max_completion_length is not None:
-            # Guard against generation overshooting the configured cap; keep tensors mutually aligned.
-            effective_keep = min(effective_keep, max(int(self.max_completion_length), 1))
-
-        if completion_ids.size(1) != effective_keep:
-            completion_ids = completion_ids[:, :effective_keep].contiguous()
-        if completion_mask.size(1) != effective_keep:
-            completion_mask = completion_mask[:, :effective_keep].contiguous()
-
-        if raw_lengths is not None:
-            raw_lengths = raw_lengths.clamp_max(effective_keep)
-
-        completion_lengths = completion_lengths.clamp_max(effective_keep)
-
-        # Rebuild concatenated ids/masks after potential trimming so shapes stay consistent.
-        prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
+        # Concatenate prompt_mask with completion_mask for logit computation
         attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)  # (B, P+C)
 
         logits_to_keep = completion_ids.size(1)  # we only need to compute the logits for the completion tokens
         batch_size = self.args.per_device_train_batch_size if mode == "train" else self.args.per_device_eval_batch_size
-        generate_every = self.args.steps_per_generation * self.num_iterations  # generation frequency
-        needs_old_logps = self.args.gradient_accumulation_steps % generate_every != 0
-        old_per_token_logps = None
-        ref_per_token_logps = None
-
-        def _enforce_keep_len(new_keep: int) -> None:
-            nonlocal logits_to_keep, completion_ids, completion_mask, completion_lengths, completion_ids_list
-            nonlocal prompt_completion_ids, attention_mask, effective_keep, raw_lengths
-            new_keep = int(new_keep)
-            if new_keep <= 0 or new_keep >= logits_to_keep:
-                return
-
-            logits_to_keep = new_keep
-            effective_keep = new_keep
-            completion_ids = completion_ids[:, :new_keep].contiguous()
-            completion_mask = completion_mask[:, :new_keep].contiguous()
-
-            if raw_lengths is not None:
-                raw_lengths = raw_lengths.clamp_max(new_keep)
-
-            completion_lengths = completion_lengths.clamp_max(new_keep)
-            completion_ids_list = [seq[:new_keep] for seq in completion_ids_list]
-
-            prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
-            attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
-
-        # Decode the generated completions
-        completions_text = self.processing_class.batch_decode(completion_ids, skip_special_tokens=True)
-        if is_conversational(inputs[0]):
-            completions = []
-            for prompt, completion in zip(prompts, completions_text):
-                bootstrap = prompt.pop()["content"] if prompt[-1]["role"] == "assistant" else ""
-                completions.append([{"role": "assistant", "content": bootstrap + completion}])
-        else:
-            completions = completions_text
-        # Calculate rewards for each reward function. rewards_per_func aggregates rewards across all processes. This is
-        # important because rewards will be normalized per group, and completions are distributed. We will later slice
-        # rewards_per_func to extract each process's subset.
-        rewards_per_func = self._calculate_rewards(inputs, original_prompts, completions, completion_ids_list)
-
-        if smc_meta is None:
-            raise RuntimeError("SMC metadata is undefined after completion generation")
-
-        local_group_counts = smc_meta.group_counts
-        local_group_indices = smc_meta.group_indices
-        local_drop_steps = smc_meta.drop_steps
-        local_total_steps = smc_meta.total_steps
-        local_kind_values = [kind.value for kind in smc_meta.kinds]
-        local_conf_values = smc_meta.confidences
-
-        def _ensure_list(obj):
-            return obj if isinstance(obj, list) else [obj]
-
-        def _ensure_nested_list(obj):
-            if isinstance(obj, list) and (not obj or isinstance(obj[0], list)):
-                return obj
-            return [obj]
-
-        group_segments = _ensure_list(gather_object(len(local_group_counts)))
-        group_offsets: list[int] = []
-        total_groups = 0
-        for seg_size in group_segments:
-            group_offsets.append(total_groups)
-            total_groups += seg_size
-        num_groups_global = total_groups
-
-        group_offset = group_offsets[self.accelerator.process_index]
-        local_group_indices_global = [group_offset + idx for idx in local_group_indices]
-
-        group_indices_across = _ensure_nested_list(gather_object(local_group_indices_global))
-        kinds_across = _ensure_nested_list(gather_object(local_kind_values))
-        drop_steps_across = _ensure_nested_list(gather_object(local_drop_steps))
-        total_steps_across = _ensure_nested_list(gather_object(local_total_steps))
-        confidences_across = _ensure_nested_list(gather_object(local_conf_values))
-        sample_counts_across = _ensure_list(gather_object(len(local_group_indices_global)))
-
-        global_group_indices = [idx for chunk in group_indices_across for idx in chunk]
-        global_kind_values = [kind for chunk in kinds_across for kind in chunk]
-        global_drop_steps = [step for chunk in drop_steps_across for step in chunk]
-        global_total_steps = [step for chunk in total_steps_across for step in chunk]
-        global_confidences = [conf for chunk in confidences_across for conf in chunk]
-
-        if rewards_per_func.size(0) != len(global_group_indices):
-            raise ValueError("SMC metadata misalignment with reward tensor")
-        if len(global_confidences) != len(global_group_indices):
-            raise ValueError("SMC confidence metadata misalignment with reward tensor")
-        if self._enable_drop_bonus:
-            drop_bonus = _smc_drop_bonus(
-                [_SMCTrajectoryKind(value) for value in global_kind_values],
-                global_drop_steps,
-                global_total_steps,
-                self._smc_drop_reward_scheme,
-                device,
-            )
-            rewards_per_func = torch.cat(
-                [rewards_per_func, drop_bonus.unsqueeze(1)],
-                dim=1,
-            )
-        
-        reward_weights = self.reward_weights.to(device).unsqueeze(0)
-        weighted_rewards = (rewards_per_func * reward_weights).nansum(dim=1)
-        confidences_tensor = torch.tensor(global_confidences, dtype=torch.float32, device=device)
-        weighted_with_conf = weighted_rewards * confidences_tensor
-
-        num_legacy_global = sum(1 for kind in global_kind_values if kind == _SMCTrajectoryKind.LEGACY.value)
-        downsample_enabled = (
-            not self._downsample_disabled
-            and self._num_generations_grad_effective > 0
-            and num_legacy_global > self._num_generations_grad_effective
-        )
-
-        keep_mask_list: list[bool]
-        if downsample_enabled:
-            keep_mask_list = _build_legacy_keep_mask(
-                global_group_indices,
-                global_kind_values,
-                weighted_with_conf,
-                self._num_generations_grad_effective,
-            )
-        else:
-            keep_mask_list = [True] * len(global_group_indices)
-
-        legacy_kept = sum(
-            1
-            for keep, kind in zip(keep_mask_list, global_kind_values)
-            if keep and kind == _SMCTrajectoryKind.LEGACY.value
-        )
-        legacy_dropped = num_legacy_global - legacy_kept
-
-        keep_mask = torch.tensor(keep_mask_list, dtype=torch.bool, device=weighted_rewards.device)
-
-        rewards_per_func = rewards_per_func[keep_mask]
-        weighted_rewards = weighted_rewards[keep_mask]
-        weighted_with_conf = weighted_with_conf[keep_mask]
-        confidences_tensor = confidences_tensor[keep_mask]
-        global_group_indices = [idx for idx, keep in zip(global_group_indices, keep_mask_list) if keep]
-        global_kind_values = [kind for kind, keep in zip(global_kind_values, keep_mask_list) if keep]
-        global_drop_steps = [step for step, keep in zip(global_drop_steps, keep_mask_list) if keep]
-        global_total_steps = [step for step, keep in zip(global_total_steps, keep_mask_list) if keep]
-        global_confidences = [conf for conf, keep in zip(global_confidences, keep_mask_list) if keep]
-
-        orig_sample_counts = sample_counts_across
-        orig_offsets: list[int] = []
-        running = 0
-        for count in orig_sample_counts:
-            orig_offsets.append(running)
-            running += count
-
-        keep_counts_across: list[int] = []
-        for count, offset in zip(orig_sample_counts, orig_offsets):
-            segment_mask = keep_mask[offset : offset + count]
-            keep_counts_across.append(int(segment_mask.sum().item()))
-
-        local_orig_offset = orig_offsets[self.accelerator.process_index]
-        local_orig_count = orig_sample_counts[self.accelerator.process_index]
-        local_keep_mask_tensor = keep_mask[local_orig_offset : local_orig_offset + local_orig_count]
-        local_keep_mask_list = local_keep_mask_tensor.cpu().tolist()
-
-        sample_counts_across = keep_counts_across
-
-        local_keep_mask_tensor = local_keep_mask_tensor.to(prompt_ids.device)
-
-        prompt_ids = prompt_ids[local_keep_mask_tensor]
-        prompt_mask = prompt_mask[local_keep_mask_tensor]
-        completion_ids = completion_ids[local_keep_mask_tensor]
-        completion_mask = completion_mask[local_keep_mask_tensor]
-        if old_per_token_logps is not None:
-            old_per_token_logps = old_per_token_logps[local_keep_mask_tensor]
-        if ref_per_token_logps is not None:
-            ref_per_token_logps = ref_per_token_logps[local_keep_mask_tensor]
-
-        completion_ids_list = [
-            seq for seq, keep in zip(completion_ids_list, local_keep_mask_list) if keep
-        ]
-        completions_text = [
-            text for text, keep in zip(completions_text, local_keep_mask_list) if keep
-        ]
-        prompts_text = [
-            text for text, keep in zip(prompts_text, local_keep_mask_list) if keep
-        ]
-        prompts = [prompt for prompt, keep in zip(prompts, local_keep_mask_list) if keep]
-        original_prompts = [
-            prompt for prompt, keep in zip(original_prompts, local_keep_mask_list) if keep
-        ]
-        if has_images and images is not None:
-            images = [img for img, keep in zip(images, local_keep_mask_list) if keep]
-            has_images = len(images) > 0
-
-        completion_lengths = torch.tensor(
-            [len(seq) for seq in completion_ids_list],
-            device=device,
-            dtype=torch.long,
-        )
-        attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
-        prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
-
-        filtered_group_indices = [
-            idx for idx, keep in zip(local_group_indices, local_keep_mask_list) if keep
-        ]
-        filtered_drop_steps = [
-            step for step, keep in zip(local_drop_steps, local_keep_mask_list) if keep
-        ]
-        filtered_total_steps = [
-            step for step, keep in zip(local_total_steps, local_keep_mask_list) if keep
-        ]
-        filtered_kinds = [
-            kind for kind, keep in zip(smc_meta.kinds, local_keep_mask_list) if keep
-        ]
-        filtered_confidences = [
-            conf for conf, keep in zip(smc_meta.confidences, local_keep_mask_list) if keep
-        ]
-        new_group_counts = [0] * len(local_group_counts)
-        for idx in filtered_group_indices:
-            new_group_counts[idx] += 1
-        smc_meta = _SMCBatchMeta(
-            new_group_counts,
-            filtered_group_indices,
-            filtered_drop_steps,
-            filtered_total_steps,
-            filtered_kinds,
-            filtered_confidences,
-        )
-        local_group_counts = smc_meta.group_counts
-        local_group_indices = smc_meta.group_indices
-        local_drop_steps = smc_meta.drop_steps
-        local_total_steps = smc_meta.total_steps
-        local_kind_values = [kind.value for kind in smc_meta.kinds]
-        local_group_indices_global = [group_offset + idx for idx in local_group_indices]
-
-        prompt_inputs["input_ids"] = prompt_ids
-        prompt_inputs["attention_mask"] = prompt_mask
-        for key in ("pixel_values", "image_grid_thw", "pixel_attention_mask", "image_sizes"):
-            if key not in prompt_inputs:
-                continue
-            value = prompt_inputs[key]
-            if isinstance(value, torch.Tensor):
-                prompt_inputs[key] = value[local_keep_mask_tensor]
-            elif isinstance(value, (list, tuple)):
-                filtered_items = [item for item, keep in zip(value, local_keep_mask_list) if keep]
-                prompt_inputs[key] = type(value)(filtered_items) if isinstance(value, tuple) else filtered_items
 
         with torch.no_grad():
-            if needs_old_logps:
-                old_outputs = self._get_per_token_logps_and_entropies(
+            # If the generation and optimization steps are misaligned—i.e., if generation does not occur at the end of
+            # a full optimizer step (when gradient_accumulation_steps is not a multiple of generate_every)—then the
+            # samples may come from an earlier version of the model. In that case, we need to track old_per_token_logps
+            # for importance sampling. If the steps are aligned, importance sampling isn't necessary and we set
+            # old_per_token_logps to None.
+            generate_every = self.args.steps_per_generation * self.num_iterations  # generation frequency
+            if self.args.gradient_accumulation_steps % generate_every != 0:
+                old_per_token_logps, _ = self._get_per_token_logps_and_entropies(
                     self.model,
                     prompt_completion_ids,
                     attention_mask,
@@ -2548,17 +1628,13 @@ class GRPOTrainer(Trainer):
                     pixel_attention_mask=prompt_inputs.get("pixel_attention_mask"),
                     image_sizes=prompt_inputs.get("image_sizes"),
                 )
-                old_per_token_logps, _, keep_len = self._unpack_logps_entropy_outputs(old_outputs, logits_to_keep)
-                _enforce_keep_len(keep_len)
-                if old_per_token_logps.size(1) > logits_to_keep + 1:
-                    keep_window = logits_to_keep + 1
-                else:
-                    keep_window = old_per_token_logps.size(1)
-                old_per_token_logps = old_per_token_logps[:, -keep_window:]
+            else:
+                old_per_token_logps = None
 
+            # Compute the per-token log probabilities for the reference model
             if self.beta != 0.0:
                 if self.ref_model is not None:
-                    ref_outputs = self._get_per_token_logps_and_entropies(
+                    ref_per_token_logps, _ = self._get_per_token_logps_and_entropies(
                         self.ref_model,
                         prompt_completion_ids,
                         attention_mask,
@@ -2571,7 +1647,7 @@ class GRPOTrainer(Trainer):
                     )
                 else:
                     with self.accelerator.unwrap_model(self.model).disable_adapter():
-                        ref_outputs = self._get_per_token_logps_and_entropies(
+                        ref_per_token_logps, _ = self._get_per_token_logps_and_entropies(
                             self.model,
                             prompt_completion_ids,
                             attention_mask,
@@ -2582,88 +1658,51 @@ class GRPOTrainer(Trainer):
                             pixel_attention_mask=prompt_inputs.get("pixel_attention_mask"),
                             image_sizes=prompt_inputs.get("image_sizes"),
                         )
-                ref_per_token_logps, _, keep_len = self._unpack_logps_entropy_outputs(ref_outputs, logits_to_keep)
-                _enforce_keep_len(keep_len)
-                if old_per_token_logps is not None:
-                    max_keep = min(old_per_token_logps.size(1), logits_to_keep + 1)
-                    old_per_token_logps = old_per_token_logps[:, -max_keep:]
-                if ref_per_token_logps.size(1) > logits_to_keep + 1:
-                    keep_window = logits_to_keep + 1
-                else:
-                    keep_window = ref_per_token_logps.size(1)
-                ref_per_token_logps = ref_per_token_logps[:, -keep_window:]
+            else:
+                ref_per_token_logps = None
 
-        training_rewards_tensor = weighted_with_conf if self._smc_self_reward else weighted_rewards
-
-        if num_groups_global == 0:
-            group_mean = torch.zeros(0, dtype=torch.float32, device=device)
-            group_std = torch.zeros(0, dtype=torch.float32, device=device)
-            std_zero_mask = torch.zeros(0, dtype=torch.bool, device=device)
-            advantages_all = training_rewards_tensor
-            base_group_mean = group_mean
-            base_group_std = group_std
-            self_group_mean = group_mean
-            self_group_std = group_std
+        # Decode the generated completions
+        completions_text = self.processing_class.batch_decode(completion_ids, skip_special_tokens=True)
+        if is_conversational(inputs[0]):
+            completions = []
+            for prompt, completion in zip(prompts, completions_text):
+                bootstrap = prompt.pop()["content"] if prompt[-1]["role"] == "assistant" else ""
+                completions.append([{"role": "assistant", "content": bootstrap + completion}])
         else:
-            group_indices_tensor = torch.tensor(global_group_indices, dtype=torch.long, device=device)
-            group_sum = torch.bincount(
-                group_indices_tensor, weights=training_rewards_tensor, minlength=num_groups_global
-            )
-            group_sq_sum = torch.bincount(
-                group_indices_tensor, weights=training_rewards_tensor**2, minlength=num_groups_global
-            )
-            group_count = torch.bincount(group_indices_tensor, minlength=num_groups_global).clamp(min=1)
-            group_mean = group_sum / group_count
-            group_var = torch.clamp(group_sq_sum / group_count - group_mean**2, min=0.0)
-            group_std = torch.sqrt(group_var)
-            std_zero_mask = group_std == 0
-            sample_mean = group_mean[group_indices_tensor]
-            sample_std = group_std[group_indices_tensor]
-            advantages_all = training_rewards_tensor - sample_mean
-            if self.scale_rewards:
-                advantages_all = advantages_all / (sample_std + 1e-4)
+            completions = completions_text
 
-            base_group_sum = torch.bincount(
-                group_indices_tensor, weights=weighted_rewards, minlength=num_groups_global
-            )
-            base_group_sq_sum = torch.bincount(
-                group_indices_tensor, weights=weighted_rewards**2, minlength=num_groups_global
-            )
-            base_group_mean = base_group_sum / group_count
-            base_group_var = torch.clamp(base_group_sq_sum / group_count - base_group_mean**2, min=0.0)
-            base_group_std = torch.sqrt(base_group_var)
-            self_group_sum = torch.bincount(
-                group_indices_tensor, weights=weighted_with_conf, minlength=num_groups_global
-            )
-            self_group_sq_sum = torch.bincount(
-                group_indices_tensor, weights=weighted_with_conf**2, minlength=num_groups_global
-            )
-            self_group_mean = self_group_sum / group_count
-            self_group_var = torch.clamp(self_group_sq_sum / group_count - self_group_mean**2, min=0.0)
-            self_group_std = torch.sqrt(self_group_var)
+        # Calculate rewards for each reward function. rewards_per_func aggregates rewards across all processes. This is
+        # important because rewards will be normalized per group, and completions are distributed. We will later slice
+        # rewards_per_func to extract each process's subset.
+        rewards_per_func = self._calculate_rewards(inputs, original_prompts, completions, completion_ids_list)
 
-        sample_offsets: list[int] = []
-        running = 0
-        for count in sample_counts_across:
-            sample_offsets.append(running)
-            running += count
-        local_offset = sample_offsets[self.accelerator.process_index]
-        local_count = len(local_group_indices_global)
-        advantages = advantages_all[local_offset : local_offset + local_count].clone()
-        all_process_advantages = advantages_all.clone()
-        local_confidences_tensor = confidences_tensor[local_offset : local_offset + local_count]
-        local_weighted_with_conf = weighted_with_conf[local_offset : local_offset + local_count]
+        # Apply weights to each reward function's output and sum
+        rewards = (rewards_per_func * self.reward_weights.to(device).unsqueeze(0)).nansum(dim=1)
 
-        mean_grouped_rewards = group_mean
-        std_grouped_rewards = group_std
-        is_std_zero = std_zero_mask
+        # Compute grouped-wise rewards
+        mean_grouped_rewards = rewards.view(-1, self.num_generations).mean(dim=1)
+        std_grouped_rewards = rewards.view(-1, self.num_generations).std(dim=1)
+        is_std_zero = torch.isclose(std_grouped_rewards, torch.zeros_like(std_grouped_rewards))
+
+        # Normalize the rewards to compute the advantages
+        mean_grouped_rewards = mean_grouped_rewards.repeat_interleave(self.num_generations, dim=0)
+        std_grouped_rewards = std_grouped_rewards.repeat_interleave(self.num_generations, dim=0)
+        advantages = rewards - mean_grouped_rewards
+        if self.scale_rewards:
+            advantages = advantages / (std_grouped_rewards + 1e-4)
+
+        # Slice to keep only the local part of the data
+        process_slice = slice(
+            self.accelerator.process_index * len(prompts),
+            (self.accelerator.process_index + 1) * len(prompts),
+        )
+        all_process_advantages = advantages.clone()  # keep the aggregated advantages for logging
+        advantages = advantages[process_slice]
 
         # Log the metrics
         if mode == "train":
             self.state.num_input_tokens_seen += self.accelerator.gather(attention_mask.sum()).sum().item()
         self._metrics[mode]["num_tokens"] = [self.state.num_input_tokens_seen]
-
-        max_length_cap = int(self.max_completion_length)
 
         # Log completion lengths, mean, min, max
         agg_completion_lengths = self.accelerator.gather(completion_lengths)
@@ -2672,8 +1711,7 @@ class GRPOTrainer(Trainer):
         self._metrics[mode]["completions/max_length"].append(agg_completion_lengths.float().max().item())
 
         # Identify sequences that terminated with EOS and log their lengths
-        terminated_flags = (completion_lengths < max_length_cap).int()
-        agg_terminated_with_eos = self.accelerator.gather(terminated_flags).bool()
+        agg_terminated_with_eos = self.accelerator.gather(is_eos.any(dim=1))
         term_completion_lengths = agg_completion_lengths[agg_terminated_with_eos]
         clipped_completions_ratio = 1 - len(term_completion_lengths) / len(agg_completion_lengths)
         self._metrics[mode]["completions/clipped_ratio"].append(clipped_completions_ratio)
@@ -2689,36 +1727,9 @@ class GRPOTrainer(Trainer):
             self._metrics[mode][f"rewards/{reward_func_name}/mean"].append(mean_rewards)
             std_rewards = nanstd(rewards_per_func[:, i]).item()
             self._metrics[mode][f"rewards/{reward_func_name}/std"].append(std_rewards)
-        self._metrics[mode]["reward"].append(
-            mean_grouped_rewards.mean().item() if mean_grouped_rewards.numel() > 0 else 0.0
-        )
-        self._metrics[mode]["reward_std"].append(
-            std_grouped_rewards.mean().item() if std_grouped_rewards.numel() > 0 else 0.0
-        )
+        self._metrics[mode]["reward"].append(mean_grouped_rewards.mean().item())
+        self._metrics[mode]["reward_std"].append(std_grouped_rewards.mean().item())
         self._metrics[mode]["frac_reward_zero_std"].append(is_std_zero.float().mean().item())
-        self._metrics[mode]["reward_original/mean"].append(
-            base_group_mean.mean().item() if base_group_mean.numel() > 0 else 0.0
-        )
-        self._metrics[mode]["reward_original/std"].append(
-            base_group_std.mean().item() if base_group_std.numel() > 0 else 0.0
-        )
-        self._metrics[mode]["reward_self/mean"].append(
-            self_group_mean.mean().item() if self_group_mean.numel() > 0 else 0.0
-        )
-        self._metrics[mode]["reward_self/std"].append(
-            self_group_std.mean().item() if self_group_std.numel() > 0 else 0.0
-        )
-        agg_confidences = self.accelerator.gather(confidences_tensor)
-        if agg_confidences.numel() > 0:
-            agg_confidences = agg_confidences.float()
-            self._metrics[mode]["self_confidence/mean"].append(agg_confidences.mean().item())
-            self._metrics[mode]["self_confidence/std"].append(agg_confidences.std(unbiased=False).item())
-        agg_self_rewards = self.accelerator.gather(weighted_with_conf)
-        if agg_self_rewards.numel() > 0:
-            agg_self_rewards = agg_self_rewards.float()
-            self._metrics[mode]["self_reward/mean"].append(agg_self_rewards.mean().item())
-            self._metrics[mode]["self_reward/std"].append(agg_self_rewards.std(unbiased=False).item())
-        self._metrics[mode]["downsample/legacy_dropped"].append(float(max(legacy_dropped, 0)))
 
         # Log prompt and completion texts
         self._logs["prompt"].extend(gather_object(prompts_text))
@@ -2726,8 +1737,6 @@ class GRPOTrainer(Trainer):
         for i, name in enumerate(self.reward_func_names):
             self._logs["rewards"][name].extend(rewards_per_func[:, i].tolist())
         self._logs["advantages"].extend(all_process_advantages.tolist())
-        self._logs["self_confidence"].extend(confidences_tensor.detach().cpu().tolist())
-        self._logs["self_weighted_reward"].extend(weighted_with_conf.detach().cpu().tolist())
 
         if has_images:
             self._logs["image"].extend(gather_object(images))
@@ -2815,7 +1824,7 @@ class GRPOTrainer(Trainer):
         logits_to_keep = completion_ids.size(1)  # we only need to compute the logits for the completion tokens
 
         # Compute the per_token_logps and the entropy at each position in the completion
-        outputs = self._get_per_token_logps_and_entropies(
+        per_token_logps, entropies = self._get_per_token_logps_and_entropies(
             model,
             input_ids,
             attention_mask,
@@ -2826,7 +1835,6 @@ class GRPOTrainer(Trainer):
             pixel_attention_mask=inputs.get("pixel_attention_mask"),
             image_sizes=inputs.get("image_sizes"),
         )
-        per_token_logps, entropies, _ = self._unpack_logps_entropy_outputs(outputs, logits_to_keep)
 
         if self.top_entropy_quantile < 1.0:
             entropy_mask = self.get_high_entropy_mask(entropies, completion_mask, 1 - self.top_entropy_quantile)
@@ -2964,8 +1972,6 @@ class GRPOTrainer(Trainer):
                     "completion": self._logs["completion"],
                     **self._logs["rewards"],
                     "advantage": self._logs["advantages"],
-                    "self_confidence": self._logs["self_confidence"],
-                    "self_weighted_reward": self._logs["self_weighted_reward"],
                 }
 
                 if self._logs["image"]:

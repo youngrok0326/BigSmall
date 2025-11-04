@@ -1,6 +1,6 @@
 """
-Compare decoding strategies (default HF generate vs custom SMC generate)
-on HF checkpoints without LoRA, across multiple datasets, with W&B logging.
+Evaluate default Hugging Face generation on checkpoints without LoRA, across
+multiple datasets, with optional W&B logging.
 
 Usage:
   uv run python3 evaluate-decode.py
@@ -475,440 +475,6 @@ def _locate_vllm_backend(model) -> tuple[bool, object | None]:
     return False, None
 
 
-def _evaluate_once_custom(
-    model,
-    tokenizer,
-    prompts,
-    answers,
-    cfg: DictConfig,
-    logging_enabled: bool,
-    *,
-    lora_request=None,
-    progress_desc: str | None = None,
-):
-    _ensure_pad_token(tokenizer)
-    use_vllm_cfg = bool(cfg.model.get("fast_inference", True))
-    use_vllm_detected, llm = _locate_vllm_backend(model)
-    use_vllm = use_vllm_cfg and use_vllm_detected
-    pass_metrics = _get_pass_metrics(cfg)
-
-    default_decode_raw = cfg.get("default_decode", {})
-    custom_decode_raw = cfg.get("custom_decode", {})
-    default_decode_cfg = (
-        OmegaConf.to_container(default_decode_raw, resolve=True)
-        if default_decode_raw
-        else {}
-    )
-    custom_decode_cfg = (
-        OmegaConf.to_container(custom_decode_raw, resolve=True)
-        if custom_decode_raw
-        else {}
-    )
-
-    def _decode_param(key: str, fallback):
-        if key in custom_decode_cfg and custom_decode_cfg[key] is not None:
-            return custom_decode_cfg[key]
-        if key in default_decode_cfg and default_decode_cfg[key] is not None:
-            return default_decode_cfg[key]
-        return fallback
-
-    if use_vllm_cfg and not use_vllm_detected:
-        print("[evaluate-decode] fast_inference enabled but no vLLM backend detected; falling back to HF custom generation.")
-
-    if use_vllm:
-        from trainer.vllm_smc import StepGeneration, SMCVLLM, build_prm_model
-
-        total_queries = len(prompts)
-        ans_correct = 0
-        for_correct = 0
-        both_correct = 0
-        total_gen_len = 0
-        examples: list[dict[str, object]] = []
-        sum_ans_frac = 0.0
-        sum_for_frac = 0.0
-        sum_both_frac = 0.0
-        pass_at_metric_sums = {metric.name: 0.0 for metric in pass_metrics}
-        pass_at_metric_counts = {metric.name: 0 for metric in pass_metrics}
-        total_group_sizes = 0
-        total_groups = 0
-
-        G = int(cfg.eval.get("batch_size_groups", 1))
-        N = int(cfg.eval.get("num_generations", 1))
-
-        confidence_cfg = custom_decode_cfg.get("confidence", {}) if custom_decode_cfg is not None else {}
-
-        step_token = custom_decode_cfg.get("step_token")
-        tokens_per_step = custom_decode_cfg.get("tokens_per_step")
-        if step_token is None and tokens_per_step is None:
-            step_token = "\n\n"
-        if tokens_per_step is not None:
-            tokens_per_step = int(tokens_per_step)
-        step_token = str(step_token) if step_token is not None else None
-        stop_token = custom_decode_cfg.get("stop_token", "\\boxed")
-        stop_token = str(stop_token) if stop_token is not None else None
-        max_steps = int(custom_decode_cfg.get("max_steps", 32))
-        include_stop = bool(custom_decode_cfg.get("include_stop_str_in_output", True))
-        scoring = str(confidence_cfg.get("scoring", custom_decode_cfg.get("scoring", "entropy")))
-        conf_group = str(confidence_cfg.get("group", "mean"))
-        conf_aggregation = str(confidence_cfg.get("aggregation", "last"))
-        conf_cap_val = confidence_cfg.get("cap") if confidence_cfg else None
-        if conf_cap_val is None and custom_decode_cfg is not None:
-            conf_cap_val = custom_decode_cfg.get("confidence_cap")
-        conf_cap = float(conf_cap_val) if conf_cap_val is not None else None
-        return_all = bool(custom_decode_cfg.get("return_all", False))
-        return_eos = bool(custom_decode_cfg.get("return_eos", False))
-        smc_topk = int(custom_decode_cfg.get("smc_topk", -1))
-        conf_window = int(custom_decode_cfg.get("smc_confidence_window_size", 50))
-        conf_eta = float(custom_decode_cfg.get("smc_confidence_eta", 1.0))
-        cdf_alpha_val = confidence_cfg.get("cdf_alpha") if confidence_cfg else None
-        if cdf_alpha_val is None:
-            cdf_alpha_val = custom_decode_cfg.get("cdf_alpha", 0.25) if custom_decode_cfg is not None else 0.25
-        cdf_alpha = float(cdf_alpha_val)
-        temperature = float(_decode_param("temperature", 1.0))
-        top_p = float(_decode_param("top_p", 1.0))
-        top_k = int(_decode_param("top_k", 0))
-        top_k = top_k if top_k > 0 else -1
-        min_p = float(custom_decode_cfg.get("min_p", 0.0))
-        repetition_penalty = float(custom_decode_cfg.get("repetition_penalty", 1.0))
-        random_sampling = bool(custom_decode_cfg.get("random_sampling", False))
-        max_new_tokens = int(cfg.eval.max_new_tokens)
-        max_prompt_length_cfg = int(getattr(cfg, "max_prompt_length", -1))
-        max_model_len = None
-        if max_prompt_length_cfg > 0 and max_new_tokens > 0:
-            max_model_len = max_prompt_length_cfg + max_new_tokens
-
-        pad_token_id = tokenizer.pad_token_id
-        if pad_token_id is None:
-            pad_token_id = tokenizer.eos_token_id if tokenizer.eos_token_id is not None else 0
-
-        # Mirror the trainer wiring (see trainer/smcgrpo_trainer.py) so decode configs stay aligned.
-        step_gen = StepGeneration(
-            max_steps=max_steps,
-            step_token=step_token,
-            tokens_per_step=tokens_per_step,
-            stop_token=stop_token,
-            include_stop_str_in_output=include_stop,
-        )
-
-        prm_model = None
-        prm_cfg = cfg.get("prm")
-        if prm_cfg and prm_cfg.get("use_prm"):
-            prm_model = build_prm_model(OmegaConf.to_container(prm_cfg, resolve=True))
-
-        smc_runner = SMCVLLM(
-            llm=llm,
-            tokenizer=tokenizer,
-            num_particles=N,
-            pad_token_id=pad_token_id,
-            temperature=temperature,
-            top_p=top_p,
-            top_k=top_k,
-            min_p=min_p,
-            repetition_penalty=repetition_penalty,
-            sg=step_gen,
-            smc_topk=smc_topk,
-            window_size=conf_window,
-            confidence_eta=conf_eta,
-            cdf_alpha=cdf_alpha,
-            max_new_tokens=max_new_tokens,
-            max_model_len=max_model_len,
-            scoring=scoring,
-            confidence_group=conf_group,
-            confidence_aggregation=conf_aggregation,
-            confidence_cap=conf_cap,
-            return_all=return_all,
-            return_eos=return_eos,
-            wandb_logging=logging_enabled,
-            prm=prm_model,
-            random_sampling=random_sampling,
-        )
-
-        with tqdm(total=total_queries, desc=progress_desc or "custom", unit="prompt", dynamic_ncols=True) as pbar:
-            for i in range(0, total_queries, G):
-                j = min(i + G, total_queries)
-                batch_prompts = prompts[i:j]
-                repeated_prompts: list[str] = []
-                for prompt in batch_prompts:
-                    repeated_prompts.extend([prompt] * N)
-
-                outputs = smc_runner.generate(
-                    repeated_prompts,
-                    batch_prompts,
-                    lora_request=lora_request,
-                )
-                group_sizes: List[int]
-                completion_ids_list: List[List[int]]
-                extras: Optional[Dict[str, Any]] = None
-
-                if isinstance(outputs, dict):
-                    extras = outputs
-                elif isinstance(outputs, tuple):
-                    completion_ids_list = outputs[0]
-                else:
-                    completion_ids_list = outputs
-
-                if extras is not None:
-                    group_completion_ids: List[List[List[int]]] = extras.get("completions", [])
-                    group_sizes = extras.get(
-                        "group_sizes",
-                        [len(group) for group in group_completion_ids],
-                    )
-                    completion_ids_list = [
-                        ids for group in group_completion_ids for ids in group
-                    ]
-                else:
-                    group_sizes = [N] * (j - i)
-
-                texts_all = tokenizer.batch_decode(completion_ids_list, skip_special_tokens=True)
-                gen_lens_all = [len(ids) for ids in completion_ids_list]
-
-                offset = 0
-
-                for g, k in enumerate(range(i, j)):
-                    gt = answers[k]
-                    group_count = group_sizes[g]
-                    texts_g = texts_all[offset : offset + group_count]
-                    gen_lens_g = gen_lens_all[offset : offset + group_count]
-                    offset += group_count
-
-                    total_group_sizes += group_count
-                    total_groups += 1
-
-                    a_list = [answer_correct(t, gt) for t in texts_g]
-                    f_list = [format_correct(t) for t in texts_g]
-
-                    _update_pass_metrics(a_list, pass_metrics, pass_at_metric_sums, pass_at_metric_counts)
-
-                    a_any = any(a_list)
-                    f_any = any(f_list)
-                    both_any = any(a and f for a, f in zip(a_list, f_list))
-
-                    ans_correct += 1 if a_any else 0
-                    for_correct += 1 if f_any else 0
-                    both_correct += 1 if both_any else 0
-
-                    denom = float(len(a_list)) if len(a_list) > 0 else float(max(group_count, 1))
-                    sum_ans_frac += (sum(1 for a in a_list if a) / denom)
-                    sum_for_frac += (sum(1 for f in f_list if f) / denom)
-                    sum_both_frac += (sum(1 for a, f in zip(a_list, f_list) if a and f) / denom)
-
-                    chosen_idx = next((idx for idx, (a, f) in enumerate(zip(a_list, f_list)) if a and f), None)
-                    if chosen_idx is None:
-                        chosen_idx = next((idx for idx, a in enumerate(a_list) if a), 0)
-                    chosen_idx = 0 if chosen_idx is None else chosen_idx
-                    chosen_text = texts_g[chosen_idx] if texts_g else ""
-                    chosen_len = gen_lens_g[chosen_idx] if gen_lens_g else 0
-                    total_gen_len += chosen_len
-
-                    if len(examples) < cfg.eval.sample_cnt:
-                        examples.append({
-                            "prompt": prompts[k],
-                            "answer": gt,
-                            "completion": chosen_text,
-                            "correct": a_any,
-                            "format_correct": f_any,
-                        })
-                pbar.update(j - i)
-
-        avg_group_traj = (total_group_sizes / total_groups) if total_groups > 0 else float(N)
-
-        if return_eos and logging_enabled:
-            try:
-                import wandb  # type: ignore
-
-                wandb.log({"decode/avg_group_traj": avg_group_traj})
-            except ImportError:
-                pass
-
-        avg_len = total_gen_len / total_queries if total_queries > 0 else 0.0
-        avg_ans_frac = sum_ans_frac / total_queries if total_queries > 0 else 0.0
-        avg_for_frac = sum_for_frac / total_queries if total_queries > 0 else 0.0
-        avg_both_frac = sum_both_frac / total_queries if total_queries > 0 else 0.0
-        avg_pass_at_k = {
-            metric.name: (pass_at_metric_sums[metric.name] / pass_at_metric_counts[metric.name]) if pass_at_metric_counts[metric.name] > 0 else 0.0
-            for metric in pass_metrics
-        }
-        return (
-            ans_correct / total_queries,
-            for_correct / total_queries,
-            both_correct / total_queries,
-            avg_len,
-            avg_ans_frac,
-            avg_for_frac,
-            avg_both_frac,
-            examples,
-            avg_pass_at_k,
-        )
-
-    if lora_request is not None:
-        raise ValueError("LoRA evaluation requires fast_inference/vLLM backend; disable lora or enable fast_inference.")
-
-    device = next(model.parameters()).device
-
-    # Build custom generation config with SMC knobs
-    gen_cfg = GenerationConfig(
-        do_sample=bool(_decode_param("do_sample", True)),
-        temperature=float(_decode_param("temperature", 1.0)),
-        top_p=float(_decode_param("top_p", 1.0)),
-        top_k=int(_decode_param("top_k", 0)),
-        max_new_tokens=cfg.eval.max_new_tokens,
-        eos_token_id=tokenizer.eos_token_id,
-        pad_token_id=tokenizer.pad_token_id,
-        return_dict_in_generate=False,
-    )
-    # SMC flags
-    gen_cfg.use_smc = bool(cfg.custom_decode.get("use_smc", True))
-    # Unified eval.num_generations controls trajectories per prompt
-    gen_cfg.num_generations = int(cfg.eval.get("num_generations", 1))
-    # Additional SMC controls (kept for parity with training config)
-    gen_cfg.smc_confidence_eta = float(custom_decode_cfg.get("smc_confidence_eta", 1.0))
-    gen_cfg.smc_confidence_window_size = int(custom_decode_cfg.get("smc_confidence_window_size", 50))
-    gen_cfg.smc_topk = int(custom_decode_cfg.get("smc_topk", -1))
-    confidence_cfg = custom_decode_cfg.get("confidence", {}) if custom_decode_cfg is not None else {}
-    gen_cfg.scoring = str(confidence_cfg.get("scoring", custom_decode_cfg.get("scoring", "entropy")))
-    gen_cfg.step_token = str(custom_decode_cfg.get("step_token", "\n\n"))
-    gen_cfg.stop_token = str(custom_decode_cfg.get("stop_token", "\\boxed"))
-    gen_cfg.return_all = bool(custom_decode_cfg.get("return_all", False))
-
-    # logging for custom generator
-    logging_config = {
-        "is_main_process": True,
-        "report_to": ["wandb"] if logging_enabled else [],
-        "global_step": 0,
-    }
-
-    total_queries = len(prompts)
-    ans_correct = 0
-    for_correct = 0
-    both_correct = 0
-    total_gen_len = 0
-    examples = []
-    # Track average fractions of correct trajectories per group
-    sum_ans_frac = 0.0
-    sum_for_frac = 0.0
-    sum_both_frac = 0.0
-    pass_at_metric_sums = {metric.name: 0.0 for metric in pass_metrics}
-    pass_at_metric_counts = {metric.name: 0 for metric in pass_metrics}
-
-    G = cfg.eval.batch_size_groups
-    N = gen_cfg.num_generations
-
-    with tqdm(total=total_queries, desc=progress_desc or "custom", unit="prompt", dynamic_ncols=True) as pbar:
-        for i in range(0, total_queries, G):
-            j = min(i + G, total_queries)
-            # Increment global_step once per outer loop iteration (per batch of groups)
-            logging_config["global_step"] = int(logging_config.get("global_step", 0)) + 1
-            batch_prompts = prompts[i:j]
-            enc = _batch_tokenize(tokenizer, batch_prompts, cfg.model.max_seq_length,
-                                   padding_side="left", add_special_tokens=False)
-            input_ids = enc.input_ids.to(device)
-            attn = enc.attention_mask.to(device)
-            prompt_lens = attn.sum(dim=1)
-
-            # repeat each prompt N times for SMC groups
-            input_rep = input_ids.repeat_interleave(N, dim=0)
-            attn_rep = attn.repeat_interleave(N, dim=0)
-
-            with torch.no_grad(), torch.autocast(device_type="cuda", dtype=torch.bfloat16):
-                # Route through HF custom_generate hook so the decoding pipeline
-                # (logits processors, stopping criteria, etc.) is prepared correctly.
-                sequences = model.generate(
-                    input_ids=input_rep,
-                    attention_mask=attn_rep,
-                    generation_config=gen_cfg,
-                    custom_generate='.',
-                    tokenizer=tokenizer,
-                    # Pass clean prompt strings for debugging/inspection inside custom generator
-                    prompt_texts=_clean_prompt_texts(tokenizer, input_ids, attn),
-                    logging_config=logging_config,
-                    trust_remote_code=True,
-                )
-
-            # Group particles per prompt: shape [groups, N, T]
-            B_rep, T = sequences.shape
-            assert B_rep % N == 0, "Batch size must be a multiple of num_generations"
-            groups = B_rep // N
-            sequences_grouped = sequences.view(groups, N, T)
-
-            # Decode all particles for all groups
-            prompt_lens_rep = prompt_lens.repeat_interleave(N, dim=0)
-            texts_all = _decode_generated(tokenizer, sequences, prompt_lens_rep)
-
-            # Compute generated lengths for all particles
-            if tokenizer.pad_token_id is not None:
-                seq_valid_lens_all = (sequences != tokenizer.pad_token_id).sum(dim=1)
-            else:
-                seq_valid_lens_all = torch.full((sequences.size(0),), sequences.size(1), device=sequences.device)
-            gen_lens_all = (seq_valid_lens_all - prompt_lens_rep).tolist()
-
-            # Iterate per-group, aggregate correctness as "any particle in group"
-            for g, k in enumerate(range(i, j)):
-                gt = answers[k]
-                start = g * N
-                end = start + N
-                texts_g = texts_all[start:end]
-                gen_lens_g = gen_lens_all[start:end]
-
-                # Evaluate each particle
-                a_list = [answer_correct(t, gt) for t in texts_g]
-                f_list = [format_correct(t) for t in texts_g]
-
-                _update_pass_metrics(a_list, pass_metrics, pass_at_metric_sums, pass_at_metric_counts)
-
-                a_any = any(a_list)
-                f_any = any(f_list)
-                # both means there exists a particle that is both answer- and format-correct
-                both_any = any(a and f for a, f in zip(a_list, f_list))
-
-                ans_correct += 1 if a_any else 0
-                for_correct += 1 if f_any else 0
-                both_correct += 1 if both_any else 0
-
-                # Accumulate fractions within this group
-                sum_ans_frac += (sum(1 for a in a_list if a) / float(N))
-                sum_for_frac += (sum(1 for f in f_list if f) / float(N))
-                sum_both_frac += (sum(1 for a, f in zip(a_list, f_list) if a and f) / float(N))
-
-                # Choose a representative particle for logging/lengths:
-                # prefer one with both correct, else one with answer correct, else first.
-                chosen_idx = next((idx for idx, (a, f) in enumerate(zip(a_list, f_list)) if a and f), None)
-                if chosen_idx is None:
-                    chosen_idx = next((idx for idx, a in enumerate(a_list) if a), 0)
-                chosen_text = texts_g[chosen_idx]
-                chosen_len = gen_lens_g[chosen_idx]
-                total_gen_len += chosen_len
-
-                if len(examples) < cfg.eval.sample_cnt:
-                    examples.append({
-                        "prompt": prompts[k],
-                        "answer": gt,
-                        "completion": chosen_text,
-                        "correct": a_any,
-                        "format_correct": f_any,
-                    })
-            pbar.update(j - i)
-
-    avg_len = total_gen_len / total_queries if total_queries > 0 else 0.0
-    avg_ans_frac = sum_ans_frac / total_queries if total_queries > 0 else 0.0
-    avg_for_frac = sum_for_frac / total_queries if total_queries > 0 else 0.0
-    avg_both_frac = sum_both_frac / total_queries if total_queries > 0 else 0.0
-    avg_pass_at_k = {
-        metric.name: (pass_at_metric_sums[metric.name] / pass_at_metric_counts[metric.name]) if pass_at_metric_counts[metric.name] > 0 else 0.0
-        for metric in pass_metrics
-    }
-    return (
-        ans_correct / total_queries,
-        for_correct / total_queries,
-        both_correct / total_queries,
-        avg_len,
-        avg_ans_frac,
-        avg_for_frac,
-        avg_both_frac,
-        examples,
-        avg_pass_at_k,
-    )
-
-
 def _evaluate_dataset(
     model,
     tokenizer,
@@ -955,76 +521,44 @@ def _evaluate_dataset(
     results = {}
 
     run_default = bool(cfg.eval.get("run_default", True))
-    run_custom = bool(cfg.eval.get("run_custom", True))
     pass_metrics = _get_pass_metrics(cfg)
     pass_metric_names = [metric.name for metric in pass_metrics]
 
-    if run_default:
-        default_ans, default_for, default_both, default_len, default_ans_frac, default_for_frac, default_both_frac, default_examples = [], [], [], [], [], [], [], []
-        default_pass_at_k = {name: [] for name in pass_metric_names}
-    if run_custom:
-        custom_ans, custom_for, custom_both, custom_len, custom_ans_frac, custom_for_frac, custom_both_frac, custom_examples = [], [], [], [], [], [], [], []
-        custom_pass_at_k = {name: [] for name in pass_metric_names}
+    if not run_default:
+        return results
+
+    default_ans, default_for, default_both, default_len, default_ans_frac, default_for_frac, default_both_frac, default_examples = [], [], [], [], [], [], [], []
+    default_pass_at_k = {name: [] for name in pass_metric_names}
 
     for t in range(cfg.eval.repeat_cnt):
-        if run_default:
-            da, df, db, dl, dr_a, dr_f, dr_b, de, dp = _evaluate_once_default(
-                model,
-                tokenizer,
-                prompts,
-                answers,
-                cfg,
-                lora_request=lora_request,
-                progress_desc=f"{dataset_name} | default | rep {t+1}/{cfg.eval.repeat_cnt}"
-            )
-            default_ans.append(da); default_for.append(df); default_both.append(db); default_len.append(dl)
-            default_ans_frac.append(dr_a); default_for_frac.append(dr_f); default_both_frac.append(dr_b)
-            default_examples = de if not default_examples else default_examples
-            for name in pass_metric_names:
-                default_pass_at_k[name].append(dp.get(name, 0.0))
-        if run_custom:
-            ca, cf, cb, cl, cr_a, cr_f, cr_b, ce, cp = _evaluate_once_custom(
-                model,
-                tokenizer,
-                prompts,
-                answers,
-                cfg,
-                logging_enabled=cfg.wandb.enable,
-                lora_request=lora_request,
-                progress_desc=f"{dataset_name} | custom | rep {t+1}/{cfg.eval.repeat_cnt}"
-            )
-            custom_ans.append(ca); custom_for.append(cf); custom_both.append(cb); custom_len.append(cl)
-            custom_ans_frac.append(cr_a); custom_for_frac.append(cr_f); custom_both_frac.append(cr_b)
-            custom_examples = ce if not custom_examples else custom_examples
-            for name in pass_metric_names:
-                custom_pass_at_k[name].append(cp.get(name, 0.0))
+        da, df, db, dl, dr_a, dr_f, dr_b, de, dp = _evaluate_once_default(
+            model,
+            tokenizer,
+            prompts,
+            answers,
+            cfg,
+            lora_request=lora_request,
+            progress_desc=f"{dataset_name} | default | rep {t+1}/{cfg.eval.repeat_cnt}"
+        )
+        default_ans.append(da); default_for.append(df); default_both.append(db); default_len.append(dl)
+        default_ans_frac.append(dr_a); default_for_frac.append(dr_f); default_both_frac.append(dr_b)
+        default_examples = de if not default_examples else default_examples
+        for name in pass_metric_names:
+            default_pass_at_k[name].append(dp.get(name, 0.0))
 
         # Do not log per-repeat metrics to W&B; only final means are logged later.
 
-    if run_default:
-        results["default"] = {
-            "ans_acc": default_ans,
-            "for_acc": default_for,
-            "both_acc": default_both,
-            "lengths": default_len,
-            "ans_frac": default_ans_frac,
-            "for_frac": default_for_frac,
-            "both_frac": default_both_frac,
-            "examples": default_examples,
-            "pass_at_k": default_pass_at_k,
-        }
-    if run_custom:
-        results["custom"] = {
-            "ans_acc": custom_ans,
-            "for_acc": custom_for,
-            "both_acc": custom_both,
-            "lengths": custom_len,
-            "ans_frac": custom_ans_frac,
-            "for_frac": custom_for_frac,
-            "both_frac": custom_both_frac,
-            "examples": custom_examples,
-            "pass_at_k": custom_pass_at_k,
-        }
+    results["default"] = {
+        "ans_acc": default_ans,
+        "for_acc": default_for,
+        "both_acc": default_both,
+        "lengths": default_len,
+        "ans_frac": default_ans_frac,
+        "for_frac": default_for_frac,
+        "both_frac": default_both_frac,
+        "examples": default_examples,
+        "pass_at_k": default_pass_at_k,
+    }
     return results
 
 
