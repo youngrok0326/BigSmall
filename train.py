@@ -16,6 +16,7 @@ from omegaconf import DictConfig
 
 from utils.logging_utils import setup_file_logging
 from utils.geo_vllm import apply_geo_patch, restore_vllm
+from utils.unsloth_patch import apply_unsloth_patch, restore_unsloth
 
 
 @hydra.main(version_base=None, config_path="config", config_name="train")
@@ -26,8 +27,10 @@ def main(cfg: DictConfig) -> None:
     apply_patch(cfg.rl.algorithm)
     if (cfg.rl.algorithm or "").lower() == "geogrpo":
         apply_geo_patch()
+        apply_unsloth_patch()
     else:
         restore_vllm()
+        restore_unsloth()
     from utils.data import set_tokenizer_name
     set_tokenizer_name(cfg.model.model_name)
     # Patch the trl trainers to use FastLanguageModel

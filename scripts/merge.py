@@ -2,6 +2,7 @@
 To merge a LoRA adapter with a base model.
 Usage: python3 scripts/merge.py <base_model_name> <lora_name> <merged_directory>
 
+Developed by: Yixuan Even Xu in 2025
 """
 
 import argparse

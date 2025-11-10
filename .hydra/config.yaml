@@ -20,7 +20,7 @@ wandb:
   run_name: debug
 rl:
   algorithm: GeoGRPO
-  geo_lambda: 0.5
+  geo_lambda: 0.0
   dataset: math
   max_prompt_length: 512
   max_completion_length: 512

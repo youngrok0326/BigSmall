@@ -641,6 +641,18 @@ class GRPOTrainer(Trainer):
         self.vllm_gpu_memory_utilization = args.vllm_gpu_memory_utilization  # only applies to colocation mode
         self.vllm_tensor_parallel_size = args.vllm_tensor_parallel_size  # only applies to colocation mode
         self.use_liger_loss = args.use_liger_loss
+        self.geo_lambda = 1.0
+        generation_kwargs = args.generation_kwargs
+        if generation_kwargs is not None:
+            if isinstance(generation_kwargs, dict):
+                geo_lambda = generation_kwargs.get("geo_lambda")
+            else:
+                geo_lambda = getattr(generation_kwargs, "geo_lambda", None)
+            if geo_lambda is not None:
+                try:
+                    self.geo_lambda = float(geo_lambda)
+                except (TypeError, ValueError):
+                    pass
         self.loss_type = args.loss_type
         self.scale_rewards = args.scale_rewards
         self.importance_sampling_level = args.importance_sampling_level
@@ -1413,6 +1425,7 @@ class GRPOTrainer(Trainer):
                     re.sub(rf"({re.escape(self.image_token)})+", self.image_token, text) for text in prompts_text
                 ]
 
+        base_token_logps = None
         # Generate completions using either vLLM or regular generation
         if self.use_vllm:
             # First, update the vLLM weights if needed
@@ -1515,13 +1528,35 @@ class GRPOTrainer(Trainer):
                     all_outputs = self.llm.generate(vllm_inputs, sampling_params=sampling_params, use_tqdm=False)
 
                 completion_ids = [output.token_ids for outputs in all_outputs for output in outputs.outputs]
-
+                base_token_logps_sequences: Optional[list] = []
+                for outputs in all_outputs:
+                    for output in outputs.outputs:
+                        base_seq = getattr(output, "base_token_logps", None)
+                        if base_seq is None:
+                            base_token_logps_sequences = None
+                            break
+                        base_token_logps_sequences.append(base_seq)
+                    if base_token_logps_sequences is None:
+                        break
+                
                 if self.vllm_tensor_parallel_size > 1:
                     # Slice completions for this rank within its TP group.
                     # Each rank generates all outputs — we keep only our share.
                     local_rank_in_group = torch.distributed.get_rank(group=self.tp_group)
                     tp_slice = slice(local_rank_in_group * orig_size, (local_rank_in_group + 1) * orig_size)
                     completion_ids = completion_ids[tp_slice]
+                    if base_token_logps_sequences is not None:
+                        base_token_logps_sequences = base_token_logps_sequences[tp_slice]
+
+                if base_token_logps_sequences:
+                    tensors = []
+                    for seq in base_token_logps_sequences:
+                        if isinstance(seq, torch.Tensor):
+                            tensors.append(seq.to(device=device, dtype=torch.float32))
+                        else:
+                            tensors.append(torch.tensor(seq, device=device, dtype=torch.float32))
+                    if tensors:
+                        base_token_logps = pad(tensors, padding_value=0.0)
 
             # Pad the completions, and concatenate them with the prompts
             completion_ids = [torch.tensor(ids, device=device) for ids in completion_ids]
@@ -1752,6 +1787,8 @@ class GRPOTrainer(Trainer):
             output["old_per_token_logps"] = old_per_token_logps
         if ref_per_token_logps is not None:
             output["ref_per_token_logps"] = ref_per_token_logps
+        if base_token_logps is not None:
+            output["base_token_logps"] = base_token_logps
         if "pixel_values" in prompt_inputs:
             output["pixel_values"] = prompt_inputs["pixel_values"]
         if "image_grid_thw" in prompt_inputs:
@@ -1856,7 +1893,13 @@ class GRPOTrainer(Trainer):
         old_per_token_logps = inputs.get("old_per_token_logps")
         old_per_token_logps = per_token_logps.detach() if old_per_token_logps is None else old_per_token_logps
 
-        log_ratio = per_token_logps - old_per_token_logps
+        log_behavior = old_per_token_logps
+        base_token_logps = inputs.get("base_token_logps")
+        if base_token_logps is not None and self.geo_lambda < 1.0:
+            log_behavior = (
+                self.geo_lambda * log_behavior + (1.0 - self.geo_lambda) * base_token_logps.to(log_behavior.dtype)
+            )
+        log_ratio = per_token_logps - log_behavior
         if self.importance_sampling_level == "token":
             log_importance_weights = log_ratio
         elif self.importance_sampling_level == "sequence":

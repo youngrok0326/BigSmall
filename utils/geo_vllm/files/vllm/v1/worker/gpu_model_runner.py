@@ -135,6 +135,7 @@ class AsyncGPUModelRunnerOutput(AsyncModelRunnerOutput):
         sampled_token_ids: torch.Tensor,
         invalid_req_indices: list[int],
         async_output_copy_stream: torch.cuda.Stream,
+        base_token_logps: Optional[torch.Tensor] = None,
     ):
         self._model_runner_output = model_runner_output
         self._invalid_req_indices = invalid_req_indices
@@ -145,6 +146,8 @@ class AsyncGPUModelRunnerOutput(AsyncModelRunnerOutput):
         # Keep a reference to the device tensor to avoid it being
         # deallocated until we finish copying it to the host.
         self._sampled_token_ids = sampled_token_ids
+        self._base_token_logps = base_token_logps
+        self._base_token_logps_cpu: Optional[torch.Tensor] = None
 
         # Initiate the copy on a separate stream, but do not synchronize it.
         default_stream = torch.cuda.current_stream()
@@ -152,6 +155,9 @@ class AsyncGPUModelRunnerOutput(AsyncModelRunnerOutput):
             async_output_copy_stream.wait_stream(default_stream)
             self._sampled_token_ids_cpu = self._sampled_token_ids.to(
                 'cpu', non_blocking=True)
+            if self._base_token_logps is not None:
+                self._base_token_logps_cpu = self._base_token_logps.to(
+                    'cpu', non_blocking=True)
             self._async_copy_ready_event.record()
 
     def get_output(self) -> ModelRunnerOutput:
@@ -163,6 +169,8 @@ class AsyncGPUModelRunnerOutput(AsyncModelRunnerOutput):
 
         # Release the device tensor once the copy has completed
         del self._sampled_token_ids
+        if self._base_token_logps is not None:
+            del self._base_token_logps
 
         valid_sampled_token_ids = self._sampled_token_ids_cpu.tolist()
         for i in self._invalid_req_indices:
@@ -170,6 +178,11 @@ class AsyncGPUModelRunnerOutput(AsyncModelRunnerOutput):
 
         output = self._model_runner_output
         output.sampled_token_ids = valid_sampled_token_ids
+        if self._base_token_logps_cpu is not None:
+            base_token_logps = self._base_token_logps_cpu.tolist()
+            for i in self._invalid_req_indices:
+                base_token_logps[i].clear()
+            output.base_token_logps = base_token_logps
         return output
 
 
@@ -2410,6 +2423,7 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
                                           logits_lora_tensor, self.device)
 
             sampling_metadata = self.input_batch.sampling_metadata
+            base_log_probs_tensor: Optional[torch.Tensor] = None
             if (logits_lora_tensor is not None
                     and sampling_metadata.mix_lambda is not None
                     and spec_decode_metadata is None):
@@ -2423,6 +2437,8 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
                 lora_log_probs = torch.log_softmax(logits_lora_tensor,
                                                    dim=-1,
                                                    dtype=torch.float32)
+                if torch.any(torch.ne(mix_lambda.squeeze(-1), 1.0)):
+                    base_log_probs_tensor = base_log_probs
                 mixed_log_probs = (mix_lambda * lora_log_probs +
                                    (1.0 - mix_lambda) * base_log_probs)
                 logits = mixed_log_probs.to(logits_base_tensor.dtype)
@@ -2431,6 +2447,18 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
 
         with record_function_or_nullcontext("Sample"):
             sampler_output = self._sample(logits, spec_decode_metadata)
+        
+        base_token_logps_tensor: Optional[torch.Tensor] = None
+        if (base_log_probs_tensor is not None and spec_decode_metadata is None
+                and sampler_output.sampled_token_ids is not None):
+            gather_index = sampler_output.sampled_token_ids.to(
+                dtype=torch.long, device=base_log_probs_tensor.device)
+            if gather_index.dim() == 2:
+                base_token_logps_tensor = torch.gather(
+                    base_log_probs_tensor,
+                    dim=-1,
+                    index=gather_index,
+                )
 
         def propose_draft_token_ids(sampled_token_ids):
             assert spec_decode_common_attn_metadata is not None
@@ -2480,6 +2508,17 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
                                        logits, hidden_states,
                                        num_scheduled_tokens)
 
+        base_token_logps_list: Optional[list[list[float]]] = None
+        async_base_token_logps: Optional[torch.Tensor] = None
+        if base_token_logps_tensor is not None:
+            if self.use_async_scheduling:
+                async_base_token_logps = base_token_logps_tensor
+            else:
+                base_token_logps_cpu = base_token_logps_tensor.to('cpu')
+                base_token_logps_list = base_token_logps_cpu.tolist()
+                for idx in invalid_req_indices:
+                    base_token_logps_list[idx].clear()
+
         if (self.speculative_config and not use_padded_batch_for_eagle
                 and input_fits_in_drafter):
             # ngram and other speculative decoding methods use the sampled
@@ -2496,6 +2535,7 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
             logprobs=logprobs_lists,
             prompt_logprobs_dict=prompt_logprobs_dict,
             pooler_output=[],
+            base_token_logps=base_token_logps_list,
             kv_connector_output=kv_connector_output,
             num_nans_in_logits=num_nans_in_logits,
         )
@@ -2508,6 +2548,7 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
             sampled_token_ids=sampler_output.sampled_token_ids,
             invalid_req_indices=invalid_req_indices,
             async_output_copy_stream=self.async_output_copy_stream,
+            base_token_logps=async_base_token_logps,
         )
 
     def take_draft_token_ids(self) -> Optional[DraftTokenIds]:

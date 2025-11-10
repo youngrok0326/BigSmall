@@ -126,6 +126,8 @@ class ModelRunnerOutput:
     # Base/LoRA logits per request (Optional, length == num_reqs)
     logits_base: Optional[list[torch.Tensor]] = None
     logits_lora: Optional[list[torch.Tensor]] = None
+    # Per-token base log probabilities aligned with sampled_token_ids.
+    base_token_logps: Optional[list[list[float]]] = None
 
     kv_connector_output: Optional[KVConnectorOutput] = None
 
@@ -164,4 +166,5 @@ EMPTY_MODEL_RUNNER_OUTPUT = ModelRunnerOutput(req_ids=[],
                                               pooler_output=[],
                                               logits_base=None,
                                               logits_lora=None,
+                                              base_token_logps=None,
                                               num_nans_in_logits=None)
