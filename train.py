@@ -17,6 +17,10 @@ from omegaconf import DictConfig
 from utils.logging_utils import setup_file_logging
 from utils.geo_vllm import apply_geo_patch, restore_vllm
 from utils.unsloth_patch import apply_unsloth_patch, restore_unsloth
+from utils.torch_patch import enable_relaxed_cuda_graph_capture
+
+
+enable_relaxed_cuda_graph_capture()
 
 
 @hydra.main(version_base=None, config_path="config", config_name="train")

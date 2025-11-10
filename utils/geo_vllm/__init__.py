@@ -17,6 +17,7 @@ _TARGETS: tuple[str, ...] = (
     "vllm/lora/layers/column_parallel_linear.py",
     "vllm/lora/layers/row_parallel_linear.py",
     "vllm/lora/layers/replicated_linear.py",
+    "vllm/compilation/compiler_interface.py",
     "vllm/outputs.py",
     "vllm/sampling_params.py",
     "vllm/model_executor/models/qwen2.py",

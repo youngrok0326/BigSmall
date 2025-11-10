@@ -3742,8 +3742,9 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
         # Flexible resolve the cudagraph mode
         cudagraph_mode = self.compilation_config.cudagraph_mode
         # check cudagraph for mixed batch is supported
-        if cudagraph_mode.mixed_mode() == CUDAGraphMode.FULL \
-            and min_cg_support != AttentionCGSupport.ALWAYS:
+        if (cudagraph_mode.mixed_mode() == CUDAGraphMode.FULL
+                and min_cg_support.value <
+                AttentionCGSupport.UNIFORM_BATCH.value):
             msg = (f"CUDAGraphMode.{cudagraph_mode.name} is not supported "
                    f"with {min_cg_builder_name} backend (support: "
                    f"{min_cg_support})")
