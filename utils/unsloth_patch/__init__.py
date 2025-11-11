@@ -48,12 +48,24 @@ def _copy_files(pairs: Iterable[tuple[Path, Path]]) -> None:
         shutil.copy2(src, dst)
 
 
-def apply_unsloth_patch() -> None:
+def _resolve_source(rel_path: str, variant: str | None) -> Path:
+    variant = (variant or "").strip().lower()
+    if variant:
+        candidate = PATCH_ROOT / variant / rel_path
+        if candidate.exists():
+            return candidate
+    fallback = PATCH_ROOT / rel_path
+    if fallback.exists():
+        return fallback
+    raise FileNotFoundError(f"Missing patch file for '{rel_path}'. Checked variant '{variant or 'default'}'.")
+
+
+def apply_unsloth_patch(variant: str | None = None) -> None:
     """Copy patched Unsloth files into the installed package."""
     for site_root in _candidate_site_packages():
         copies = []
         for rel_path in _TARGETS:
-            src = PATCH_ROOT / rel_path
+            src = _resolve_source(rel_path, variant)
             dst = site_root / rel_path
             backup = dst.with_suffix(dst.suffix + _BACKUP_SUFFIX)
             if not backup.exists() and dst.exists():

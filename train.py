@@ -29,12 +29,16 @@ def main(cfg: DictConfig) -> None:
 
     from utils.patcher import apply_patch
     apply_patch(cfg.rl.algorithm)
-    if (cfg.rl.algorithm or "").lower() == "geogrpo":
+    algorithm = (cfg.rl.algorithm or "").lower()
+    if algorithm == "geogrpo":
         apply_geo_patch()
-        apply_unsloth_patch()
+        apply_unsloth_patch("geogrpo")
     else:
         restore_vllm()
-        restore_unsloth()
+        if algorithm == "mirror":
+            apply_unsloth_patch("mirror")
+        else:
+            restore_unsloth()
     from utils.data import set_tokenizer_name
     set_tokenizer_name(cfg.model.model_name)
     # Patch the trl trainers to use FastLanguageModel
