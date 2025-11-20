@@ -22,7 +22,7 @@ def main(cfg: DictConfig) -> None:
     setup_file_logging("train.log")
 
     from utils.patcher import apply_patch
-    apply_patch(cfg.rl.algorithm)
+    apply_patch()
     from utils.data import set_tokenizer_name
     set_tokenizer_name(cfg.model.model_name)
     # Patch the trl trainers to use FastLanguageModel
