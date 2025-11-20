@@ -16,11 +16,10 @@ model:
   random_state: 42
 wandb:
   enable: true
-  project_name: "GeoGRPO"
+  project_name: "GRPO"
   run_name: Original_1.5B_T512_N16_KL0.01 #"Instruct-GSM8K-16-16-Run1"
 rl:
-  algorithm: "GRPO" # GRPO, SMCGRPO, "GeoGRPO"
-  geo_lambda: 1.0
+  algorithm: "GRPO" # GRPO
   dataset: "math"
   max_prompt_length: 512
   max_completion_length: 512 #TODO: debugging temporarily

@@ -15,12 +15,6 @@ import hydra
 from omegaconf import DictConfig
 
 from utils.logging_utils import setup_file_logging
-from utils.geo_vllm import apply_geo_patch, restore_vllm
-from utils.unsloth_patch import apply_unsloth_patch, restore_unsloth
-from utils.torch_patch import enable_relaxed_cuda_graph_capture
-
-
-enable_relaxed_cuda_graph_capture()
 
 
 @hydra.main(version_base=None, config_path="config", config_name="train")
@@ -29,16 +23,6 @@ def main(cfg: DictConfig) -> None:
 
     from utils.patcher import apply_patch
     apply_patch(cfg.rl.algorithm)
-    algorithm = (cfg.rl.algorithm or "").lower()
-    if algorithm == "geogrpo":
-        apply_geo_patch()
-        apply_unsloth_patch("geogrpo")
-    else:
-        restore_vllm()
-        if algorithm == "mirror":
-            apply_unsloth_patch("mirror")
-        else:
-            restore_unsloth()
     from utils.data import set_tokenizer_name
     set_tokenizer_name(cfg.model.model_name)
     # Patch the trl trainers to use FastLanguageModel
@@ -78,7 +62,6 @@ def main(cfg: DictConfig) -> None:
     # Initialize the trainer
     rlparams = {
         "algorithm": cfg.rl.algorithm,
-        "geo_lambda": cfg.rl.geo_lambda,
         "max_prompt_length": cfg.rl.max_prompt_length,
         "max_completion_length": cfg.rl.max_completion_length,
         "num_generations": cfg.rl.num_generations,
@@ -106,10 +89,7 @@ def main(cfg: DictConfig) -> None:
     from inspect import signature
     valid_params = signature(Config.__init__).parameters.keys()
     rlparams = {k: v for k, v in rlparams.items() if k in valid_params}
-    gen_kwargs: dict[str, object] = {}
-    if (cfg.rl.algorithm or "").lower() == "geogrpo":
-        gen_kwargs["geo_lambda"] = cfg.rl.geo_lambda
-    generation_kwargs = gen_kwargs or None
+    generation_kwargs = None
 
     training_args = Config(
         learning_rate = cfg.optim.learning_rate,

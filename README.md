@@ -1,5 +1,4 @@
-# Inter-Scaling
-
+# Multi-Modal Sharpening
 ## General Information
 
 Our implementation is based on [Unsloth](https://github.com/unslothai/unsloth).

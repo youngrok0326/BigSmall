@@ -10,7 +10,6 @@ import json
 import hydra
 from omegaconf import DictConfig
 from utils.eval import test_model
-from utils.geo_vllm import restore_vllm
 
 def list_subdirectories(directory):
     subdirs = [name for name in os.listdir(directory) 
@@ -23,7 +22,6 @@ def list_subdirectories(directory):
 
 @hydra.main(version_base=None, config_path="config", config_name="test")
 def main(cfg: DictConfig) -> None:
-    restore_vllm()
     lora_names = list_subdirectories(f"checkpoints/{cfg.run_name}")
     try:
         with open(f"results/{cfg.run_name}.json", "r") as f:

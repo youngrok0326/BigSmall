@@ -16,11 +16,10 @@ model:
   random_state: 42
 wandb:
   enable: true
-  project_name: "GeoGRPO"
+  project_name: "GRPO"
   run_name: mirror_decent_0.1 #"Instruct-GSM8K-16-16-Run1"
 rl:
-  algorithm: "mirror" # GRPO, SMCGRPO, "GeoGRPO"
-  geo_lambda: 1.0
+  algorithm: "mirror" # mirror
   dataset: "math"
   max_prompt_length: 512
   max_completion_length: 512 #TODO: debugging temporarily
