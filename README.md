@@ -1,4 +1,4 @@
-# Multi-Modal Sharpening
+# Think Big, Stay Small
 ## General Information
 
 Our implementation is based on [Unsloth](https://github.com/unslothai/unsloth).
