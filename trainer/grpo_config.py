@@ -441,10 +441,6 @@ class GRPOConfig(TrainingArguments):
             "launching the vLLM server via the `--vllm_tensor_parallel_size` flag."
         },
     )
-    unsloth_num_chunks: Optional[int] = field(
-        default=-1,
-        metadata={"help": "Chunk size to reduce memory usage. -1 is most efficient."},
-    )
 
     # Parameters that control the training
     beta: float = field(

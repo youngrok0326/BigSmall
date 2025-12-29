@@ -121,6 +121,8 @@ def main(cfg: DictConfig) -> None:
         generation_kwargs=generation_kwargs,
         **rlparams,
     )
+    if not hasattr(training_args, "unsloth_num_chunks"):
+        training_args.unsloth_num_chunks = -1
     reward_funcs = [correctness_reward_func, format_reward_func, xmlcount_reward_func]
     trainer = Trainer(
         model = model,
