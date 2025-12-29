@@ -1,3 +1,6 @@
+defaults:
+  - _self_
+  - experiment: ???
 base_model: "Qwen/Qwen2.5-1.5B"
 run_name: "Instruct-GSM8K-16-16-Run1"
 datasets: 

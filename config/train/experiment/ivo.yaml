@@ -1,0 +1,10 @@
+# @package _global_
+wandb:
+  enable: true
+  project_name: "rlvr-distill"
+  run_name: ivo 
+
+rl:
+  algorithm: "IVO"
+  ivo_beta: 1.0
+  normalized_softlabel: true

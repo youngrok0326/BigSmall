@@ -1,6 +1,6 @@
 defaults:
-  - algorithm: ???
   - _self_
+  - experiment: ???
 model:
   model_name: Qwen/Qwen2.5-1.5B
   gpu_memory_utilization: 0.5

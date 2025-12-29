@@ -18,7 +18,7 @@ from omegaconf import DictConfig, OmegaConf
 from utils.logging_utils import setup_file_logging
 
 
-@hydra.main(version_base=None, config_path="config", config_name="train")
+@hydra.main(version_base=None, config_path="config/train", config_name="train")
 def main(cfg: DictConfig) -> None:
     setup_file_logging("train.log")
 

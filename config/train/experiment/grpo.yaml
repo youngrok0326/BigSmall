@@ -1,3 +1,9 @@
+# @package _global_
+wandb:
+  enable: true
+  project_name: "rlvr-distill"
+  run_name: grpo 
+
 rl:
   algorithm: "GRPO"
   epsilon: 0.2

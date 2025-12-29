@@ -20,7 +20,7 @@ def list_subdirectories(directory):
     subdirs.sort(key=extract_number)
     return subdirs
 
-@hydra.main(version_base=None, config_path="config", config_name="test")
+@hydra.main(version_base=None, config_path="config/test", config_name="test")
 def main(cfg: DictConfig) -> None:
     lora_names = list_subdirectories(f"checkpoints/{cfg.run_name}")
     try:
