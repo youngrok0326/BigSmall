@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from transformers import TrainingArguments
 
@@ -406,6 +406,10 @@ class GRPOConfig(TrainingArguments):
         default=None,
         metadata={"help": "Regex for vLLM guided decoding. If `None` (default), guided decoding is disabled."},
     )
+    vllm_sampling_params: Optional[Any] = field(
+        default=None,
+        metadata={"help": "Optional vLLM SamplingParams override."},
+    )
 
     # Parameters that control the vLLM server (only used when `vllm_mode` is `"server"`)
     vllm_server_host: str = field(
@@ -440,6 +444,10 @@ class GRPOConfig(TrainingArguments):
             "to `'colocate'`. If you are using `vllm_mode='server'`, this parameter must be passed separately when "
             "launching the vLLM server via the `--vllm_tensor_parallel_size` flag."
         },
+    )
+    unsloth_num_chunks: Optional[int] = field(
+        default=-1,
+        metadata={"help": "Chunk size to reduce memory usage. -1 is most efficient."},
     )
 
     # Parameters that control the training
