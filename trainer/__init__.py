@@ -10,11 +10,15 @@ from trl.import_utils import OptionalDependencyNotAvailable, _LazyModule
 _import_structure = {
     "grpo_trainer": ["GRPOTrainer"],
     "grpo_config": ["GRPOConfig"],
+    "ivo_trainer": ["IVOTrainer"],
+    "ivo_config": ["IVOConfig"],
 }
 
 if TYPE_CHECKING:
     from .grpo_trainer import GRPOTrainer
     from .grpo_config import GRPOConfig
+    from .ivo_trainer import IVOTrainer
+    from .ivo_config import IVOConfig
 else:
     import sys
 

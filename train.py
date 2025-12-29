@@ -57,7 +57,13 @@ def main(cfg: DictConfig) -> None:
     # dataset_testing  = get_math8k_questions(split = "test")
 
     # Import the trainer and config
-    from trl import GRPOTrainer as Trainer, GRPOConfig as Config
+    algorithm = cfg.rl.algorithm.lower()
+    if algorithm == "grpo":
+        from trl import GRPOTrainer as Trainer, GRPOConfig as Config
+    elif algorithm == "ivo":
+        from trl import IVOTrainer as Trainer, IVOConfig as Config
+    else:
+        raise ValueError(f"Unknown algorithm: {cfg.rl.algorithm}")
     
     # Initialize the trainer
     rlparams = {
@@ -68,6 +74,8 @@ def main(cfg: DictConfig) -> None:
         "max_steps": cfg.rl.max_steps,
         "save_steps": cfg.rl.save_steps,
         "beta": cfg.rl.beta,
+        "ivo_beta": cfg.rl.ivo_beta,
+        "normalized_softlabel": cfg.rl.normalized_softlabel,
         "save_strategy": "steps" if cfg.rl.save_strategy == "steps" else "no",
         "epsilon": cfg.rl.epsilon,
         "epsilon_high": cfg.rl.epsilon_high,

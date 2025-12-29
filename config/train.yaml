@@ -30,6 +30,8 @@ rl:
   save_interval: 100 #1800 # 1800
   max_time: .inf
   beta: 0.0
+  ivo_beta: 1.0
+  normalized_softlabel: true
   epsilon: 0.2
   epsilon_high: #0.28 # one sided
   delta: #1.5 # two sided

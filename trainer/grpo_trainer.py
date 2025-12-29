@@ -1696,6 +1696,7 @@ class GRPOTrainer(Trainer):
             self.accelerator.process_index * len(prompts),
             (self.accelerator.process_index + 1) * len(prompts),
         )
+        scores = rewards[process_slice]
         all_process_advantages = advantages.clone()  # keep the aggregated advantages for logging
         advantages = advantages[process_slice]
 
@@ -1747,6 +1748,7 @@ class GRPOTrainer(Trainer):
             "completion_ids": completion_ids,
             "completion_mask": completion_mask,
             "advantages": advantages,
+            "scores": scores,
         }
         if old_per_token_logps is not None:
             output["old_per_token_logps"] = old_per_token_logps
