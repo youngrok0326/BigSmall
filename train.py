@@ -60,9 +60,11 @@ def main(cfg: DictConfig) -> None:
     # Import the trainer and config
     algorithm = cfg.rl.algorithm.lower()
     if algorithm == "grpo":
-        from trl import GRPOTrainer as Trainer, GRPOConfig as Config
+        from trl.trainer.grpo_trainer import GRPOTrainer as Trainer
+        from trl.trainer.grpo_config import GRPOConfig as Config
     elif algorithm in ("ivo", "ivo_distill"):
-        from trl import IVOTrainer as Trainer, IVOConfig as Config
+        from trl.trainer.ivo_trainer import IVOTrainer as Trainer
+        from trl.trainer.ivo_config import IVOConfig as Config
     else:
         raise ValueError(f"Unknown algorithm: {cfg.rl.algorithm}")
     
