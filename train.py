@@ -4,7 +4,6 @@ To train a reasoning model using the Unsloth framework.
 """
 
 import os
-import unsloth
 
 os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"
 
@@ -24,10 +23,11 @@ def main(cfg: DictConfig) -> None:
 
     from utils.patcher import apply_patch
     apply_patch()
+    # Import Unsloth before anything that pulls in transformers.
+    import unsloth
+    from unsloth import FastLanguageModel
     from utils.data import set_tokenizer_name
     set_tokenizer_name(cfg.model.model_name)
-    # Patch the trl trainers to use FastLanguageModel
-    from unsloth import FastLanguageModel
     
     # Load the model
     pretrained_args = {
