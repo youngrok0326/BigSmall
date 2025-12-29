@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Any, Optional, Union
+from typing import Optional, Union
 
 from transformers import TrainingArguments
 
@@ -405,10 +405,6 @@ class GRPOConfig(TrainingArguments):
     vllm_guided_decoding_regex: Optional[str] = field(
         default=None,
         metadata={"help": "Regex for vLLM guided decoding. If `None` (default), guided decoding is disabled."},
-    )
-    vllm_sampling_params: Optional[Any] = field(
-        default=None,
-        metadata={"help": "Optional vLLM SamplingParams override."},
     )
 
     # Parameters that control the vLLM server (only used when `vllm_mode` is `"server"`)
