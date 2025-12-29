@@ -1,4 +1,5 @@
 import inspect
+import os
 from typing import Optional, Union
 
 import torch
@@ -84,16 +85,23 @@ class IVOTrainer(GRPOTrainer):
 
         load_in_4bit = bool(getattr(self.model, "is_loaded_in_4bit", False))
         load_in_8bit = bool(getattr(self.model, "is_loaded_in_8bit", False))
-        device_map = self.teacher_device or "sequential"
-
-        teacher_model, teacher_tokenizer = FastLanguageModel.from_pretrained(
-            model_name=self.teacher_model_id,
-            max_seq_length=max_seq_length,
-            load_in_4bit=load_in_4bit,
-            load_in_8bit=load_in_8bit,
-            fast_inference=False,
-            device_map=device_map,
-        )
+        device_map = {"": self.teacher_device} if self.teacher_device else "sequential"
+        prev_compile_disable = os.environ.get("UNSLOTH_COMPILE_DISABLE")
+        os.environ["UNSLOTH_COMPILE_DISABLE"] = "1"
+        try:
+            teacher_model, teacher_tokenizer = FastLanguageModel.from_pretrained(
+                model_name=self.teacher_model_id,
+                max_seq_length=max_seq_length,
+                load_in_4bit=load_in_4bit,
+                load_in_8bit=load_in_8bit,
+                fast_inference=False,
+                device_map=device_map,
+            )
+        finally:
+            if prev_compile_disable is None:
+                os.environ.pop("UNSLOTH_COMPILE_DISABLE", None)
+            else:
+                os.environ["UNSLOTH_COMPILE_DISABLE"] = prev_compile_disable
         self._ensure_tokenizer_compatibility(teacher_tokenizer)
         teacher_model.eval()
         if hasattr(teacher_model, "for_inference"):
