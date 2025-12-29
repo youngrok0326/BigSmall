@@ -33,6 +33,9 @@ rl:
   max_time: .inf
   mask_truncated_completions: # True #DAPO
   resume_from_checkpoint:
+  teacher_model:
+  teacher_beta:
+  teacher_device:
 optim:
   learning_rate: 5e-6
   lr_scheduler_type: "constant"

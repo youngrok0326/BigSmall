@@ -61,7 +61,7 @@ def main(cfg: DictConfig) -> None:
     algorithm = cfg.rl.algorithm.lower()
     if algorithm == "grpo":
         from trl import GRPOTrainer as Trainer, GRPOConfig as Config
-    elif algorithm == "ivo":
+    elif algorithm in ("ivo", "ivo_distill"):
         from trl import IVOTrainer as Trainer, IVOConfig as Config
     else:
         raise ValueError(f"Unknown algorithm: {cfg.rl.algorithm}")
@@ -75,6 +75,15 @@ def main(cfg: DictConfig) -> None:
             "steps" if rlparams["save_strategy"] == "steps" else "no"
         )
     rlparams = {k: v for k, v in rlparams.items() if v is not None}
+    if algorithm != "ivo_distill":
+        rlparams.pop("teacher_model", None)
+        rlparams.pop("teacher_beta", None)
+        rlparams.pop("teacher_device", None)
+    else:
+        if not rlparams.get("teacher_model"):
+            raise ValueError("rl.teacher_model must be set when rl.algorithm=IVO_DISTILL.")
+        if float(rlparams.get("teacher_beta", 0.0)) <= 0.0:
+            raise ValueError("rl.teacher_beta must be > 0 when rl.algorithm=IVO_DISTILL.")
     if cfg.wandb.enable:
         import wandb
         wandb_run = wandb.init(

@@ -1,0 +1,13 @@
+# @package _global_
+wandb:
+  enable: true
+  project_name: "rlvr-distill"
+  run_name: ivo_distill
+
+rl:
+  algorithm: "IVO_DISTILL"
+  ivo_beta: 1.0
+  normalized_softlabel: true
+  teacher_model: "Qwen/Qwen2.5-7B"
+  teacher_beta: 1.0
+  teacher_device:

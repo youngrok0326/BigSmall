@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Optional
 
 from .grpo_config import GRPOConfig
 
@@ -18,4 +19,16 @@ class IVOConfig(GRPOConfig):
     normalized_softlabel: bool = field(
         default=True,
         metadata={"help": "Use softmax-normalized soft labels."},
+    )
+    teacher_model: Optional[str] = field(
+        default=None,
+        metadata={"help": "Teacher model name or path for IVO distillation."},
+    )
+    teacher_beta: float = field(
+        default=0.0,
+        metadata={"help": "Teacher guidance strength. Set > 0 to enable distillation."},
+    )
+    teacher_device: Optional[str] = field(
+        default=None,
+        metadata={"help": "Device for the teacher model, e.g. 'cuda:0'."},
     )
