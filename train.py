@@ -23,26 +23,6 @@ def main(cfg: DictConfig) -> None:
 
     from utils.patcher import apply_patch
     apply_patch()
-    # Ensure Unsloth recompiles trainers after patching TRL.
-    import hashlib
-    base_dir = os.environ.get("HYDRA_ORIGINAL_CWD", os.getcwd())
-    patch_files = [
-        os.path.join(base_dir, "trainer", "grpo_trainer.py"),
-        os.path.join(base_dir, "trainer", "grpo_config.py"),
-        os.path.join(base_dir, "trainer", "ivo_trainer.py"),
-        os.path.join(base_dir, "trainer", "ivo_config.py"),
-    ]
-    hasher = hashlib.md5()
-    for path in patch_files:
-        try:
-            with open(path, "rb") as f:
-                hasher.update(f.read())
-        except FileNotFoundError:
-            continue
-    compile_hash = hasher.hexdigest()[:8]
-    compile_dir = os.path.join(base_dir, "unsloth_compiled_cache", f"trl_patch_{compile_hash}")
-    os.environ.setdefault("UNSLOTH_COMPILE_LOCATION", compile_dir)
-    os.environ.setdefault("UNSLOTH_COMPILE_OVERWRITE", "1")
     # Import Unsloth before anything that pulls in transformers.
     import unsloth
     from unsloth import FastLanguageModel

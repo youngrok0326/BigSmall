@@ -180,6 +180,7 @@ class IVOTrainer(GRPOTrainer):
         outputs = super()._generate_and_score_completions(inputs)
         if self._teacher is None or self.teacher_beta <= 0.0:
             return outputs
+        from trl.extras.profiling import profiling_context
 
         prompt_ids, prompt_mask = outputs["prompt_ids"], outputs["prompt_mask"]
         completion_ids, completion_mask = outputs["completion_ids"], outputs["completion_mask"]
@@ -187,16 +188,17 @@ class IVOTrainer(GRPOTrainer):
         attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
         logits_to_keep = completion_ids.size(1)
 
-        with torch.inference_mode():
-            teacher_values = self._get_teacher_values(
-                input_ids,
-                attention_mask,
-                logits_to_keep,
-                pixel_values=outputs.get("pixel_values"),
-                image_grid_thw=outputs.get("image_grid_thw"),
-                pixel_attention_mask=outputs.get("pixel_attention_mask"),
-                image_sizes=outputs.get("image_sizes"),
-            )
+        with profiling_context(self, "teacher_values"):
+            with torch.inference_mode():
+                teacher_values = self._get_teacher_values(
+                    input_ids,
+                    attention_mask,
+                    logits_to_keep,
+                    pixel_values=outputs.get("pixel_values"),
+                    image_grid_thw=outputs.get("image_grid_thw"),
+                    pixel_attention_mask=outputs.get("pixel_attention_mask"),
+                    image_sizes=outputs.get("image_sizes"),
+                )
         outputs["teacher_psi"] = teacher_values - teacher_values[:, :1]
         return outputs
 
