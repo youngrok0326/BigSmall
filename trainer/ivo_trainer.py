@@ -76,6 +76,7 @@ class IVOTrainer(GRPOTrainer):
 
     def _init_teacher(self):
         from unsloth import FastLanguageModel
+        from unsloth.models.llama import original_apply_qkv, original_apply_o
 
         max_seq_length = getattr(self.model, "max_seq_length", None)
         if max_seq_length is None:
@@ -108,6 +109,20 @@ class IVOTrainer(GRPOTrainer):
             teacher_model.for_inference()
         for param in teacher_model.parameters():
             param.requires_grad_(False)
+        base_model = teacher_model.get_base_model() if hasattr(teacher_model, "get_base_model") else teacher_model
+        layers = []
+        if hasattr(base_model, "model") and hasattr(base_model.model, "layers"):
+            layers = base_model.model.layers
+        elif hasattr(base_model, "layers"):
+            layers = base_model.layers
+        for layer in layers:
+            attn = getattr(layer, "self_attn", None)
+            if attn is None:
+                continue
+            if not hasattr(attn, "apply_qkv"):
+                attn.apply_qkv = original_apply_qkv
+            if not hasattr(attn, "apply_o"):
+                attn.apply_o = original_apply_o
         self._teacher = teacher_model
         self._teacher_device = next(teacher_model.parameters()).device
 
