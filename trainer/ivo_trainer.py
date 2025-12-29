@@ -40,6 +40,8 @@ class IVOTrainer(GRPOTrainer):
         )
         self.ivo_beta = getattr(args, "ivo_beta", 1.0)
         self.normalized_softlabel = getattr(args, "normalized_softlabel", True)
+        if self.num_generations > 1:
+            self._group_shuffle_size = self.num_generations
 
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         if return_outputs:
@@ -87,7 +89,9 @@ class IVOTrainer(GRPOTrainer):
         group_lse = group_lse.repeat_interleave(self.num_generations, dim=0)
 
         per_token_loss = -soft_label.unsqueeze(1) * (diff_cum - group_lse)
-        loss = (per_token_loss * completion_mask).sum() / completion_mask.sum().clamp(min=1.0)
+        token_counts = completion_mask.sum(dim=1).clamp(min=1.0)
+        per_seq_loss = (per_token_loss * completion_mask).sum(dim=1) / token_counts
+        loss = per_seq_loss.mean()
 
         if self.beta != 0.0:
             ref_per_token_logps = inputs.get("ref_per_token_logps")

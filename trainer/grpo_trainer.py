@@ -234,9 +234,12 @@ def split_tensor_dict(
     ]
 
 
-def shuffle_sequence_dict(seq_dict: dict[str, Optional[Sequence]]) -> dict[str, Optional[Sequence]]:
+def shuffle_sequence_dict(
+    seq_dict: dict[str, Optional[Sequence]], group_size: Optional[int] = None
+) -> dict[str, Optional[Sequence]]:
     """
     Shuffles all sequence-like values in a dictionary along the first dimension in unison.
+    If group_size is provided, shuffles groups of that size while preserving within-group order.
 
     Example:
     ```python
@@ -252,16 +255,35 @@ def shuffle_sequence_dict(seq_dict: dict[str, Optional[Sequence]]) -> dict[str, 
     """
     # Determine batch size from the first non-None sequence
     batch_size = len(next(v for v in seq_dict.values() if v is not None))
-    permutation = torch.randperm(batch_size)
+    if group_size is None or group_size <= 1:
+        permutation = torch.randperm(batch_size)
 
-    def permute(v: Optional[Sequence]) -> Optional[Sequence]:
+        def permute(v: Optional[Sequence]) -> Optional[Sequence]:
+            if v is None:
+                return None
+            if isinstance(v, torch.Tensor):
+                return v[permutation]
+            return [v[i] for i in permutation]
+
+        return {key: permute(val) for key, val in seq_dict.items()}
+
+    if batch_size % group_size != 0:
+        raise ValueError(f"group_size ({group_size}) must divide batch_size ({batch_size}).")
+    num_groups = batch_size // group_size
+    group_permutation = torch.randperm(num_groups)
+
+    def permute_group(v: Optional[Sequence]) -> Optional[Sequence]:
         if v is None:
             return None
         if isinstance(v, torch.Tensor):
-            return v[permutation]
-        return [v[i] for i in permutation]
+            grouped = v.reshape(num_groups, group_size, *v.shape[1:])
+            shuffled = grouped[group_permutation]
+            return shuffled.reshape(v.shape)
+        grouped = [v[i * group_size : (i + 1) * group_size] for i in range(num_groups)]
+        shuffled = [grouped[i] for i in group_permutation.tolist()]
+        return [item for group in shuffled for item in group]
 
-    return {key: permute(val) for key, val in seq_dict.items()}
+    return {key: permute_group(val) for key, val in seq_dict.items()}
 
 
 def nanmin(tensor: torch.Tensor) -> torch.Tensor:
@@ -1278,7 +1300,8 @@ class GRPOTrainer(Trainer):
                 # self._buffered_inputs=None can occur when resuming from a checkpoint
                 generation_batch = self._generate_and_score_completions(generation_batch)
                 generation_batch = split_pixel_values_by_grid(generation_batch)
-                generation_batch = shuffle_sequence_dict(generation_batch)
+                group_size = getattr(self, "_group_shuffle_size", None)
+                generation_batch = shuffle_sequence_dict(generation_batch, group_size=group_size)
                 generation_batches = split_tensor_dict(generation_batch, self.args.steps_per_generation)
                 self._buffered_inputs = [unsplit_pixel_values_by_grid(batch) for batch in generation_batches]
             inputs = self._buffered_inputs[self._step % self.args.steps_per_generation]
