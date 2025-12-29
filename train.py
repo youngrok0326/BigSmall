@@ -4,7 +4,6 @@ To train a reasoning model using the Unsloth framework.
 """
 
 import os
-from pathlib import Path
 import unsloth
 
 os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"
@@ -14,42 +13,9 @@ import logging
 logging.getLogger("vllm").setLevel(logging.WARNING)
 
 import hydra
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from utils.logging_utils import setup_file_logging
-
-
-def _resolve_unsloth_lora_cache_dir() -> Path:
-    cache_dir = os.environ.get("UNSLOTH_LORA_DIR")
-    if cache_dir:
-        return Path(cache_dir).expanduser()
-
-    xdg_cache = os.environ.get("XDG_CACHE_HOME")
-    if xdg_cache:
-        return Path(xdg_cache).expanduser() / "unsloth_lora"
-
-    return Path.home() / ".cache" / "unsloth_lora"
-
-
-def _patch_unsloth_lora_cache(cache_dir: Path) -> None:
-    try:
-        import unsloth_zoo.vllm_utils as vllm_utils
-    except Exception:
-        return
-
-    if getattr(vllm_utils, "_unsloth_lora_cache_patched", False):
-        return
-
-    original_load_lora = vllm_utils.load_lora
-
-    def _load_lora_with_cache(model, save_directory, *args, **kwargs):
-        save_directory = os.path.expanduser(str(save_directory))
-        if not os.path.isabs(save_directory):
-            save_directory = str(cache_dir / save_directory)
-        return original_load_lora(model, save_directory, *args, **kwargs)
-
-    vllm_utils.load_lora = _load_lora_with_cache
-    vllm_utils._unsloth_lora_cache_patched = True
 
 
 @hydra.main(version_base=None, config_path="config", config_name="train")
@@ -64,11 +30,6 @@ def main(cfg: DictConfig) -> None:
     from unsloth import FastLanguageModel
     
     # Load the model
-    if cfg.model.fast_inference:
-        # Keep Unsloth's vLLM LoRA cache out of the project root.
-        cache_dir = _resolve_unsloth_lora_cache_dir()
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        _patch_unsloth_lora_cache(cache_dir)
     pretrained_args = {
         "model_name": cfg.model.model_name,
         "max_lora_rank": cfg.model.lora_rank,
@@ -106,27 +67,14 @@ def main(cfg: DictConfig) -> None:
         raise ValueError(f"Unknown algorithm: {cfg.rl.algorithm}")
     
     # Initialize the trainer
-    rlparams = {
-        "algorithm": cfg.rl.algorithm,
-        "max_prompt_length": cfg.rl.max_prompt_length,
-        "max_completion_length": cfg.rl.max_completion_length,
-        "num_generations": cfg.rl.num_generations,
-        "max_steps": cfg.rl.max_steps,
-        "save_steps": cfg.rl.save_steps,
-        "beta": cfg.rl.beta,
-        "ivo_beta": cfg.rl.ivo_beta,
-        "normalized_softlabel": cfg.rl.normalized_softlabel,
-        "save_strategy": "steps" if cfg.rl.save_strategy == "steps" else "no",
-        "mask_truncated_completions": cfg.rl.mask_truncated_completions,
-    }
-    optional_rlparams = {
-        "epsilon": cfg.rl.get("epsilon"),
-        "epsilon_high": cfg.rl.get("epsilon_high"),
-        "delta": cfg.rl.get("delta"),
-        "scale_rewards": cfg.rl.get("scale_rewards"),
-        "loss_type": cfg.rl.get("loss_type"),
-    }
-    rlparams.update({k: v for k, v in optional_rlparams.items() if v is not None})
+    rlparams = OmegaConf.to_container(cfg.rl, resolve=True) or {}
+    if not isinstance(rlparams, dict):
+        raise ValueError("cfg.rl must be a mapping of RL parameters")
+    if "save_strategy" in rlparams:
+        rlparams["save_strategy"] = (
+            "steps" if rlparams["save_strategy"] == "steps" else "no"
+        )
+    rlparams = {k: v for k, v in rlparams.items() if v is not None}
     if cfg.wandb.enable:
         import wandb
         wandb_run = wandb.init(

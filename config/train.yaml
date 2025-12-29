@@ -1,3 +1,6 @@
+defaults:
+  - algorithm: ???
+  - _self_
 model:
   model_name: Qwen/Qwen2.5-1.5B
   gpu_memory_utilization: 0.5
@@ -16,10 +19,9 @@ model:
   random_state: 42
 wandb:
   enable: true
-  project_name: "GRPO"
+  project_name: "rlvr-distill"
   run_name: debug #"Instruct-GSM8K-16-16-Run1"
 rl:
-  algorithm: "GRPO" # GRPO
   dataset: "math"
   max_prompt_length: 512
   max_completion_length: 512 #TODO: debugging temporarily
@@ -29,14 +31,6 @@ rl:
   save_steps: 100
   save_interval: 100 #1800 # 1800
   max_time: .inf
-  beta: 0.0
-  ivo_beta: 1.0
-  normalized_softlabel: true
-  epsilon: 0.2
-  epsilon_high: #0.28 # one sided
-  delta: #1.5 # two sided
-  scale_rewards: true
-  loss_type: 'grpo' # 'bnpo', 'dr_grpo'
   mask_truncated_completions: # True #DAPO
   resume_from_checkpoint:
 optim:
