@@ -1607,6 +1607,15 @@ class GRPOTrainer(Trainer):
 
         # Mask everything after the first EOS token
         eos_token_id = getattr(self, "_eos_token_ids", self.eos_token_id)
+        if eos_token_id is None:
+            fallback_eos = getattr(self.processing_class, "eos_token_id", None)
+            if fallback_eos is None and hasattr(self.processing_class, "tokenizer"):
+                fallback_eos = getattr(self.processing_class.tokenizer, "eos_token_id", None)
+            if fallback_eos is None:
+                fallback_eos = getattr(self, "pad_token_id", None)
+            eos_token_id = fallback_eos
+        if eos_token_id is None:
+            raise ValueError("eos_token_id is None; set a valid eos_token_id before generation.")
         if isinstance(eos_token_id, (list, tuple, set)):
             eos_ids = torch.tensor(list(eos_token_id), device=completion_ids.device)
             is_eos = (completion_ids.unsqueeze(-1) == eos_ids).any(-1)
