@@ -2,7 +2,7 @@
 wandb:
   enable: true
   project_name: "rlvr-distill-Qwen2.5-Math"
-  run_name: ivo_distill_Tbeta2.0
+  run_name: ivo_distill_Math_Tbeta2.0
 
 rl:
   algorithm: "IVO_DISTILL"

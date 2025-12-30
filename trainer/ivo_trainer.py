@@ -48,6 +48,7 @@ class IVOTrainer(GRPOTrainer):
         self._teacher = None
         self._teacher_model_kwarg_keys = None
         self._teacher_device = None
+        self._eos_token_ids = None
         if self.teacher_beta > 0.0:
             if not self.teacher_model_id:
                 raise ValueError("teacher_model must be set when teacher_beta > 0.")
@@ -64,10 +65,27 @@ class IVOTrainer(GRPOTrainer):
         student_tokenizer = self._get_student_tokenizer()
         if teacher_tokenizer is None or student_tokenizer is None:
             return
+        teacher_id = (self.teacher_model_id or "").lower()
+        student_id = getattr(self.model.config, "_name_or_path", "") or ""
+        student_id = str(student_id).lower()
+        is_qwen = "qwen" in teacher_id and "qwen" in student_id
         if getattr(teacher_tokenizer, "vocab_size", None) != getattr(student_tokenizer, "vocab_size", None):
             raise ValueError("Teacher tokenizer vocab_size does not match the student tokenizer.")
-        if getattr(teacher_tokenizer, "special_tokens_map", None) != getattr(student_tokenizer, "special_tokens_map", None):
+        teacher_vocab = teacher_tokenizer.get_vocab()
+        student_vocab = student_tokenizer.get_vocab()
+        if teacher_vocab != student_vocab:
+            raise ValueError("Teacher tokenizer vocab does not match the student tokenizer.")
+        def _normalized_special_tokens_map(tokenizer):
+            tokens_map = getattr(tokenizer, "special_tokens_map", None)
+            if tokens_map is None:
+                return None
+            if is_qwen:
+                return {key: value for key, value in tokens_map.items() if key != "eos_token"}
+            return tokens_map
+        if _normalized_special_tokens_map(teacher_tokenizer) != _normalized_special_tokens_map(student_tokenizer):
             raise ValueError("Teacher tokenizer special tokens do not match the student tokenizer.")
+        if not is_qwen and getattr(teacher_tokenizer, "chat_template", None) != getattr(student_tokenizer, "chat_template", None):
+            raise ValueError("Teacher tokenizer chat_template does not match the student tokenizer.")
         test_text = "Tokenization compatibility check."
         teacher_ids = teacher_tokenizer.encode(test_text, add_special_tokens=False)
         student_ids = student_tokenizer.encode(test_text, add_special_tokens=False)
@@ -104,6 +122,28 @@ class IVOTrainer(GRPOTrainer):
             else:
                 os.environ["UNSLOTH_COMPILE_DISABLE"] = prev_compile_disable
         self._ensure_tokenizer_compatibility(teacher_tokenizer)
+        student_tokenizer = self._get_student_tokenizer()
+        eos_ids = []
+        teacher_id = (self.teacher_model_id or "").lower()
+        student_id = getattr(self.model.config, "_name_or_path", "") or ""
+        student_id = str(student_id).lower()
+        is_qwen = "qwen" in teacher_id and "qwen" in student_id
+        if is_qwen:
+            for tokenizer in (teacher_tokenizer, student_tokenizer):
+                if tokenizer is None:
+                    continue
+                eos = getattr(tokenizer, "eos_token_id", None)
+                if eos is None:
+                    continue
+                if isinstance(eos, (list, tuple, set)):
+                    eos_ids.extend(list(eos))
+                else:
+                    eos_ids.append(eos)
+            eos_ids = sorted(set(eos_ids))
+            if eos_ids:
+                self._eos_token_ids = eos_ids if len(eos_ids) > 1 else eos_ids[0]
+                if hasattr(self, "generation_config"):
+                    self.generation_config.eos_token_id = eos_ids if len(eos_ids) > 1 else eos_ids[0]
         teacher_model.eval()
         if hasattr(teacher_model, "for_inference"):
             teacher_model.for_inference()

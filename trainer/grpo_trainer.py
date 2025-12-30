@@ -1606,7 +1606,12 @@ class GRPOTrainer(Trainer):
             completion_ids = prompt_completion_ids[:, prompt_length:]
 
         # Mask everything after the first EOS token
-        is_eos = completion_ids == self.eos_token_id
+        eos_token_id = getattr(self, "_eos_token_ids", self.eos_token_id)
+        if isinstance(eos_token_id, (list, tuple, set)):
+            eos_ids = torch.tensor(list(eos_token_id), device=completion_ids.device)
+            is_eos = (completion_ids.unsqueeze(-1) == eos_ids).any(-1)
+        else:
+            is_eos = completion_ids == eos_token_id
         eos_idx = torch.full((is_eos.size(0),), is_eos.size(1), dtype=torch.long, device=device)
         eos_idx[is_eos.any(dim=1)] = is_eos.int().argmax(dim=1)[is_eos.any(dim=1)]
         sequence_indices = torch.arange(is_eos.size(1), device=device).expand(is_eos.size(0), -1)
