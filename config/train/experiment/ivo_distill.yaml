@@ -2,12 +2,12 @@
 wandb:
   enable: true
   project_name: "rlvr-distill-Qwen2.5-Math"
-  run_name: ivo_distill
+  run_name: ivo_distill_Tbeta2.0
 
 rl:
   algorithm: "IVO_DISTILL"
   ivo_beta: 1.0
   normalized_softlabel: true
-  teacher_model: Qwen/Qwen2.5-Math-7B-Instruct
-  teacher_beta: 1.0
+  teacher_model: "Qwen/Qwen2.5-Math-7B-Instruct"
+  teacher_beta: 2.0
   teacher_device: "cuda:1"
