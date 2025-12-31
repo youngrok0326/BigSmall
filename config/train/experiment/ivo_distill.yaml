@@ -6,7 +6,7 @@ wandb:
 
 rl:
   algorithm: "IVO_DISTILL"
-  ivo_beta: 1.0
+  ivo_beta: 1.0 # TODO: distinguish with soft label?
   normalized_softlabel: true
   teacher_model: "Qwen/Qwen2.5-Math-7B-Instruct"
   teacher_lora_path: null

@@ -9,5 +9,6 @@ rl:
   epsilon: 0.2
   epsilon_high: #0.28 # one sided
   delta: #1.5 # two sided
+  beta: 0.0
   scale_rewards: true
   loss_type: "grpo"

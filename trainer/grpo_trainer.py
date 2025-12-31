@@ -36,6 +36,7 @@ from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.utils.data import DataLoader, Sampler
 from transformers import (
     AutoConfig,
+    AutoModelForCausalLM,
     AutoModelForSequenceClassification,
     AutoProcessor,
     AutoTokenizer,
@@ -70,7 +71,7 @@ from trl.trainer.utils import (
 
 
 if is_peft_available():
-    from peft import PeftConfig, get_peft_model
+    from peft import PeftConfig, PeftModel, get_peft_model
 
 if is_liger_kernel_available():
     from liger_kernel.chunked_loss import LigerFusedLinearGRPOLoss
@@ -737,10 +738,27 @@ class GRPOTrainer(Trainer):
             optimizers=optimizers,
         )
 
-        # Reference model
+        # Reference/teacher KL
         self.beta = args.beta
-        if self.beta == 0.0:
-            # If beta is 0.0, the reference model is not needed
+        self.kl_alpha = float(getattr(args, "kl_alpha", 1.0))
+        if not 0.0 <= self.kl_alpha <= 1.0:
+            raise ValueError("kl_alpha must be between 0 and 1.")
+        self.teacher_model_id = getattr(args, "teacher_model", None)
+        self.teacher_device = getattr(args, "teacher_device", None)
+        self.teacher_lora_path = getattr(args, "teacher_lora_path", None)
+        self._teacher = None
+        self._teacher_device = None
+        self._teacher_model_kwarg_keys = None
+
+        needs_teacher = self.beta != 0.0 and self.kl_alpha < 1.0
+        if needs_teacher and not self.teacher_model_id:
+            raise ValueError("teacher_model must be set when teacher KL is enabled.")
+        if needs_teacher:
+            self._init_teacher()
+
+        # Reference model
+        if self.beta == 0.0 or self.kl_alpha == 0.0:
+            # If beta is 0.0 or teacher KL is fully used, the reference model is not needed.
             self.ref_model = None
         elif is_peft_model(model):
             # If PEFT is used, the reference model is not needed since the adapter can be disabled
@@ -760,6 +778,8 @@ class GRPOTrainer(Trainer):
 
         # Liger loss
         if self.use_liger_loss:
+            if self.beta != 0.0 and self.kl_alpha < 1.0:
+                raise NotImplementedError("Liger loss does not support teacher KL.")
             if not is_liger_kernel_available():
                 raise ImportError(
                     "Liger is required to use `liger_loss` as the GRPO loss. Run `pip install liger-kernel`."
@@ -772,7 +792,7 @@ class GRPOTrainer(Trainer):
                 epsilon_low=self.epsilon_low,
                 epsilon_high=self.epsilon_high,
                 temperature=self.temperature,
-                use_ref_model=self.beta != 0.0,
+                use_ref_model=self.beta != 0.0 and self.kl_alpha > 0.0,
                 loss_type=self.loss_type,
                 max_completion_length=self.max_completion_length,
             )
@@ -1169,6 +1189,120 @@ class GRPOTrainer(Trainer):
         logps = torch.cat(all_logps, dim=0)
         entropies = torch.cat(all_entropies, dim=0) if compute_entropy else None
         return logps, entropies
+
+    def _resolve_teacher_lora_path(self, path: Optional[str]) -> Optional[str]:
+        if not path:
+            return None
+        if isinstance(path, str) and path.lower() in ("none", "null"):
+            return None
+        path = os.path.expanduser(path)
+        if os.path.isabs(path):
+            return path
+        from hydra.utils import get_original_cwd
+
+        base_dir = get_original_cwd()
+        candidate = os.path.join(base_dir, path)
+        return candidate if os.path.exists(candidate) else path
+
+    def _get_student_tokenizer(self):
+        if isinstance(self.processing_class, ProcessorMixin):
+            return self.processing_class.tokenizer
+        return self.processing_class
+
+    def _is_qwen_pair(self) -> bool:
+        teacher_id = (self.teacher_model_id or "").lower()
+        student_id = str(getattr(self.model.config, "_name_or_path", "") or "").lower()
+        return "qwen" in teacher_id and "qwen" in student_id
+
+    def _ensure_tokenizer_compatibility(self, teacher_tokenizer):
+        student_tokenizer = self._get_student_tokenizer()
+        if teacher_tokenizer is None or student_tokenizer is None:
+            return
+        is_qwen = self._is_qwen_pair()
+        if getattr(teacher_tokenizer, "vocab_size", None) != getattr(student_tokenizer, "vocab_size", None):
+            raise ValueError("Teacher tokenizer vocab_size does not match the student tokenizer.")
+        if teacher_tokenizer.get_vocab() != student_tokenizer.get_vocab():
+            raise ValueError("Teacher tokenizer vocab does not match the student tokenizer.")
+
+        def _normalized_special_tokens_map(tokenizer):
+            tokens_map = getattr(tokenizer, "special_tokens_map", None)
+            if tokens_map is None:
+                return None
+            if is_qwen:
+                return {key: value for key, value in tokens_map.items() if key != "eos_token"}
+            return tokens_map
+
+        if _normalized_special_tokens_map(teacher_tokenizer) != _normalized_special_tokens_map(student_tokenizer):
+            raise ValueError("Teacher tokenizer special tokens do not match the student tokenizer.")
+        if not is_qwen and getattr(teacher_tokenizer, "chat_template", None) != getattr(student_tokenizer, "chat_template", None):
+            raise ValueError("Teacher tokenizer chat_template does not match the student tokenizer.")
+        test_text = "Tokenization compatibility check."
+        if teacher_tokenizer.encode(test_text, add_special_tokens=False) != student_tokenizer.encode(
+            test_text, add_special_tokens=False
+        ):
+            raise ValueError("Teacher tokenizer encoding differs from the student tokenizer.")
+
+    def _init_teacher(self):
+        model_init_kwargs = self.args.model_init_kwargs or {}
+        device_map = {"": self.teacher_device} if self.teacher_device else "sequential"
+        teacher_model = AutoModelForCausalLM.from_pretrained(
+            self.teacher_model_id,
+            device_map=device_map,
+            **model_init_kwargs,
+        )
+        teacher_tokenizer = AutoTokenizer.from_pretrained(self.teacher_model_id)
+        self._ensure_tokenizer_compatibility(teacher_tokenizer)
+        lora_path = self._resolve_teacher_lora_path(self.teacher_lora_path)
+        if lora_path:
+            if not is_peft_available():
+                raise ImportError("PEFT is required to load a teacher LoRA adapter.")
+            teacher_model = PeftModel.from_pretrained(teacher_model, lora_path)
+        if self.args.disable_dropout:
+            disable_dropout_in_model(teacher_model)
+        teacher_model.eval()
+        if hasattr(teacher_model, "for_inference"):
+            teacher_model.for_inference()
+        for param in teacher_model.parameters():
+            param.requires_grad_(False)
+        base_model = teacher_model.get_base_model() if hasattr(teacher_model, "get_base_model") else teacher_model
+        self._teacher_model_kwarg_keys = inspect.signature(base_model.forward).parameters.keys()
+        self._teacher = teacher_model
+        self._teacher_device = next(teacher_model.parameters()).device
+
+    def _get_teacher_logits(
+        self,
+        input_ids,
+        attention_mask,
+        logits_to_keep,
+        pixel_values=None,
+        image_grid_thw=None,
+        pixel_attention_mask=None,
+        image_sizes=None,
+    ):
+        if self._teacher is None:
+            raise ValueError("Teacher model is not initialized.")
+        teacher = self._teacher
+        teacher_device = self._teacher_device or input_ids.device
+        model_inputs = {
+            "input_ids": input_ids.to(teacher_device),
+            "attention_mask": attention_mask.to(teacher_device),
+        }
+        if image_grid_thw is not None and pixel_values is not None:
+            model_inputs["image_grid_thw"] = image_grid_thw.to(teacher_device)
+            model_inputs["pixel_values"] = pixel_values.to(teacher_device)
+        elif pixel_values is not None:
+            model_inputs["pixel_values"] = pixel_values.to(teacher_device)
+        if pixel_attention_mask is not None:
+            model_inputs["pixel_attention_mask"] = pixel_attention_mask.to(teacher_device)
+        if image_sizes is not None:
+            model_inputs["image_sizes"] = image_sizes.to(teacher_device)
+        if "logits_to_keep" in self._teacher_model_kwarg_keys:
+            model_inputs["logits_to_keep"] = logits_to_keep + 1
+        with torch.no_grad():
+            logits = teacher(**model_inputs).logits
+        logits = logits[:, :-1, :]
+        logits = logits[:, -logits_to_keep:, :]
+        return logits
 
     def _fix_param_name_to_vllm(self, name, extra_prefixes: Optional[list[str]] = None):
         extra_prefixes = extra_prefixes or []
@@ -1703,7 +1837,7 @@ class GRPOTrainer(Trainer):
                 old_per_token_logps = None
 
             # Compute the per-token log probabilities for the reference model
-            if self.beta != 0.0:
+            if self.beta != 0.0 and self.kl_alpha > 0.0:
                 if self.ref_model is not None:
                     ref_per_token_logps, _ = self._get_per_token_logps_and_entropies(
                         self.ref_model,
@@ -1731,6 +1865,21 @@ class GRPOTrainer(Trainer):
                         )
             else:
                 ref_per_token_logps = None
+
+            teacher_per_token_logps = None
+            if self.beta != 0.0 and self.kl_alpha < 1.0:
+                teacher_logits = self._get_teacher_logits(
+                    prompt_completion_ids,
+                    attention_mask,
+                    logits_to_keep,
+                    pixel_values=prompt_inputs.get("pixel_values"),
+                    image_grid_thw=prompt_inputs.get("image_grid_thw"),
+                    pixel_attention_mask=prompt_inputs.get("pixel_attention_mask"),
+                    image_sizes=prompt_inputs.get("image_sizes"),
+                )
+                completion_ids_teacher = completion_ids.to(teacher_logits.device)
+                teacher_logps = selective_log_softmax(teacher_logits / self.temperature, completion_ids_teacher)
+                teacher_per_token_logps = teacher_logps.to(completion_ids.device)
 
         # Decode the generated completions
         completions_text = self.processing_class.batch_decode(completion_ids, skip_special_tokens=True)
@@ -1825,6 +1974,8 @@ class GRPOTrainer(Trainer):
             output["old_per_token_logps"] = old_per_token_logps
         if ref_per_token_logps is not None:
             output["ref_per_token_logps"] = ref_per_token_logps
+        if teacher_per_token_logps is not None:
+            output["teacher_per_token_logps"] = teacher_per_token_logps
         if "pixel_values" in prompt_inputs:
             output["pixel_values"] = prompt_inputs["pixel_values"]
         if "image_grid_thw" in prompt_inputs:
@@ -1914,12 +2065,35 @@ class GRPOTrainer(Trainer):
         else:
             entropy_mask = None
 
-        # Compute the KL divergence between the model and the reference model
+        # Compute the KL divergence between the model and the reference/teacher model
+        per_token_kl = None
         if self.beta != 0.0:
-            ref_per_token_logps = inputs["sampling_per_token_logps"] #inputs["ref_per_token_logps"]
-            per_token_kl = (
-                torch.exp(ref_per_token_logps - per_token_logps) - (ref_per_token_logps - per_token_logps) - 1
-            )
+            ref_per_token_logps = inputs.get("sampling_per_token_logps")
+            if ref_per_token_logps is None:
+                ref_per_token_logps = inputs.get("ref_per_token_logps")
+            teacher_per_token_logps = inputs.get("teacher_per_token_logps")
+            per_token_kl_ref = None
+            per_token_kl_teacher = None
+            if self.kl_alpha > 0.0:
+                if ref_per_token_logps is None:
+                    raise ValueError("ref_per_token_logps is required when kl_alpha > 0.")
+                per_token_kl_ref = (
+                    torch.exp(ref_per_token_logps - per_token_logps) - (ref_per_token_logps - per_token_logps) - 1
+                )
+            if self.kl_alpha < 1.0:
+                if teacher_per_token_logps is None:
+                    raise ValueError("teacher_per_token_logps is required when kl_alpha < 1.")
+                per_token_kl_teacher = (
+                    torch.exp(teacher_per_token_logps - per_token_logps)
+                    - (teacher_per_token_logps - per_token_logps)
+                    - 1
+                )
+            if self.kl_alpha == 1.0:
+                per_token_kl = per_token_kl_ref
+            elif self.kl_alpha == 0.0:
+                per_token_kl = per_token_kl_teacher
+            else:
+                per_token_kl = self.kl_alpha * per_token_kl_ref + (1.0 - self.kl_alpha) * per_token_kl_teacher
 
         # Compute the loss
         advantages = inputs["advantages"]

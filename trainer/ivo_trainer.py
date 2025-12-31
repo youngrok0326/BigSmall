@@ -50,15 +50,20 @@ class IVOTrainer(GRPOTrainer):
         self.normalized_softlabel = getattr(args, "normalized_softlabel", True)
         self.teacher_model_id = getattr(args, "teacher_model", None)
         self.teacher_beta = float(getattr(args, "teacher_beta", 0.0) or 0.0)
+        self.kl_alpha = float(getattr(args, "kl_alpha", 1.0) or 1.0)
+        if not 0.0 <= self.kl_alpha <= 1.0:
+            raise ValueError("kl_alpha must be in [0, 1].")
         self.teacher_device = getattr(args, "teacher_device", None)
         self.teacher_lora_path = getattr(args, "teacher_lora_path", None)
+        self.beta = 0.0
         self._teacher = None
         self._teacher_model_kwarg_keys = None
         self._teacher_device = None
         self._eos_token_ids = None
-        if self.teacher_beta > 0.0:
-            if not self.teacher_model_id:
-                raise ValueError("teacher_model must be set when teacher_beta > 0.")
+        needs_teacher = self.teacher_beta > 0.0 or (self.ivo_beta != 0.0 and self.kl_alpha < 1.0)
+        if needs_teacher and not self.teacher_model_id:
+            raise ValueError("teacher_model must be set when teacher guidance or teacher KL is enabled.")
+        if needs_teacher:
             self._init_teacher()
         if self.num_generations > 1:
             self._group_shuffle_size = self.num_generations
@@ -288,6 +293,28 @@ class IVOTrainer(GRPOTrainer):
         pixel_attention_mask=None,
         image_sizes=None,
     ):
+        logits = self._get_teacher_logits(
+            input_ids,
+            attention_mask,
+            logits_to_keep,
+            pixel_values=pixel_values,
+            image_grid_thw=image_grid_thw,
+            pixel_attention_mask=pixel_attention_mask,
+            image_sizes=image_sizes,
+        )
+        values = self.ivo_beta * torch.logsumexp(logits / self.ivo_beta, dim=-1)
+        return values.to(input_ids.device)
+
+    def _get_teacher_logits(
+        self,
+        input_ids,
+        attention_mask,
+        logits_to_keep,
+        pixel_values=None,
+        image_grid_thw=None,
+        pixel_attention_mask=None,
+        image_sizes=None,
+    ):
         if self._teacher is None:
             raise ValueError("Teacher model is not initialized.")
         teacher = self._teacher
@@ -311,15 +338,18 @@ class IVOTrainer(GRPOTrainer):
         logits = teacher(**model_inputs).logits
         logits = logits[:, :-1, :]
         logits = logits[:, -logits_to_keep:, :]
-        logits = logits / self.ivo_beta
-        values = self.ivo_beta * torch.logsumexp(logits, dim=-1)
-        return values.to(input_ids.device)
+        return logits
 
     def _generate_and_score_completions(self, inputs):
         self._ensure_vllm_generate_lora_request()
         outputs = super()._generate_and_score_completions(inputs)
-        if self._teacher is None or self.teacher_beta <= 0.0:
+
+        need_teacher_values = self.teacher_beta > 0.0
+        need_teacher_kl = self.ivo_beta != 0.0 and self.kl_alpha < 1.0
+        if not (need_teacher_values or need_teacher_kl):
             return outputs
+        if self._teacher is None:
+            raise ValueError("Teacher model must be initialized when teacher guidance or teacher KL is enabled.")
         from trl.extras.profiling import profiling_context
 
         prompt_ids, prompt_mask = outputs["prompt_ids"], outputs["prompt_mask"]
@@ -328,9 +358,9 @@ class IVOTrainer(GRPOTrainer):
         attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
         logits_to_keep = completion_ids.size(1)
 
-        with profiling_context(self, "teacher_values"):
+        with profiling_context(self, "teacher_forward"):
             with torch.inference_mode():
-                teacher_values = self._get_teacher_values(
+                teacher_logits = self._get_teacher_logits(
                     input_ids,
                     attention_mask,
                     logits_to_keep,
@@ -339,7 +369,13 @@ class IVOTrainer(GRPOTrainer):
                     pixel_attention_mask=outputs.get("pixel_attention_mask"),
                     image_sizes=outputs.get("image_sizes"),
                 )
-        outputs["teacher_psi"] = teacher_values - teacher_values[:, :1]
+        if need_teacher_values:
+            teacher_values = self.ivo_beta * torch.logsumexp(teacher_logits / self.ivo_beta, dim=-1)
+            outputs["teacher_psi"] = teacher_values - teacher_values[:, :1]
+        if need_teacher_kl:
+            completion_ids_teacher = completion_ids.to(teacher_logits.device)
+            teacher_logps = selective_log_softmax(teacher_logits / self.temperature, completion_ids_teacher)
+            outputs["teacher_per_token_logps"] = teacher_logps.to(completion_ids.device)
         return outputs
 
     @staticmethod
@@ -448,18 +484,40 @@ class IVOTrainer(GRPOTrainer):
                     self.num_generations,
                 )
 
-            if self.beta != 0.0:
-                ref_per_token_logps = inputs.get("ref_per_token_logps")
-                if ref_per_token_logps is None:
-                    raise ValueError("IVOTrainer requires `ref_per_token_logps` when beta != 0.0.")
-                ref_per_token_logps = ref_per_token_logps.to(per_token_logps.dtype, copy=True)
-                per_token_kl = (
-                    torch.exp(ref_per_token_logps - per_token_logps)
-                    - (ref_per_token_logps - per_token_logps)
-                    - 1
-                )
-                mean_kl = (per_token_kl * completion_mask).sum() / completion_mask.sum().clamp(min=1.0)
-                loss = loss + self.beta * mean_kl
+            kl_beta = self.ivo_beta
+            if kl_beta != 0.0:
+                token_count = completion_mask.sum().clamp(min=1.0)
+                mean_kl_old = None
+                mean_kl_teacher = None
+                if self.kl_alpha > 0.0:
+                    old_per_token_logps = old_per_token_logps.to(per_token_logps.dtype, copy=True)
+                    per_token_kl_old = (
+                        torch.exp(old_per_token_logps - per_token_logps)
+                        - (old_per_token_logps - per_token_logps)
+                        - 1
+                    )
+                    mean_kl_old = (per_token_kl_old * completion_mask).sum() / token_count
+
+                if self.kl_alpha < 1.0:
+                    teacher_per_token_logps = inputs.get("teacher_per_token_logps")
+                    if teacher_per_token_logps is None:
+                        raise ValueError("IVOTrainer requires `teacher_per_token_logps` when kl_alpha < 1.")
+                    teacher_per_token_logps = teacher_per_token_logps.to(per_token_logps.dtype, copy=True)
+                    per_token_kl_teacher = (
+                        torch.exp(teacher_per_token_logps - per_token_logps)
+                        - (teacher_per_token_logps - per_token_logps)
+                        - 1
+                    )
+                    mean_kl_teacher = (per_token_kl_teacher * completion_mask).sum() / token_count
+
+                if self.kl_alpha == 1.0:
+                    mean_kl = mean_kl_old
+                elif self.kl_alpha == 0.0:
+                    mean_kl = mean_kl_teacher
+                else:
+                    mean_kl = self.kl_alpha * mean_kl_old + (1.0 - self.kl_alpha) * mean_kl_teacher
+
+                loss = loss + kl_beta * mean_kl
 
                 mode = "train" if self.model.training else "eval"
                 self._metrics[mode]["kl"].append(self.accelerator.gather(mean_kl).mean().item())

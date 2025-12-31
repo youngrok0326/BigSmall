@@ -450,6 +450,22 @@ class GRPOConfig(TrainingArguments):
             "improving training speed."
         },
     )
+    kl_alpha: float = field(
+        default=1.0,
+        metadata={"help": "Weight for reference KL in mixed KL. 1.0=ref only, 0.0=teacher only."},
+    )
+    teacher_model: Optional[str] = field(
+        default=None,
+        metadata={"help": "Optional teacher model ID/path for mixed KL."},
+    )
+    teacher_device: Optional[str] = field(
+        default=None,
+        metadata={"help": "Device for the teacher model, e.g. 'cuda:0'."},
+    )
+    teacher_lora_path: Optional[str] = field(
+        default=None,
+        metadata={"help": "Optional LoRA adapter path or repo for the teacher model."},
+    )
     num_iterations: int = field(
         default=1,
         metadata={"help": "Number of iterations per batch (denoted as μ in the algorithm)."},

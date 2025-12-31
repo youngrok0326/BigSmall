@@ -28,6 +28,12 @@ class IVOConfig(GRPOConfig):
         default=0.0,
         metadata={"help": "Teacher guidance strength. Set > 0 to enable distillation."},
     )
+    kl_alpha: float = field(
+        default=1.0,
+        metadata={
+            "help": "Weight for reference-model KL in mixed KL. 1.0 uses only ref KL, 0.0 uses only teacher KL."
+        },
+    )
     teacher_device: Optional[str] = field(
         default=None,
         metadata={"help": "Device for the teacher model, e.g. 'cuda:0'."},
