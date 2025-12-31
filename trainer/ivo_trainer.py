@@ -49,8 +49,10 @@ class IVOTrainer(GRPOTrainer):
         self.ivo_beta = getattr(args, "ivo_beta", 1.0)
         self.normalized_softlabel = getattr(args, "normalized_softlabel", True)
         self.teacher_model_id = getattr(args, "teacher_model", None)
-        self.teacher_beta = float(getattr(args, "teacher_beta", 0.0) or 0.0)
-        self.kl_alpha = float(getattr(args, "kl_alpha", 1.0) or 1.0)
+        teacher_beta = getattr(args, "teacher_beta", 0.0)
+        self.teacher_beta = 0.0 if teacher_beta is None else float(teacher_beta)
+        kl_alpha = getattr(args, "kl_alpha", 1.0)
+        self.kl_alpha = 1.0 if kl_alpha is None else float(kl_alpha)
         if not 0.0 <= self.kl_alpha <= 1.0:
             raise ValueError("kl_alpha must be in [0, 1].")
         self.teacher_device = getattr(args, "teacher_device", None)
