@@ -75,9 +75,16 @@ if is_peft_available():
 if is_liger_kernel_available():
     from liger_kernel.chunked_loss import LigerFusedLinearGRPOLoss
 
+VLLM_SUPPORTS_GUIDED_DECODING = False
 if is_vllm_available():
     from vllm import LLM, SamplingParams
     from vllm.sampling_params import GuidedDecodingParams
+
+    try:
+        SamplingParams(guided_decoding=None)
+        VLLM_SUPPORTS_GUIDED_DECODING = True
+    except TypeError:
+        VLLM_SUPPORTS_GUIDED_DECODING = False
 
 if is_wandb_available():
     import wandb
@@ -578,6 +585,14 @@ class GRPOTrainer(Trainer):
         if args.gradient_checkpointing:
             model = self._enable_gradient_checkpointing(model, args)
 
+        # Reuse Unsloth's vLLM engine when present to avoid double vLLM initialization.
+        self._reuse_vllm_engine = False
+        if hasattr(model, "vllm_engine"):
+            if not getattr(args, "use_vllm", False):
+                args.use_vllm = True
+            args.vllm_mode = "colocate"
+            self._reuse_vllm_engine = True
+
         # Processing class
         if processing_class is None:
             processing_class = AutoProcessor.from_pretrained(model.config._name_or_path)
@@ -789,7 +804,9 @@ class GRPOTrainer(Trainer):
                     "`pip install vllm` to use it."
                 )
 
-            if self.vllm_mode == "server" and self.accelerator.is_main_process:
+            if self._reuse_vllm_engine:
+                self.llm = model.vllm_engine
+            elif self.vllm_mode == "server" and self.accelerator.is_main_process:
                 if args.vllm_server_base_url is not None:
                     base_url = args.vllm_server_base_url
                 else:
@@ -1202,6 +1219,9 @@ class GRPOTrainer(Trainer):
 
     @profiling_decorator
     def _move_model_to_vllm(self):
+        if self.vllm_mode == "colocate" and is_peft_model(self.model) and hasattr(self.model, "load_lora"):
+            # Unsloth/vLLM handles LoRA via lora_request; merging is not supported for quantized weights.
+            return None
         # For DeepSpeed ZeRO-3 and FSDP, we need to gather all parameters before operations
         deepspeed_plugin = self.accelerator.state.deepspeed_plugin
         zero_stage_3 = deepspeed_plugin is not None and deepspeed_plugin.zero_stage == 3
@@ -1487,10 +1507,21 @@ class GRPOTrainer(Trainer):
 
             # Generate completions using colocated vLLM instances: each device holds vLLM copy and work on their own batch of prompts
             elif self.vllm_mode == "colocate":
-                if self.guided_decoding_regex:
+                if self.guided_decoding_regex and VLLM_SUPPORTS_GUIDED_DECODING:
                     guided_decoding = GuidedDecodingParams(regex=self.guided_decoding_regex)
                 else:
                     guided_decoding = None
+                    if (
+                        self.guided_decoding_regex
+                        and not VLLM_SUPPORTS_GUIDED_DECODING
+                        and self.accelerator.is_main_process
+                        and not getattr(self, "_warned_guided_decoding", False)
+                    ):
+                        warnings.warn(
+                            "vLLM SamplingParams does not support guided_decoding; "
+                            "continuing without guided decoding."
+                        )
+                        self._warned_guided_decoding = True
 
                 generation_kwargs = {
                     "n": 1,  # vLLM on each GPU generates only 1 in colocate mode
@@ -1500,8 +1531,9 @@ class GRPOTrainer(Trainer):
                     "top_k": -1 if self.top_k is None else self.top_k,
                     "min_p": 0.0 if self.min_p is None else self.min_p,
                     "max_tokens": self.max_completion_length,
-                    "guided_decoding": guided_decoding,
                 }
+                if VLLM_SUPPORTS_GUIDED_DECODING:
+                    generation_kwargs["guided_decoding"] = guided_decoding
                 if self.args.generation_kwargs is not None:
                     generation_kwargs.update(self.args.generation_kwargs)
                 sampling_params = SamplingParams(**generation_kwargs)
@@ -1535,7 +1567,9 @@ class GRPOTrainer(Trainer):
                     vllm_inputs = all_prompts_text
 
                 with profiling_context(self, "vLLM.generate"):
-                    all_outputs = self.llm.generate(vllm_inputs, sampling_params=sampling_params, use_tqdm=False)
+                    all_outputs = self.llm.generate(
+                        vllm_inputs, sampling_params=sampling_params, use_tqdm=False
+                    )
 
                 completion_ids = [output.token_ids for outputs in all_outputs for output in outputs.outputs]
 

@@ -26,6 +26,10 @@ rl:
   max_prompt_length: 512
   max_completion_length: 512 #TODO: debugging temporarily
   num_generations: 16
+  use_vllm: ${model.fast_inference}
+  vllm_mode: "colocate"
+  vllm_gpu_memory_utilization: ${model.gpu_memory_utilization}
+  vllm_tensor_parallel_size: 1
   max_steps: 8000
   save_strategy: "steps" #"steps"
   save_steps: 100

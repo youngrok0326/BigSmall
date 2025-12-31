@@ -5,6 +5,7 @@ from typing import Optional, Union
 import torch
 from datasets import Dataset, IterableDataset
 from transformers import PreTrainedModel, PreTrainedTokenizerBase, ProcessorMixin, TrainerCallback
+from trl.trainer.utils import entropy_from_logits, selective_log_softmax
 
 from .grpo_trainer import GRPOTrainer
 from .ivo_config import IVOConfig
@@ -28,6 +29,10 @@ class IVOTrainer(GRPOTrainer):
     ):
         if args is None:
             args = IVOConfig("ivo")
+        if hasattr(model, "vllm_engine") and hasattr(args, "use_vllm"):
+            if not getattr(args, "use_vllm", False):
+                args.use_vllm = True
+            args.vllm_mode = "colocate"
         super().__init__(
             model=model,
             reward_funcs=reward_funcs,
@@ -55,6 +60,61 @@ class IVOTrainer(GRPOTrainer):
             self._init_teacher()
         if self.num_generations > 1:
             self._group_shuffle_size = self.num_generations
+
+    def _get_per_token_logps_and_entropies(
+        self,
+        model,
+        input_ids,
+        attention_mask,
+        logits_to_keep,
+        batch_size=None,
+        compute_entropy=False,
+        pixel_values=None,
+        image_grid_thw=None,
+        pixel_attention_mask=None,
+        image_sizes=None,
+    ):
+        batch_size = batch_size or input_ids.size(0)
+        all_logps = []
+        all_entropies = []
+        for start in range(0, input_ids.size(0), batch_size):
+            input_ids_batch = input_ids[start : start + batch_size]
+            attention_mask_batch = attention_mask[start : start + batch_size]
+
+            model_inputs = {"input_ids": input_ids_batch, "attention_mask": attention_mask_batch}
+
+            if image_grid_thw is not None and pixel_values is not None:
+                model_inputs["image_grid_thw"] = image_grid_thw[start : start + batch_size]
+                start_pixel_idx = image_grid_thw[:start].prod(-1).sum().item()
+                end_pixel_idx = image_grid_thw[: start + batch_size].prod(-1).sum().item()
+                model_inputs["pixel_values"] = pixel_values[start_pixel_idx:end_pixel_idx]
+            elif pixel_values is not None:
+                model_inputs["pixel_values"] = pixel_values[start : start + batch_size]
+            if pixel_attention_mask is not None:
+                model_inputs["pixel_attention_mask"] = pixel_attention_mask[start : start + batch_size]
+            if image_sizes is not None:
+                model_inputs["image_sizes"] = image_sizes[start : start + batch_size]
+
+            if "logits_to_keep" in self.model_kwarg_keys:
+                model_inputs["logits_to_keep"] = logits_to_keep + 1
+
+            logits = model(**model_inputs).logits
+            logits = logits[:, :-1, :]
+            logits = logits[:, -logits_to_keep:, :]
+            logits = logits / self.temperature
+
+            completion_ids = input_ids_batch[:, -logits_to_keep:]
+            logps = selective_log_softmax(logits, completion_ids)
+            all_logps.append(logps)
+
+            if compute_entropy:
+                with torch.no_grad():
+                    entropies = entropy_from_logits(logits)
+                all_entropies.append(entropies)
+
+        logps = torch.cat(all_logps, dim=0)
+        entropies = torch.cat(all_entropies, dim=0) if compute_entropy else None
+        return logps, entropies
 
     def _get_student_tokenizer(self):
         if isinstance(self.processing_class, ProcessorMixin):
@@ -242,74 +302,126 @@ class IVOTrainer(GRPOTrainer):
         outputs["teacher_psi"] = teacher_values - teacher_values[:, :1]
         return outputs
 
+    @staticmethod
+    def _ivo_loss_impl(
+        per_token_logps,
+        old_per_token_logps,
+        completion_mask,
+        soft_label,
+        num_generations,
+    ):
+        token_diff = (per_token_logps - old_per_token_logps) * completion_mask
+        diff_cum = token_diff.cumsum(dim=1)
+        group_diff = diff_cum.view(-1, num_generations, diff_cum.shape[1])
+        group_lse = group_diff.float().logsumexp(dim=1).to(diff_cum.dtype)
+        per_token_loss = -soft_label.view(-1, num_generations, 1) * (group_diff - group_lse.unsqueeze(1))
+        per_token_loss = per_token_loss.view(-1, diff_cum.shape[1])
+        token_count = completion_mask.sum().clamp(min=1.0)
+        loss = (per_token_loss * completion_mask).sum() / token_count
+        return loss
+
+    @staticmethod
+    def _ivo_loss_impl_teacher(
+        per_token_logps,
+        old_per_token_logps,
+        completion_mask,
+        soft_label,
+        num_generations,
+        teacher_psi,
+        teacher_scale,
+    ):
+        token_diff = (per_token_logps - old_per_token_logps) * completion_mask
+        diff_cum = token_diff.cumsum(dim=1)
+        diff_cum = diff_cum - teacher_scale * teacher_psi
+        group_diff = diff_cum.view(-1, num_generations, diff_cum.shape[1])
+        group_lse = group_diff.float().logsumexp(dim=1).to(diff_cum.dtype)
+        per_token_loss = -soft_label.view(-1, num_generations, 1) * (group_diff - group_lse.unsqueeze(1))
+        per_token_loss = per_token_loss.view(-1, diff_cum.shape[1])
+        token_count = completion_mask.sum().clamp(min=1.0)
+        loss = (per_token_loss * completion_mask).sum() / token_count
+        return loss
+
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         if return_outputs:
             raise ValueError("The IVOTrainer does not support returning outputs")
 
-        prompt_ids, prompt_mask = inputs["prompt_ids"], inputs["prompt_mask"]
-        completion_ids, completion_mask = inputs["completion_ids"], inputs["completion_mask"]
-        input_ids = torch.cat([prompt_ids, completion_ids], dim=1)
-        attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
-        logits_to_keep = completion_ids.size(1)
+        with torch.inference_mode(False):
+            prompt_ids, prompt_mask = inputs["prompt_ids"], inputs["prompt_mask"]
+            completion_ids, completion_mask = inputs["completion_ids"], inputs["completion_mask"]
+            input_ids = torch.cat([prompt_ids, completion_ids], dim=1)
+            attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
+            logits_to_keep = completion_ids.size(1)
 
-        per_token_logps, _ = self._get_per_token_logps_and_entropies(
-            model,
-            input_ids,
-            attention_mask,
-            logits_to_keep,
-            compute_entropy=False,
-            pixel_values=inputs.get("pixel_values"),
-            image_grid_thw=inputs.get("image_grid_thw"),
-            pixel_attention_mask=inputs.get("pixel_attention_mask"),
-            image_sizes=inputs.get("image_sizes"),
-        )
-
-        old_per_token_logps = inputs.get("old_per_token_logps")
-        if old_per_token_logps is None:
-            old_per_token_logps = per_token_logps.detach()
-
-        scores = inputs.get("scores")
-        if scores is None:
-            raise ValueError("IVOTrainer requires `scores` in inputs.")
-        scores = scores.to(per_token_logps.device)
-
-        if self.normalized_softlabel:
-            soft_label = torch.softmax(
-                scores.view(-1, self.num_generations) / self.ivo_beta,
-                dim=1,
-            ).view(-1)
-        else:
-            soft_label = torch.exp(scores / self.ivo_beta)
-
-        completion_mask = completion_mask.to(per_token_logps.dtype)
-        token_diff = (per_token_logps - old_per_token_logps) * completion_mask
-        diff_cum = token_diff.cumsum(dim=1)
-
-        teacher_psi = inputs.get("teacher_psi")
-        if self.teacher_beta > 0.0:
-            if teacher_psi is None:
-                raise ValueError("IVOTrainer requires `teacher_psi` when teacher_beta > 0.")
-            teacher_psi = teacher_psi.to(diff_cum.dtype)
-            diff_cum = diff_cum - (self.teacher_beta / self.ivo_beta) * teacher_psi
-        group_lse = diff_cum.view(-1, self.num_generations, diff_cum.shape[1]).logsumexp(dim=1)
-        group_lse = group_lse.repeat_interleave(self.num_generations, dim=0)
-        per_token_loss = -soft_label.unsqueeze(1) * (diff_cum - group_lse)
-        token_count = completion_mask.sum().clamp(min=1.0)
-        loss = (per_token_loss * completion_mask).sum() / token_count
-
-        if self.beta != 0.0:
-            ref_per_token_logps = inputs.get("ref_per_token_logps")
-            if ref_per_token_logps is None:
-                raise ValueError("IVOTrainer requires `ref_per_token_logps` when beta != 0.0.")
-            per_token_kl = (
-                torch.exp(ref_per_token_logps - per_token_logps)
-                - (ref_per_token_logps - per_token_logps)
-                - 1
+            per_token_logps, _ = self._get_per_token_logps_and_entropies(
+                model,
+                input_ids,
+                attention_mask,
+                logits_to_keep,
+                compute_entropy=False,
+                pixel_values=inputs.get("pixel_values"),
+                image_grid_thw=inputs.get("image_grid_thw"),
+                pixel_attention_mask=inputs.get("pixel_attention_mask"),
+                image_sizes=inputs.get("image_sizes"),
             )
-            mean_kl = (per_token_kl * completion_mask).sum() / completion_mask.sum().clamp(min=1.0)
-            loss = loss + self.beta * mean_kl
 
-            mode = "train" if self.model.training else "eval"
-            self._metrics[mode]["kl"].append(self.accelerator.gather(mean_kl).mean().item())
+            old_per_token_logps = inputs.get("old_per_token_logps")
+            if old_per_token_logps is None:
+                old_per_token_logps = per_token_logps.detach()
 
-        return loss
+            scores = inputs.get("scores")
+            if scores is None:
+                raise ValueError("IVOTrainer requires `scores` in inputs.")
+            scores = scores.to(per_token_logps.device, copy=True)
+
+            if self.normalized_softlabel:
+                soft_label = torch.softmax(
+                    scores.view(-1, self.num_generations) / self.ivo_beta,
+                    dim=1,
+                ).view(-1)
+            else:
+                soft_label = torch.exp(scores / self.ivo_beta)
+
+            completion_mask = completion_mask.to(per_token_logps.dtype, copy=True)
+            soft_label = soft_label.to(per_token_logps.dtype, copy=True)
+
+            teacher_psi = inputs.get("teacher_psi")
+            if self.teacher_beta > 0.0:
+                if teacher_psi is None:
+                    raise ValueError("IVOTrainer requires `teacher_psi` when teacher_beta > 0.")
+                teacher_psi = teacher_psi.to(per_token_logps.dtype, copy=True)
+                teacher_scale = self.teacher_beta / self.ivo_beta
+                loss = self._ivo_loss_impl_teacher(
+                    per_token_logps,
+                    old_per_token_logps,
+                    completion_mask,
+                    soft_label,
+                    self.num_generations,
+                    teacher_psi,
+                    teacher_scale,
+                )
+            else:
+                loss = self._ivo_loss_impl(
+                    per_token_logps,
+                    old_per_token_logps,
+                    completion_mask,
+                    soft_label,
+                    self.num_generations,
+                )
+
+            if self.beta != 0.0:
+                ref_per_token_logps = inputs.get("ref_per_token_logps")
+                if ref_per_token_logps is None:
+                    raise ValueError("IVOTrainer requires `ref_per_token_logps` when beta != 0.0.")
+                ref_per_token_logps = ref_per_token_logps.to(per_token_logps.dtype, copy=True)
+                per_token_kl = (
+                    torch.exp(ref_per_token_logps - per_token_logps)
+                    - (ref_per_token_logps - per_token_logps)
+                    - 1
+                )
+                mean_kl = (per_token_kl * completion_mask).sum() / completion_mask.sum().clamp(min=1.0)
+                loss = loss + self.beta * mean_kl
+
+                mode = "train" if self.model.training else "eval"
+                self._metrics[mode]["kl"].append(self.accelerator.gather(mean_kl).mean().item())
+
+            return loss

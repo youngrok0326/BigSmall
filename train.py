@@ -6,6 +6,7 @@ To train a reasoning model using the Unsloth framework.
 import os
 
 os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"
+os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "1")
 
 import logging
 
