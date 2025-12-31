@@ -82,6 +82,7 @@ def main(cfg: DictConfig) -> None:
         rlparams.pop("teacher_model", None)
         rlparams.pop("teacher_beta", None)
         rlparams.pop("teacher_device", None)
+        rlparams.pop("teacher_lora_path", None)
     else:
         if not rlparams.get("teacher_model"):
             raise ValueError("rl.teacher_model must be set when rl.algorithm=IVO_DISTILL.")

@@ -32,3 +32,7 @@ class IVOConfig(GRPOConfig):
         default=None,
         metadata={"help": "Device for the teacher model, e.g. 'cuda:0'."},
     )
+    teacher_lora_path: Optional[str] = field(
+        default=None,
+        metadata={"help": "Optional LoRA adapter path or repo for the teacher model."},
+    )

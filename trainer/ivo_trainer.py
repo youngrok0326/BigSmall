@@ -3,6 +3,7 @@ import os
 from typing import Optional, Union
 
 import torch
+from accelerate.utils import is_peft_model
 from datasets import Dataset, IterableDataset
 from transformers import PreTrainedModel, PreTrainedTokenizerBase, ProcessorMixin, TrainerCallback
 from trl.trainer.utils import entropy_from_logits, selective_log_softmax
@@ -50,6 +51,7 @@ class IVOTrainer(GRPOTrainer):
         self.teacher_model_id = getattr(args, "teacher_model", None)
         self.teacher_beta = float(getattr(args, "teacher_beta", 0.0) or 0.0)
         self.teacher_device = getattr(args, "teacher_device", None)
+        self.teacher_lora_path = getattr(args, "teacher_lora_path", None)
         self._teacher = None
         self._teacher_model_kwarg_keys = None
         self._teacher_device = None
@@ -60,6 +62,43 @@ class IVOTrainer(GRPOTrainer):
             self._init_teacher()
         if self.num_generations > 1:
             self._group_shuffle_size = self.num_generations
+        self._ensure_vllm_generate_lora_request()
+
+    def _resolve_teacher_lora_path(self, path: Optional[str]) -> Optional[str]:
+        if not path:
+            return None
+        if isinstance(path, str) and path.lower() in ("none", "null"):
+            return None
+        path = os.path.expanduser(path)
+        if os.path.isabs(path):
+            return path
+        from hydra.utils import get_original_cwd
+        base_dir = get_original_cwd()
+        candidate = os.path.join(base_dir, path)
+        return candidate if os.path.exists(candidate) else path
+
+    def _ensure_vllm_generate_lora_request(self):
+        if getattr(self, "_vllm_generate_wrapped", False):
+            return
+        if not getattr(self, "use_vllm", False) or getattr(self, "vllm_mode", None) != "colocate":
+            return
+        llm = getattr(self, "llm", None)
+        if llm is None or not hasattr(llm, "generate"):
+            return
+        if not (is_peft_model(self.model) and hasattr(self.model, "load_lora")):
+            return
+
+        original_generate = llm.generate
+
+        def generate_with_lora(*args, **kwargs):
+            if "lora_request" not in kwargs:
+                visible = os.environ.get("CUDA_VISIBLE_DEVICES", "0").replace(",", "")
+                lora_name = f"ivo_trainer_lora_model_{visible}"
+                kwargs["lora_request"] = self.model.load_lora(lora_name, load_tensors=True)
+            return original_generate(*args, **kwargs)
+
+        llm.generate = generate_with_lora
+        self._vllm_generate_wrapped = True
 
     def _get_per_token_logps_and_entropies(
         self,
@@ -121,14 +160,16 @@ class IVOTrainer(GRPOTrainer):
             return self.processing_class.tokenizer
         return self.processing_class
 
+    def _is_qwen_pair(self) -> bool:
+        teacher_id = (self.teacher_model_id or "").lower()
+        student_id = str(getattr(self.model.config, "_name_or_path", "") or "").lower()
+        return "qwen" in teacher_id and "qwen" in student_id
+
     def _ensure_tokenizer_compatibility(self, teacher_tokenizer):
         student_tokenizer = self._get_student_tokenizer()
         if teacher_tokenizer is None or student_tokenizer is None:
             return
-        teacher_id = (self.teacher_model_id or "").lower()
-        student_id = getattr(self.model.config, "_name_or_path", "") or ""
-        student_id = str(student_id).lower()
-        is_qwen = "qwen" in teacher_id and "qwen" in student_id
+        is_qwen = self._is_qwen_pair()
         if getattr(teacher_tokenizer, "vocab_size", None) != getattr(student_tokenizer, "vocab_size", None):
             raise ValueError("Teacher tokenizer vocab_size does not match the student tokenizer.")
         teacher_vocab = teacher_tokenizer.get_vocab()
@@ -182,12 +223,18 @@ class IVOTrainer(GRPOTrainer):
             else:
                 os.environ["UNSLOTH_COMPILE_DISABLE"] = prev_compile_disable
         self._ensure_tokenizer_compatibility(teacher_tokenizer)
+
+        lora_path = self._resolve_teacher_lora_path(self.teacher_lora_path)
+        if lora_path:
+            from peft import PeftModel
+            teacher_model = PeftModel.from_pretrained(
+                teacher_model,
+                lora_path,
+                is_trainable=False,
+            )
         student_tokenizer = self._get_student_tokenizer()
         eos_ids = []
-        teacher_id = (self.teacher_model_id or "").lower()
-        student_id = getattr(self.model.config, "_name_or_path", "") or ""
-        student_id = str(student_id).lower()
-        is_qwen = "qwen" in teacher_id and "qwen" in student_id
+        is_qwen = self._is_qwen_pair()
         if is_qwen:
             for tokenizer in (teacher_tokenizer, student_tokenizer):
                 if tokenizer is None:
@@ -245,38 +292,31 @@ class IVOTrainer(GRPOTrainer):
             raise ValueError("Teacher model is not initialized.")
         teacher = self._teacher
         teacher_device = self._teacher_device or input_ids.device
-        batch_size = input_ids.size(0)
-        all_values = []
-        for start in range(0, input_ids.size(0), batch_size):
-            input_ids_batch = input_ids[start : start + batch_size].to(teacher_device)
-            attention_mask_batch = attention_mask[start : start + batch_size].to(teacher_device)
+        input_ids_batch = input_ids.to(teacher_device)
+        attention_mask_batch = attention_mask.to(teacher_device)
 
-            model_inputs = {"input_ids": input_ids_batch, "attention_mask": attention_mask_batch}
-            if image_grid_thw is not None and pixel_values is not None:
-                model_inputs["image_grid_thw"] = image_grid_thw[start : start + batch_size].to(teacher_device)
-                start_pixel_idx = image_grid_thw[:start].prod(-1).sum().item()
-                end_pixel_idx = image_grid_thw[: start + batch_size].prod(-1).sum().item()
-                model_inputs["pixel_values"] = pixel_values[start_pixel_idx:end_pixel_idx].to(teacher_device)
-            elif pixel_values is not None:
-                model_inputs["pixel_values"] = pixel_values[start : start + batch_size].to(teacher_device)
-            if pixel_attention_mask is not None:
-                model_inputs["pixel_attention_mask"] = pixel_attention_mask[start : start + batch_size].to(teacher_device)
-            if image_sizes is not None:
-                model_inputs["image_sizes"] = image_sizes[start : start + batch_size].to(teacher_device)
-            if "logits_to_keep" in self._teacher_model_kwarg_keys:
-                model_inputs["logits_to_keep"] = logits_to_keep + 1
+        model_inputs = {"input_ids": input_ids_batch, "attention_mask": attention_mask_batch}
+        if image_grid_thw is not None and pixel_values is not None:
+            model_inputs["image_grid_thw"] = image_grid_thw.to(teacher_device)
+            model_inputs["pixel_values"] = pixel_values.to(teacher_device)
+        elif pixel_values is not None:
+            model_inputs["pixel_values"] = pixel_values.to(teacher_device)
+        if pixel_attention_mask is not None:
+            model_inputs["pixel_attention_mask"] = pixel_attention_mask.to(teacher_device)
+        if image_sizes is not None:
+            model_inputs["image_sizes"] = image_sizes.to(teacher_device)
+        if "logits_to_keep" in self._teacher_model_kwarg_keys:
+            model_inputs["logits_to_keep"] = logits_to_keep + 1
 
-            logits = teacher(**model_inputs).logits
-            logits = logits[:, :-1, :]
-            logits = logits[:, -logits_to_keep:, :]
-            logits = logits / self.ivo_beta
-            values = self.ivo_beta * torch.logsumexp(logits, dim=-1)
-            all_values.append(values)
-
-        values = torch.cat(all_values, dim=0)
+        logits = teacher(**model_inputs).logits
+        logits = logits[:, :-1, :]
+        logits = logits[:, -logits_to_keep:, :]
+        logits = logits / self.ivo_beta
+        values = self.ivo_beta * torch.logsumexp(logits, dim=-1)
         return values.to(input_ids.device)
 
     def _generate_and_score_completions(self, inputs):
+        self._ensure_vllm_generate_lora_request()
         outputs = super()._generate_and_score_completions(inputs)
         if self._teacher is None or self.teacher_beta <= 0.0:
             return outputs
