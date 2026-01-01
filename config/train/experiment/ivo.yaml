@@ -8,3 +8,4 @@ rl:
   algorithm: "IVO"
   ivo_beta: 1.0
   normalized_softlabel: true
+  use_value_adapter: false

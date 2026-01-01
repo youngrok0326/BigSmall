@@ -3,6 +3,7 @@ import os
 from typing import Optional, Union
 
 import torch
+import torch.nn as nn
 from accelerate.utils import is_peft_model
 from datasets import Dataset, IterableDataset
 from transformers import PreTrainedModel, PreTrainedTokenizerBase, ProcessorMixin, TrainerCallback
@@ -10,6 +11,23 @@ from trl.trainer.utils import entropy_from_logits, selective_log_softmax
 
 from .grpo_trainer import GRPOTrainer
 from .ivo_config import IVOConfig
+
+
+class ValueAdapter(nn.Module):
+    def __init__(self, hidden_size: int):
+        super().__init__()
+        self.ln = nn.LayerNorm(hidden_size)
+        self.fc1 = nn.Linear(hidden_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, 1)
+        self.act = nn.SiLU()
+
+    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        x = self.ln(hidden_states)
+        x = self.act(self.fc1(x))
+        x = self.act(self.fc2(x))
+        x = self.fc3(x)
+        return x.squeeze(-1)
 
 
 class IVOTrainer(GRPOTrainer):
@@ -51,6 +69,7 @@ class IVOTrainer(GRPOTrainer):
         self.teacher_model_id = getattr(args, "teacher_model", None)
         teacher_beta = getattr(args, "teacher_beta", 0.0)
         self.teacher_beta = 0.0 if teacher_beta is None else float(teacher_beta)
+        self.use_value_adapter = bool(getattr(args, "use_value_adapter", False)) and self.teacher_beta > 0.0
         kl_alpha = getattr(args, "kl_alpha", 1.0)
         self.kl_alpha = 1.0 if kl_alpha is None else float(kl_alpha)
         if not 0.0 <= self.kl_alpha <= 1.0:
@@ -62,7 +81,9 @@ class IVOTrainer(GRPOTrainer):
         self._teacher_model_kwarg_keys = None
         self._teacher_device = None
         self._eos_token_ids = None
-        needs_teacher = self.teacher_beta > 0.0 or (self.ivo_beta != 0.0 and self.kl_alpha < 1.0)
+        self.value_adapter = None
+        self._value_adapter_added = False
+        needs_teacher = self.teacher_beta > 0.0 or (self.ivo_beta != 0.0 and self.kl_alpha < 1.0) or self.use_value_adapter
         if needs_teacher and not self.teacher_model_id:
             raise ValueError("teacher_model must be set when teacher guidance or teacher KL is enabled.")
         if needs_teacher:
@@ -106,6 +127,21 @@ class IVOTrainer(GRPOTrainer):
 
         llm.generate = generate_with_lora
         self._vllm_generate_wrapped = True
+
+    def create_optimizer(self):
+        optimizer = super().create_optimizer()
+        if self.value_adapter is None or self._value_adapter_added:
+            return optimizer
+        adapter_params = [
+            param
+            for param in self.value_adapter.parameters()
+            if param.requires_grad
+            and all(param is not opt_param for group in optimizer.param_groups for opt_param in group["params"])
+        ]
+        if adapter_params:
+            optimizer.add_param_group({"params": adapter_params})
+        self._value_adapter_added = True
+        return optimizer
 
     def _get_per_token_logps_and_entropies(
         self,
@@ -279,6 +315,16 @@ class IVOTrainer(GRPOTrainer):
                 attn.apply_o = original_apply_o
         self._teacher = teacher_model
         self._teacher_device = next(teacher_model.parameters()).device
+        if self.use_value_adapter:
+            hidden_size = getattr(teacher_model.config, "hidden_size", None) or getattr(
+                teacher_model.config, "n_embd", None
+            )
+            if hidden_size is None:
+                raise ValueError("Teacher model config must define hidden_size for value adapter.")
+            teacher_param = next(teacher_model.parameters())
+            self.value_adapter = ValueAdapter(hidden_size).to(
+                device=teacher_param.device, dtype=teacher_param.dtype
+            )
 
         base_forward = teacher_model.forward
         if hasattr(teacher_model, "get_base_model"):
@@ -307,11 +353,12 @@ class IVOTrainer(GRPOTrainer):
         values = self.ivo_beta * torch.logsumexp(logits / self.ivo_beta, dim=-1)
         return values.to(input_ids.device)
 
-    def _get_teacher_logits(
+    def _get_teacher_outputs(
         self,
         input_ids,
         attention_mask,
         logits_to_keep,
+        output_hidden_states=False,
         pixel_values=None,
         image_grid_thw=None,
         pixel_attention_mask=None,
@@ -334,12 +381,44 @@ class IVOTrainer(GRPOTrainer):
             model_inputs["pixel_attention_mask"] = pixel_attention_mask.to(teacher_device)
         if image_sizes is not None:
             model_inputs["image_sizes"] = image_sizes.to(teacher_device)
+        if output_hidden_states:
+            if "output_hidden_states" not in self._teacher_model_kwarg_keys:
+                raise ValueError("Teacher model does not support output_hidden_states.")
+            model_inputs["output_hidden_states"] = True
         if "logits_to_keep" in self._teacher_model_kwarg_keys:
             model_inputs["logits_to_keep"] = logits_to_keep + 1
 
-        logits = teacher(**model_inputs).logits
+        outputs = teacher(**model_inputs)
+        logits = outputs.logits
         logits = logits[:, :-1, :]
         logits = logits[:, -logits_to_keep:, :]
+        hidden_states = None
+        if output_hidden_states:
+            hidden_states = outputs.hidden_states[-1]
+            hidden_states = hidden_states[:, :-1, :]
+            hidden_states = hidden_states[:, -logits_to_keep:, :]
+        return logits, hidden_states
+
+    def _get_teacher_logits(
+        self,
+        input_ids,
+        attention_mask,
+        logits_to_keep,
+        pixel_values=None,
+        image_grid_thw=None,
+        pixel_attention_mask=None,
+        image_sizes=None,
+    ):
+        logits, _ = self._get_teacher_outputs(
+            input_ids,
+            attention_mask,
+            logits_to_keep,
+            output_hidden_states=False,
+            pixel_values=pixel_values,
+            image_grid_thw=image_grid_thw,
+            pixel_attention_mask=pixel_attention_mask,
+            image_sizes=image_sizes,
+        )
         return logits
 
     def _generate_and_score_completions(self, inputs):
@@ -348,6 +427,7 @@ class IVOTrainer(GRPOTrainer):
 
         need_teacher_values = self.teacher_beta > 0.0
         need_teacher_kl = self.ivo_beta != 0.0 and self.kl_alpha < 1.0
+        use_adapter = self.use_value_adapter and need_teacher_values
         if not (need_teacher_values or need_teacher_kl):
             return outputs
         if self._teacher is None:
@@ -361,19 +441,26 @@ class IVOTrainer(GRPOTrainer):
         logits_to_keep = completion_ids.size(1)
 
         with profiling_context(self, "teacher_forward"):
-            with torch.inference_mode():
-                teacher_logits = self._get_teacher_logits(
+            with torch.no_grad():
+                teacher_logits, teacher_hidden_states = self._get_teacher_outputs(
                     input_ids,
                     attention_mask,
                     logits_to_keep,
+                    output_hidden_states=use_adapter,
                     pixel_values=outputs.get("pixel_values"),
                     image_grid_thw=outputs.get("image_grid_thw"),
                     pixel_attention_mask=outputs.get("pixel_attention_mask"),
                     image_sizes=outputs.get("image_sizes"),
                 )
         if need_teacher_values:
-            teacher_values = self.ivo_beta * torch.logsumexp(teacher_logits / self.ivo_beta, dim=-1)
-            outputs["teacher_psi"] = teacher_values - teacher_values[:, :1]
+            if use_adapter:
+                if self.value_adapter is None:
+                    raise ValueError("Value adapter is enabled but not initialized.")
+                teacher_values = self.value_adapter(teacher_hidden_states)
+            else:
+                teacher_values = self.ivo_beta * torch.logsumexp(teacher_logits / self.ivo_beta, dim=-1)
+            teacher_psi = teacher_values - teacher_values[:, :1]
+            outputs["teacher_psi"] = teacher_psi.to(completion_ids.device)
         if need_teacher_kl:
             completion_ids_teacher = completion_ids.to(teacher_logits.device)
             teacher_logps = selective_log_softmax(teacher_logits / self.temperature, completion_ids_teacher)

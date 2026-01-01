@@ -12,3 +12,4 @@ rl:
   teacher_lora_path: null
   teacher_beta: 2.0
   teacher_device: "cuda:0"
+  use_value_adapter: false

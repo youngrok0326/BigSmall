@@ -42,3 +42,7 @@ class IVOConfig(GRPOConfig):
         default=None,
         metadata={"help": "Optional LoRA adapter path or repo for the teacher model."},
     )
+    use_value_adapter: bool = field(
+        default=False,
+        metadata={"help": "Use a value adapter on teacher hidden states for value calibration."},
+    )
