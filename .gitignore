@@ -11,7 +11,7 @@ wheels/
 
 # Unsloth
 unsloth_compiled_cache
-*trainer_lora_model
+*_trainer_lora_model*
 
 # Datasets
 datasets
