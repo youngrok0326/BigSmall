@@ -1,7 +1,5 @@
 # @package _global_
 wandb:
-  enable: true
-  project_name: "rlvr-distill"
   run_name: ivo_math
 
 rl:

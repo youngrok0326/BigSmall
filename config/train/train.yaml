@@ -19,7 +19,7 @@ model:
   random_state: 42
 wandb:
   enable: true
-  project_name: "rlvr-distill"
+  project_name: "rlvr-distill-2"
   run_name: debug #"Instruct-GSM8K-16-16-Run1"
 rl:
   dataset: "math"

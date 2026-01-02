@@ -1,7 +1,5 @@
 # @package _global_
 wandb:
-  enable: true
-  project_name: "rlvr-distill"
   run_name: ivo_distill_Qwen2.5-Math_Tbeta1.0
 
 rl:
