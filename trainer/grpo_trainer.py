@@ -740,9 +740,9 @@ class GRPOTrainer(Trainer):
 
         # Reference/teacher KL
         self.beta = args.beta
-        self.kl_alpha = float(getattr(args, "kl_alpha", 1.0))
-        if not 0.0 <= self.kl_alpha <= 1.0:
-            raise ValueError("kl_alpha must be between 0 and 1.")
+        self.gamma = float(getattr(args, "gamma", 1.0))
+        if not 0.0 <= self.gamma <= 1.0:
+            raise ValueError("gamma must be between 0 and 1.")
         self.teacher_model_id = getattr(args, "teacher_model", None)
         self.teacher_device = getattr(args, "teacher_device", None)
         self.teacher_lora_path = getattr(args, "teacher_lora_path", None)
@@ -750,14 +750,14 @@ class GRPOTrainer(Trainer):
         self._teacher_device = None
         self._teacher_model_kwarg_keys = None
 
-        needs_teacher = self.beta != 0.0 and self.kl_alpha < 1.0
+        needs_teacher = self.beta != 0.0 and self.gamma < 1.0
         if needs_teacher and not self.teacher_model_id:
             raise ValueError("teacher_model must be set when teacher KL is enabled.")
         if needs_teacher:
             self._init_teacher()
 
         # Reference model
-        if self.beta == 0.0 or self.kl_alpha == 0.0:
+        if self.beta == 0.0 or self.gamma == 0.0:
             # If beta is 0.0 or teacher KL is fully used, the reference model is not needed.
             self.ref_model = None
         elif is_peft_model(model):
@@ -778,7 +778,7 @@ class GRPOTrainer(Trainer):
 
         # Liger loss
         if self.use_liger_loss:
-            if self.beta != 0.0 and self.kl_alpha < 1.0:
+            if self.beta != 0.0 and self.gamma < 1.0:
                 raise NotImplementedError("Liger loss does not support teacher KL.")
             if not is_liger_kernel_available():
                 raise ImportError(
@@ -792,7 +792,7 @@ class GRPOTrainer(Trainer):
                 epsilon_low=self.epsilon_low,
                 epsilon_high=self.epsilon_high,
                 temperature=self.temperature,
-                use_ref_model=self.beta != 0.0 and self.kl_alpha > 0.0,
+                use_ref_model=self.beta != 0.0 and self.gamma > 0.0,
                 loss_type=self.loss_type,
                 max_completion_length=self.max_completion_length,
             )
@@ -1837,7 +1837,7 @@ class GRPOTrainer(Trainer):
                 old_per_token_logps = None
 
             # Compute the per-token log probabilities for the reference model
-            if self.beta != 0.0 and self.kl_alpha > 0.0:
+            if self.beta != 0.0 and self.gamma > 0.0:
                 if self.ref_model is not None:
                     ref_per_token_logps, _ = self._get_per_token_logps_and_entropies(
                         self.ref_model,
@@ -1867,7 +1867,7 @@ class GRPOTrainer(Trainer):
                 ref_per_token_logps = None
 
             teacher_per_token_logps = None
-            if self.beta != 0.0 and self.kl_alpha < 1.0:
+            if self.beta != 0.0 and self.gamma < 1.0:
                 teacher_logits = self._get_teacher_logits(
                     prompt_completion_ids,
                     attention_mask,
@@ -2074,26 +2074,26 @@ class GRPOTrainer(Trainer):
             teacher_per_token_logps = inputs.get("teacher_per_token_logps")
             per_token_kl_ref = None
             per_token_kl_teacher = None
-            if self.kl_alpha > 0.0:
+            if self.gamma > 0.0:
                 if ref_per_token_logps is None:
-                    raise ValueError("ref_per_token_logps is required when kl_alpha > 0.")
+                    raise ValueError("ref_per_token_logps is required when gamma > 0.")
                 per_token_kl_ref = (
                     torch.exp(ref_per_token_logps - per_token_logps) - (ref_per_token_logps - per_token_logps) - 1
                 )
-            if self.kl_alpha < 1.0:
+            if self.gamma < 1.0:
                 if teacher_per_token_logps is None:
-                    raise ValueError("teacher_per_token_logps is required when kl_alpha < 1.")
+                    raise ValueError("teacher_per_token_logps is required when gamma < 1.")
                 per_token_kl_teacher = (
                     torch.exp(teacher_per_token_logps - per_token_logps)
                     - (teacher_per_token_logps - per_token_logps)
                     - 1
                 )
-            if self.kl_alpha == 1.0:
+            if self.gamma == 1.0:
                 per_token_kl = per_token_kl_ref
-            elif self.kl_alpha == 0.0:
+            elif self.gamma == 0.0:
                 per_token_kl = per_token_kl_teacher
             else:
-                per_token_kl = self.kl_alpha * per_token_kl_ref + (1.0 - self.kl_alpha) * per_token_kl_teacher
+                per_token_kl = self.gamma * per_token_kl_ref + (1.0 - self.gamma) * per_token_kl_teacher
 
         # Compute the loss
         advantages = inputs["advantages"]

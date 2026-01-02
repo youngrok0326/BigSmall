@@ -450,7 +450,7 @@ class GRPOConfig(TrainingArguments):
             "improving training speed."
         },
     )
-    kl_alpha: float = field(
+    gamma: float = field(
         default=1.0,
         metadata={"help": "Weight for reference KL in mixed KL. 1.0=ref only, 0.0=teacher only."},
     )
