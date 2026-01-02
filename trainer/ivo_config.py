@@ -14,7 +14,7 @@ class IVOConfig(GRPOConfig):
 
     beta: float = field(
         default=1.0,
-        metadata={"help": "Soft label temperature for IVO."},
+        metadata={"help": "IVO temperature (alpha in paper) used for soft labels and teacher scaling."},
     )
     normalized_softlabel: bool = field(
         default=True,
@@ -30,7 +30,7 @@ class IVOConfig(GRPOConfig):
     )
     alpha: float = field(
         default=0.0,
-        metadata={"help": "Teacher guidance strength. Set > 0 to enable distillation."},
+        metadata={"help": "Teacher guidance strength (beta in paper). Set > 0 to enable distillation."},
     )
     gamma: float = field(
         default=1.0,

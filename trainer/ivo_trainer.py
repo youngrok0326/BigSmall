@@ -52,10 +52,10 @@ class IVOTrainer(GRPOTrainer):
             if not getattr(args, "use_vllm", False):
                 args.use_vllm = True
             args.vllm_mode = "colocate"
-        ivo_beta = float(getattr(args, "beta", 1.0))
+        reward_beta = float(getattr(args, "beta", 1.0))
         teacher_value_beta = getattr(args, "teacher_value_beta", None)
         if teacher_value_beta is None:
-            teacher_value_beta = ivo_beta
+            teacher_value_beta = reward_beta
         teacher_value_beta = float(teacher_value_beta)
         if teacher_value_beta <= 0.0:
             raise ValueError("teacher_value_beta must be > 0.")
@@ -77,7 +77,8 @@ class IVOTrainer(GRPOTrainer):
             optimizers=optimizers,
             peft_config=peft_config,
         )
-        self.ivo_beta = ivo_beta
+        self.args.beta = reward_beta
+        self.reward_beta = reward_beta
         self.teacher_value_beta = teacher_value_beta
         self.alpha = alpha
         self.gamma = gamma
@@ -360,7 +361,8 @@ class IVOTrainer(GRPOTrainer):
             pixel_attention_mask=pixel_attention_mask,
             image_sizes=image_sizes,
         )
-        values = self.ivo_beta * torch.logsumexp(logits / self.ivo_beta, dim=-1)
+        value_beta = self.teacher_value_beta
+        values = value_beta * torch.logsumexp(logits / value_beta, dim=-1)
         return values.to(input_ids.device)
 
     def _get_teacher_outputs(
@@ -551,11 +553,11 @@ class IVOTrainer(GRPOTrainer):
 
             if self.normalized_softlabel:
                 soft_label = torch.softmax(
-                    scores.view(-1, self.num_generations) / self.ivo_beta,
+                    scores.view(-1, self.num_generations) / self.reward_beta,
                     dim=1,
                 ).view(-1)
             else:
-                soft_label = torch.exp(scores / self.ivo_beta)
+                soft_label = torch.exp(scores / self.reward_beta)
 
             completion_mask = completion_mask.to(per_token_logps.dtype, copy=True)
             soft_label = soft_label.to(per_token_logps.dtype, copy=True)
@@ -565,7 +567,7 @@ class IVOTrainer(GRPOTrainer):
                 if teacher_psi is None:
                     raise ValueError("IVOTrainer requires `teacher_psi` when alpha > 0.")
                 teacher_psi = teacher_psi.to(per_token_logps.dtype, copy=True)
-                teacher_scale = self.alpha / self.ivo_beta
+                teacher_scale = self.alpha / self.reward_beta
             else:
                 teacher_scale = None
 
