@@ -24,6 +24,10 @@ class IVOConfig(GRPOConfig):
         default=None,
         metadata={"help": "Teacher model name or path for IVO distillation."},
     )
+    teacher_value_beta: Optional[float] = field(
+        default=None,
+        metadata={"help": "Temperature for teacher value logsumexp. Defaults to beta."},
+    )
     alpha: float = field(
         default=0.0,
         metadata={"help": "Teacher guidance strength. Set > 0 to enable distillation."},

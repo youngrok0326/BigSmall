@@ -38,6 +38,7 @@ rl:
   mask_truncated_completions: # True #DAPO
   resume_from_checkpoint:
   teacher_model:
+  teacher_value_beta:
   teacher_device:
   teacher_lora_path:
 optim:

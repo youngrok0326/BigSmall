@@ -10,6 +10,7 @@ rl:
   alpha: 1.0
   gamma: 1.0
   normalized_softlabel: true
+  teacher_value_beta: 1.0 # if null, same as beta
   teacher_model: "Qwen/Qwen2.5-Math-7B-Instruct"
   teacher_lora_path: null
   teacher_device: "cuda:0"

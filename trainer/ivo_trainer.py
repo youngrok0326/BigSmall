@@ -53,6 +53,12 @@ class IVOTrainer(GRPOTrainer):
                 args.use_vllm = True
             args.vllm_mode = "colocate"
         ivo_beta = float(getattr(args, "beta", 1.0))
+        teacher_value_beta = getattr(args, "teacher_value_beta", None)
+        if teacher_value_beta is None:
+            teacher_value_beta = ivo_beta
+        teacher_value_beta = float(teacher_value_beta)
+        if teacher_value_beta <= 0.0:
+            raise ValueError("teacher_value_beta must be > 0.")
         alpha = float(getattr(args, "alpha", 0.0))
         gamma = float(getattr(args, "gamma", 1.0))
         if not 0.0 <= gamma <= 1.0:
@@ -72,6 +78,7 @@ class IVOTrainer(GRPOTrainer):
             peft_config=peft_config,
         )
         self.ivo_beta = ivo_beta
+        self.teacher_value_beta = teacher_value_beta
         self.alpha = alpha
         self.gamma = gamma
         self.normalized_softlabel = getattr(args, "normalized_softlabel", True)
@@ -461,7 +468,8 @@ class IVOTrainer(GRPOTrainer):
                     raise ValueError("Value adapter is enabled but not initialized.")
                 teacher_values = self.value_adapter(teacher_hidden_states)
             else:
-                teacher_values = self.ivo_beta * torch.logsumexp(teacher_logits / self.ivo_beta, dim=-1)
+                value_beta = self.teacher_value_beta
+                teacher_values = value_beta * torch.logsumexp(teacher_logits / value_beta, dim=-1)
             teacher_psi = teacher_values - teacher_values[:, :1]
             outputs["teacher_psi"] = teacher_psi.to(completion_ids.device)
         if need_teacher_ratio:
