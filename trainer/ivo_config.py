@@ -12,7 +12,7 @@ class IVOConfig(GRPOConfig):
     Extends GRPOConfig with IVO-specific parameters.
     """
 
-    ivo_beta: float = field(
+    beta: float = field(
         default=1.0,
         metadata={"help": "Soft label temperature for IVO."},
     )
@@ -24,14 +24,14 @@ class IVOConfig(GRPOConfig):
         default=None,
         metadata={"help": "Teacher model name or path for IVO distillation."},
     )
-    teacher_beta: float = field(
+    alpha: float = field(
         default=0.0,
         metadata={"help": "Teacher guidance strength. Set > 0 to enable distillation."},
     )
-    kl_alpha: float = field(
+    gamma: float = field(
         default=1.0,
         metadata={
-            "help": "Weight for reference-model KL in mixed KL. 1.0 uses only ref KL, 0.0 uses only teacher KL."
+            "help": "Geometric mixture weight for old vs teacher log-probs. 1.0=old only, 0.0=teacher only."
         },
     )
     teacher_device: Optional[str] = field(

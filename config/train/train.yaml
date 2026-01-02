@@ -37,9 +37,7 @@ rl:
   max_time: .inf
   mask_truncated_completions: # True #DAPO
   resume_from_checkpoint:
-  kl_alpha: 1.0 # 0.0 means teacher kl only
   teacher_model:
-  teacher_beta:
   teacher_device:
   teacher_lora_path:
 optim:

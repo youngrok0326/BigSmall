@@ -6,10 +6,11 @@ wandb:
 
 rl:
   algorithm: "IVO_DISTILL"
-  ivo_beta: 1.0 # TODO: distinguish with soft label?
+  beta: 1.0
+  alpha: 1.0
+  gamma: 1.0
   normalized_softlabel: true
   teacher_model: "Qwen/Qwen2.5-Math-7B-Instruct"
   teacher_lora_path: null
-  teacher_beta: 1.0
   teacher_device: "cuda:0"
   use_value_adapter: false

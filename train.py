@@ -78,20 +78,21 @@ def main(cfg: DictConfig) -> None:
             "steps" if rlparams["save_strategy"] == "steps" else "no"
         )
     rlparams = {k: v for k, v in rlparams.items() if v is not None}
-    teacher_beta = rlparams.get("teacher_beta", 0.0)
-    teacher_beta = 0.0 if teacher_beta is None else float(teacher_beta)
-    kl_alpha = rlparams.get("kl_alpha", 1.0)
-    kl_alpha = 1.0 if kl_alpha is None else float(kl_alpha)
-    need_teacher = teacher_beta > 0.0 or kl_alpha < 1.0
-    if algorithm != "ivo_distill" and not need_teacher:
-        rlparams.pop("teacher_model", None)
-        rlparams.pop("teacher_beta", None)
-        rlparams.pop("teacher_device", None)
-        rlparams.pop("teacher_lora_path", None)
-    if need_teacher and not rlparams.get("teacher_model"):
-        raise ValueError("rl.teacher_model must be set when teacher KL or guidance is enabled.")
-    if algorithm == "ivo_distill" and teacher_beta <= 0.0:
-        raise ValueError("rl.teacher_beta must be > 0 when rl.algorithm=IVO_DISTILL.")
+    if algorithm in ("ivo", "ivo_distill"):
+        alpha = rlparams.get("alpha", 0.0)
+        alpha = 0.0 if alpha is None else float(alpha)
+        gamma = rlparams.get("gamma", 1.0)
+        gamma = 1.0 if gamma is None else float(gamma)
+        use_value_adapter = bool(rlparams.get("use_value_adapter", False))
+        need_teacher = alpha > 0.0 or gamma < 1.0 or use_value_adapter
+        if not need_teacher:
+            rlparams.pop("teacher_model", None)
+            rlparams.pop("teacher_device", None)
+            rlparams.pop("teacher_lora_path", None)
+        if need_teacher and not rlparams.get("teacher_model"):
+            raise ValueError("rl.teacher_model must be set when teacher guidance or teacher KL is enabled.")
+        if algorithm == "ivo_distill" and alpha <= 0.0:
+            raise ValueError("rl.alpha must be > 0 when rl.algorithm=IVO_DISTILL.")
     if cfg.wandb.enable:
         import wandb
         wandb_run = wandb.init(

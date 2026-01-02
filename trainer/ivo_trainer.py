@@ -52,6 +52,13 @@ class IVOTrainer(GRPOTrainer):
             if not getattr(args, "use_vllm", False):
                 args.use_vllm = True
             args.vllm_mode = "colocate"
+        ivo_beta = float(getattr(args, "beta", 1.0))
+        alpha = float(getattr(args, "alpha", 0.0))
+        gamma = float(getattr(args, "gamma", 1.0))
+        if not 0.0 <= gamma <= 1.0:
+            raise ValueError("gamma must be in [0, 1].")
+        use_value_adapter = bool(getattr(args, "use_value_adapter", False))
+        args.beta = 0.0
         super().__init__(
             model=model,
             reward_funcs=reward_funcs,
@@ -64,16 +71,12 @@ class IVOTrainer(GRPOTrainer):
             optimizers=optimizers,
             peft_config=peft_config,
         )
-        self.ivo_beta = getattr(args, "ivo_beta", 1.0)
+        self.ivo_beta = ivo_beta
+        self.alpha = alpha
+        self.gamma = gamma
         self.normalized_softlabel = getattr(args, "normalized_softlabel", True)
         self.teacher_model_id = getattr(args, "teacher_model", None)
-        teacher_beta = getattr(args, "teacher_beta", 0.0)
-        self.teacher_beta = 0.0 if teacher_beta is None else float(teacher_beta)
-        self.use_value_adapter = bool(getattr(args, "use_value_adapter", False)) and self.teacher_beta > 0.0
-        kl_alpha = getattr(args, "kl_alpha", 1.0)
-        self.kl_alpha = 1.0 if kl_alpha is None else float(kl_alpha)
-        if not 0.0 <= self.kl_alpha <= 1.0:
-            raise ValueError("kl_alpha must be in [0, 1].")
+        self.use_value_adapter = use_value_adapter and self.alpha > 0.0
         self.teacher_device = getattr(args, "teacher_device", None)
         self.teacher_lora_path = getattr(args, "teacher_lora_path", None)
         self.beta = 0.0
@@ -83,7 +86,7 @@ class IVOTrainer(GRPOTrainer):
         self._eos_token_ids = None
         self.value_adapter = None
         self._value_adapter_added = False
-        needs_teacher = self.teacher_beta > 0.0 or (self.ivo_beta != 0.0 and self.kl_alpha < 1.0) or self.use_value_adapter
+        needs_teacher = self.alpha > 0.0 or self.gamma < 1.0 or self.use_value_adapter
         if needs_teacher and not self.teacher_model_id:
             raise ValueError("teacher_model must be set when teacher guidance or teacher KL is enabled.")
         if needs_teacher:
@@ -425,10 +428,10 @@ class IVOTrainer(GRPOTrainer):
         self._ensure_vllm_generate_lora_request()
         outputs = super()._generate_and_score_completions(inputs)
 
-        need_teacher_values = self.teacher_beta > 0.0
-        need_teacher_kl = self.ivo_beta != 0.0 and self.kl_alpha < 1.0
+        need_teacher_values = self.alpha > 0.0
+        need_teacher_ratio = self.gamma < 1.0
         use_adapter = self.use_value_adapter and need_teacher_values
-        if not (need_teacher_values or need_teacher_kl):
+        if not (need_teacher_values or need_teacher_ratio):
             return outputs
         if self._teacher is None:
             raise ValueError("Teacher model must be initialized when teacher guidance or teacher KL is enabled.")
@@ -461,7 +464,7 @@ class IVOTrainer(GRPOTrainer):
                 teacher_values = self.ivo_beta * torch.logsumexp(teacher_logits / self.ivo_beta, dim=-1)
             teacher_psi = teacher_values - teacher_values[:, :1]
             outputs["teacher_psi"] = teacher_psi.to(completion_ids.device)
-        if need_teacher_kl:
+        if need_teacher_ratio:
             completion_ids_teacher = completion_ids.to(teacher_logits.device)
             teacher_logps = selective_log_softmax(teacher_logits / self.temperature, completion_ids_teacher)
             outputs["teacher_per_token_logps"] = teacher_logps.to(completion_ids.device)
@@ -470,12 +473,12 @@ class IVOTrainer(GRPOTrainer):
     @staticmethod
     def _ivo_loss_impl(
         per_token_logps,
-        old_per_token_logps,
+        base_per_token_logps,
         completion_mask,
         soft_label,
         num_generations,
     ):
-        token_diff = (per_token_logps - old_per_token_logps) * completion_mask
+        token_diff = (per_token_logps - base_per_token_logps) * completion_mask
         diff_cum = token_diff.cumsum(dim=1)
         group_diff = diff_cum.view(-1, num_generations, diff_cum.shape[1])
         group_lse = group_diff.float().logsumexp(dim=1).to(diff_cum.dtype)
@@ -488,14 +491,14 @@ class IVOTrainer(GRPOTrainer):
     @staticmethod
     def _ivo_loss_impl_teacher(
         per_token_logps,
-        old_per_token_logps,
+        base_per_token_logps,
         completion_mask,
         soft_label,
         num_generations,
         teacher_psi,
         teacher_scale,
     ):
-        token_diff = (per_token_logps - old_per_token_logps) * completion_mask
+        token_diff = (per_token_logps - base_per_token_logps) * completion_mask
         diff_cum = token_diff.cumsum(dim=1)
         diff_cum = diff_cum - teacher_scale * teacher_psi
         group_diff = diff_cum.view(-1, num_generations, diff_cum.shape[1])
@@ -550,14 +553,26 @@ class IVOTrainer(GRPOTrainer):
             soft_label = soft_label.to(per_token_logps.dtype, copy=True)
 
             teacher_psi = inputs.get("teacher_psi")
-            if self.teacher_beta > 0.0:
+            if self.alpha > 0.0:
                 if teacher_psi is None:
-                    raise ValueError("IVOTrainer requires `teacher_psi` when teacher_beta > 0.")
+                    raise ValueError("IVOTrainer requires `teacher_psi` when alpha > 0.")
                 teacher_psi = teacher_psi.to(per_token_logps.dtype, copy=True)
-                teacher_scale = self.teacher_beta / self.ivo_beta
+                teacher_scale = self.alpha / self.ivo_beta
+            else:
+                teacher_scale = None
+
+            base_per_token_logps = old_per_token_logps.to(per_token_logps.dtype, copy=True)
+            if self.gamma < 1.0:
+                teacher_per_token_logps = inputs.get("teacher_per_token_logps")
+                if teacher_per_token_logps is None:
+                    raise ValueError("IVOTrainer requires `teacher_per_token_logps` when gamma < 1.")
+                teacher_per_token_logps = teacher_per_token_logps.to(per_token_logps.dtype, copy=True)
+                base_per_token_logps = self.gamma * base_per_token_logps + (1.0 - self.gamma) * teacher_per_token_logps
+
+            if self.alpha > 0.0:
                 loss = self._ivo_loss_impl_teacher(
                     per_token_logps,
-                    old_per_token_logps,
+                    base_per_token_logps,
                     completion_mask,
                     soft_label,
                     self.num_generations,
@@ -567,48 +582,9 @@ class IVOTrainer(GRPOTrainer):
             else:
                 loss = self._ivo_loss_impl(
                     per_token_logps,
-                    old_per_token_logps,
+                    base_per_token_logps,
                     completion_mask,
                     soft_label,
                     self.num_generations,
                 )
-
-            kl_beta = self.ivo_beta
-            if kl_beta != 0.0:
-                token_count = completion_mask.sum().clamp(min=1.0)
-                mean_kl_old = None
-                mean_kl_teacher = None
-                if self.kl_alpha > 0.0:
-                    old_per_token_logps = old_per_token_logps.to(per_token_logps.dtype, copy=True)
-                    per_token_kl_old = (
-                        torch.exp(old_per_token_logps - per_token_logps)
-                        - (old_per_token_logps - per_token_logps)
-                        - 1
-                    )
-                    mean_kl_old = (per_token_kl_old * completion_mask).sum() / token_count
-
-                if self.kl_alpha < 1.0:
-                    teacher_per_token_logps = inputs.get("teacher_per_token_logps")
-                    if teacher_per_token_logps is None:
-                        raise ValueError("IVOTrainer requires `teacher_per_token_logps` when kl_alpha < 1.")
-                    teacher_per_token_logps = teacher_per_token_logps.to(per_token_logps.dtype, copy=True)
-                    per_token_kl_teacher = (
-                        torch.exp(teacher_per_token_logps - per_token_logps)
-                        - (teacher_per_token_logps - per_token_logps)
-                        - 1
-                    )
-                    mean_kl_teacher = (per_token_kl_teacher * completion_mask).sum() / token_count
-
-                if self.kl_alpha == 1.0:
-                    mean_kl = mean_kl_old
-                elif self.kl_alpha == 0.0:
-                    mean_kl = mean_kl_teacher
-                else:
-                    mean_kl = self.kl_alpha * mean_kl_old + (1.0 - self.kl_alpha) * mean_kl_teacher
-
-                loss = loss + kl_beta * mean_kl
-
-                mode = "train" if self.model.training else "eval"
-                self._metrics[mode]["kl"].append(self.accelerator.gather(mean_kl).mean().item())
-
             return loss
